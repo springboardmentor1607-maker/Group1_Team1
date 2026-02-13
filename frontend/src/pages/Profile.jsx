@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./Profile.css";
+import "../Profile.css";
 
 function Profile() {
   const initialData = {
