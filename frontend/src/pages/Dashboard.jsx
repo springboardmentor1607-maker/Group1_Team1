@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "../Dashboard.css"; // adjust path based on your folder structure
+import "../cleanstreet.css"; // adjust path based on your folder structure
 
 // ─── Mock Data (replace with API calls) ──────────────────────────────────────
 const MOCK_USER = {
