@@ -1,8 +1,8 @@
 import React from "react";
-import EditProfile from "./EditProfile";
+import Profile from "./pages/Profile";
 
 function App() {
-  return <EditProfile />;
+  return <Profile />;
 }
 
 export default App;
