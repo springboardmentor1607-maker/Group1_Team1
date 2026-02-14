@@ -3,7 +3,6 @@ import Dashboard from "./pages/Dashboard";
 import SubmitComplaint from "./pages/SubmitComplaint";
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Profile from "./pages/Profile";
 
 export default function App() {
   return (
@@ -18,7 +17,6 @@ export default function App() {
 
         {/* App pages */}
         <Route path="/dashboard"        element={<Dashboard />} />
-        <Route path="/profile"          element={<Profile />} />
         <Route path="/submit-complaint" element={<SubmitComplaint />} />
 
         {/* Catch-all fallback */}
