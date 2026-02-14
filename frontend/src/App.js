@@ -1,19 +1,26 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
 import Dashboard from "./pages/Dashboard";
 import SubmitComplaint from "./pages/SubmitComplaint";
 
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+
+import "./App.css";
+
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        {/* Redirect home to dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" />} />
-
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/submit-complaint" element={<SubmitComplaint />} />
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/report" element={<SubmitComplaint />} />
+      
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
 export default App;
+
