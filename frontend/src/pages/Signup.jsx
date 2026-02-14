@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../Login-Signup.css";
@@ -215,7 +216,7 @@ export default function Signup() {
  ) : (
  <>
  <div className="auth-card__header">
- <button className="auth-card__back" onClick={() => navigate("/")}>← Back to home</button>
+ <button className="auth-card__back" onClick={() => navigate("/dashboard")}>← Back to dashboard</button>
  <h2 className="auth-card__title">Create your account 🌿</h2>
  <p className="auth-card__subtitle">
  Already have an account?{" "}
@@ -316,3 +317,4 @@ export default function Signup() {
  </div>
  );
 }
+

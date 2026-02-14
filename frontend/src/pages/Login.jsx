@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../Login-Signup.css";
+import "../Login-Signup.css"; 
 
 function CleanStreetLogo({ size = 100 }) {
  return (
@@ -161,7 +161,7 @@ export default function Login() {
  <div className="auth-form-side">
  <div className="auth-card">
  <div className="auth-card__header">
- <button className="auth-card__back" onClick={() => navigate("/")}>← Back to home</button>
+ <button className="auth-card__back" onClick={() => navigate("/dashboard")}>← Back to dashboard</button>
  <h2 className="auth-card__title">Welcome back 👋</h2>
  <p className="auth-card__subtitle">
  Don't have an account?{" "}
