@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import "../cleanstreet.css"; // adjust path based on your folder structure
+import "../Dashboard.css"; // adjust path based on your folder structure
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const MOCK_USER = {
