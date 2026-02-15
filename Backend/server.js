@@ -4,10 +4,6 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 require('dotenv').config({ path: './backend.env' });
 
-// Load env vars
-dotenv.config();
-
-// Connect to database
 connectDB();
 
 const app = express();
