@@ -1,10 +1,16 @@
 import React from "react";
 import Profile from "./pages/Profile";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
+function App() {
+  return <Profile />;
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
 import Dashboard from "./pages/Dashboard";
 import SubmitComplaint from "./pages/SubmitComplaint";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+
 import "./App.css";
 
 function App() {

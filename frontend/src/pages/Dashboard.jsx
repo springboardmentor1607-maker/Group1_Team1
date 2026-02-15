@@ -1,11 +1,81 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import "../Dashboard.css"; // adjust path based on your folder structure
-import { useEffect } from "react";
-import axios from "axios";
-
+import "../cleanstreet.css"; // adjust path based on your folder structure
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
+const MOCK_USER = {
+  name: "Demo User",
+  username: "@demo_user",
+  role: "Citizen",
+  avatar: "DU",
+};
+
+const MOCK_COMPLAINTS = [
+  {
+    id: 1,
+    title: "Large pothole on Main Street",
+    type: "Pothole",
+    typeIcon: "🕳️",
+    status: "in_review",
+    location: "Main Street & Oak Avenue",
+    description: "Deep pothole causing vehicle damage near the intersection.",
+    createdAt: "2025-07-10T08:00:00Z",
+    updatedAt: "2025-07-11T10:00:00Z",
+    votes: 12,
+    comments: 3,
+    image: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=400&q=80",
+  },
+  {
+    id: 2,
+    title: "Broken streetlight on Elm Ave",
+    type: "Streetlight",
+    typeIcon: "💡",
+    status: "received",
+    location: "Elm Avenue near Park",
+    description: "Streetlight has been out for 2 weeks creating safety issues.",
+    createdAt: "2025-07-08T14:00:00Z",
+    updatedAt: "2025-07-08T14:00:00Z",
+    votes: 7,
+    comments: 1,
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
+  },
+  {
+    id: 3,
+    title: "Garbage dump near school",
+    type: "Garbage",
+    typeIcon: "🗑️",
+    status: "resolved",
+    location: "Westfield School, Back Road",
+    description: "Illegal garbage dump attracting pests near school premises.",
+    createdAt: "2025-07-01T09:00:00Z",
+    updatedAt: "2025-07-12T16:00:00Z",
+    votes: 24,
+    comments: 8,
+    image: "https://images.unsplash.com/photo-1604187351574-c75ca79f5807?w=400&q=80",
+  },
+  {
+    id: 4,
+    title: "Water leakage on 5th Street",
+    type: "Water Leak",
+    typeIcon: "💧",
+    status: "received",
+    location: "5th Street between Elm & Oak",
+    description: "Main water pipe leaking and flooding the sidewalk.",
+    createdAt: "2025-07-13T07:30:00Z",
+    updatedAt: "2025-07-13T07:30:00Z",
+    votes: 5,
+    comments: 0,
+    image: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80",
+  },
+];
+
+const ACTIVITY = [
+  { icon: "✅", text: "Pothole on Main Street resolved", time: "2 hours ago", colorHex: "#22c55e" },
+  { icon: "➕", text: "New streetlight issue reported", time: "4 hours ago", colorHex: "#3b82f6" },
+  { icon: "🔄", text: "Garbage dump complaint updated", time: "6 hours ago", colorHex: "#f59e0b" },
+  { icon: "💬", text: "New comment on your water leak report", time: "1 day ago", colorHex: "#8b5cf6" },
+];
+
 const STATUS_LABELS = { received: "Received", in_review: "In Review", resolved: "Resolved" };
 const STATUS_DOT_COLORS = { received: "#3b82f6", in_review: "#f59e0b", resolved: "#22c55e" };
 const PROGRESS_STEPS = ["received", "in_review", "resolved"];
@@ -177,11 +247,11 @@ function StatCard({ icon, count, label, iconBgClass, trend }) {
 function ComplaintCard({ complaint, onView }) {
   return (
     <div className="cs-complaint-card" onClick={() => onView(complaint)}>
-      {complaint.photo && (
+      {complaint.image && (
         <div className="cs-complaint-card__img-wrap">
           <img
-            src={complaint.photo}
-            alt={complaint.category}
+            src={complaint.image}
+            alt={complaint.type}
             className="cs-complaint-card__img"
             onError={e => { e.target.parentNode.style.display = 'none'; }}
           />
@@ -199,7 +269,7 @@ function ComplaintCard({ complaint, onView }) {
         <p className="cs-complaint-card__desc">{complaint.description}</p>
         <div className="cs-complaint-card__location">
           <span>📍</span>
-          <span>{complaint.address}</span>
+          <span>{complaint.location}</span>
         </div>
         <div className="cs-complaint-card__footer">
           <div className="cs-complaint-card__meta">
@@ -223,15 +293,15 @@ function ComplaintDetailModal({ complaint, onClose }) {
       <div className="cs-modal">
         <button className="cs-modal__close" onClick={onClose}>×</button>
 
-        {complaint.photo ? (
+        {complaint.image ? (
           <div className="cs-modal__img-wrap">
-            <img src={complaint.photo} alt={complaint.category} className="cs-modal__img" onError={e => { e.target.parentNode.style.display = 'none'; }} />
+            <img src={complaint.image} alt={complaint.type} className="cs-modal__img" onError={e => { e.target.parentNode.style.display = 'none'; }} />
             <div className="cs-modal__img-overlay" />
             <div className="cs-modal__img-badge">
               <span style={{ fontSize: 24 }}>{complaint.typeIcon}</span>
               <div>
                 <div className="cs-modal__title" style={{ color: '#fff' }}>{complaint.title}</div>
-                <div className="cs-modal__subtitle" style={{ color: 'rgba(255,255,255,0.75)' }}>#{complaint.id} · {complaint.category}</div>
+                <div className="cs-modal__subtitle" style={{ color: 'rgba(255,255,255,0.75)' }}>#{complaint.id} · {complaint.type}</div>
               </div>
             </div>
           </div>
@@ -240,7 +310,7 @@ function ComplaintDetailModal({ complaint, onClose }) {
             <span style={{ fontSize: 28 }}>{complaint.typeIcon}</span>
             <div>
               <div className="cs-modal__title">{complaint.title}</div>
-              <div className="cs-modal__subtitle">#{complaint.id} · {complaint.category}</div>
+              <div className="cs-modal__subtitle">#{complaint.id} · {complaint.type}</div>
             </div>
           </div>
         )}
@@ -257,7 +327,7 @@ function ComplaintDetailModal({ complaint, onClose }) {
           <div className="cs-modal__grid">
             <div>
               <div className="cs-modal__field-label">Location</div>
-              <div className="cs-modal__field-value">📍 {complaint.address}</div>
+              <div className="cs-modal__field-value">📍 {complaint.location}</div>
             </div>
             <div>
               <div className="cs-modal__field-label">Reported On</div>
@@ -305,19 +375,16 @@ function ComplaintDetailModal({ complaint, onClose }) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function UserDashboard() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-const [complaints, setComplaints] = useState([]);
-const [activeFilter, setActiveFilter] = useState("all");
-const [selectedComplaint, setSelectedComplaint] = useState(null);
-const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
+  const total = MOCK_COMPLAINTS.length;
+  const pending = MOCK_COMPLAINTS.filter(c => c.status === "received").length;
+  const inProg = MOCK_COMPLAINTS.filter(c => c.status === "in_review").length;
+  const resolved = MOCK_COMPLAINTS.filter(c => c.status === "resolved").length;
 
-  const total = complaints.length;
-  const pending = complaints.filter(c => c.status === "received").length;
-  const inProg = complaints.filter(c => c.status === "in_review").length;
-  const resolved = complaints.filter(c => c.status === "resolved").length;
-
-  const filtered = complaints.filter(c => {
+  const filtered = MOCK_COMPLAINTS.filter(c => {
     const matchStatus = activeFilter === "all" || c.status === activeFilter;
     const matchSearch =
       c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -353,7 +420,7 @@ const [searchQuery, setSearchQuery] = useState("");
         <div className="cs-navbar__actions">
           <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => navigate('/login')}>Login</button>
           <button className="cs-btn--register" onClick={() => navigate('/signup')}>Register</button>
-          <div className="cs-avatar">{user?.name?.charAt(0)}</div>
+          <div className="cs-avatar">{MOCK_USER.avatar}</div>
         </div>
       </nav>
 
@@ -364,7 +431,7 @@ const [searchQuery, setSearchQuery] = useState("");
         <div className="cs-hero">
           <div className="cs-hero__content">
             <div className="cs-hero__eyebrow">🏙️ Civic Dashboard</div>
-            <h1 className="cs-hero__title">Welcome back, {user?.name} 👋</h1>
+            <h1 className="cs-hero__title">Welcome back, {MOCK_USER.name} 👋</h1>
             <p className="cs-hero__subtitle">
               Help keep your community clean and safe. Report issues, track
               progress, and see the impact of your civic action.
@@ -428,7 +495,7 @@ const [searchQuery, setSearchQuery] = useState("");
 
             {filtered.length > 0 ? (
               <div className="cs-flex-col cs-gap-sm">
-                {filtered.map(c => <ComplaintCard key={c._id} complaint={c} onView={setSelectedComplaint} />)}
+                {filtered.map(c => <ComplaintCard key={c.id} complaint={c} onView={setSelectedComplaint} />)}
               </div>
             ) : (
               <div className="cs-empty">
@@ -466,7 +533,7 @@ const [searchQuery, setSearchQuery] = useState("");
             <div className="cs-sidebar-card">
               <div className="cs-sidebar-card__title">🕐 Recent Activity</div>
               <div className="cs-activity-list">
-                {complaints.slice(0, 4).map((a, i) => (
+                {ACTIVITY.map((a, i) => (
                   <div key={i} className="cs-activity-item">
                     <div className="cs-activity-item__icon" style={{ background: a.colorHex + "18" }}>{a.icon}</div>
                     <div>
@@ -480,11 +547,11 @@ const [searchQuery, setSearchQuery] = useState("");
 
             {/* Profile Snapshot */}
             <div className="cs-profile-card">
-              <div className="cs-avatar cs-avatar--lg">{user?.name?.charAt(0)}</div>
+              <div className="cs-avatar cs-avatar--lg">{MOCK_USER.avatar}</div>
               <div>
-                <div className="cs-font-bold cs-text-md">{user?.name}</div>
-                <div className="cs-text-sm cs-text-muted">{user?.email}</div>
-                <span className="cs-badge cs-badge--role cs-mt-sm" style={{ display: "inline-block" }}>{user?.role}</span>
+                <div className="cs-font-bold cs-text-md">{MOCK_USER.name}</div>
+                <div className="cs-text-sm cs-text-muted">{MOCK_USER.username}</div>
+                <span className="cs-badge cs-badge--role cs-mt-sm" style={{ display: "inline-block" }}>{MOCK_USER.role}</span>
               </div>
             </div>
 
