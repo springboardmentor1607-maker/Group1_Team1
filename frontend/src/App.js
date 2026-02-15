@@ -1,5 +1,6 @@
 import React from "react";
 import Profile from "./pages/Profile";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 function App() {
   return <Profile />;
