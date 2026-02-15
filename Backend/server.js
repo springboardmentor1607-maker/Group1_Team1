@@ -1,33 +1,25 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const connectDB = require('./config/db');
-require('dotenv').config({ path: './backend.env' });
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const connectDB = require("./config/db");
+
+dotenv.config({ path: "./backend.env" });
 
 connectDB();
 
 const app = express();
 
-// Body parser
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Enable CORS
-app.use(cors());
+// Routes
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/users", require("./routes/user"));
+app.use("/api/complaints", require("./routes/complaint"));
 
-// Route files
-const auth = require('./routes/auth');
-const users = require('./routes/user');
-const complaints = require('./routes/complaint');
-
-// Mount routers
-app.use('/api/auth', auth);
-app.use('/api/users', users);
-app.use('/api/complaints', complaints);
-
-// Basic route
-app.get('/', (req, res) => {
-  res.json({ message: 'Clean Street API is running' });
+app.get("/", (req, res) => {
+  res.json({ message: "Clean Street API running" });
 });
 
 const PORT = process.env.PORT || 5000;
