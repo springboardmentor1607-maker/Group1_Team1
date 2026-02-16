@@ -411,9 +411,18 @@ export default function UserDashboard() {
         </div>
 
         <div className="cs-navbar__links">
-          {["Dashboard", "Report Issue", "View Complaints"].map(item => (
-            <span key={item} className={`cs-navbar__link ${item === "Dashboard" ? "cs-navbar__link--active" : ""}`}>
-              {item}
+          {[
+            { label: "Dashboard",       path: "/dashboard" },
+            { label: "Report Issue",    path: "/report"    },
+            { label: "View Complaints", path: "/complaints"},
+          ].map(item => (
+            <span
+              key={item.label}
+              className={`cs-navbar__link ${item.label === "Dashboard" ? "cs-navbar__link--active" : ""}`}
+              onClick={() => navigate(item.path)}
+              style={{ cursor: "pointer" }}
+            >
+              {item.label}
             </span>
           ))}
         </div>
@@ -421,7 +430,9 @@ export default function UserDashboard() {
         <div className="cs-navbar__actions">
           <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => navigate('/login')}>Login</button>
           <button className="cs-btn--register" onClick={() => navigate('/signup')}>Register</button>
-          <div className="cs-avatar">{MOCK_USER.avatar}</div>
+          <div className="cs-avatar" onClick={() => navigate('/profile')} title="My Profile" style={{ cursor: "pointer" }}>
+            {MOCK_USER.avatar}
+          </div>
         </div>
       </nav>
 
@@ -524,9 +535,9 @@ export default function UserDashboard() {
             <div className="cs-sidebar-card">
               <div className="cs-sidebar-card__title">⚡ Quick Actions</div>
               <div className="cs-flex-col cs-gap-sm">
-                <button className="cs-btn cs-btn--primary cs-btn--full">➕ Report New Issue</button>
-                <button className="cs-btn cs-btn--secondary cs-btn--full" style={{ textAlign: "left" }}>📋 View All Complaints</button>
-                <button className="cs-btn cs-btn--secondary cs-btn--full" style={{ textAlign: "left" }}>🗺️ Issue Map</button>
+                <button className="cs-btn cs-btn--primary cs-btn--full" onClick={() => navigate('/report')}>➕ Report New Issue</button>
+                <button className="cs-btn cs-btn--secondary cs-btn--full" style={{ textAlign: "left" }} onClick={() => navigate('/complaints')}>📋 View All Complaints</button>
+                <button className="cs-btn cs-btn--secondary cs-btn--full" style={{ textAlign: "left" }} onClick={() => navigate('/map')}>🗺️ Issue Map</button>
               </div>
             </div>
 
@@ -546,8 +557,8 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Profile Snapshot */}
-            <div className="cs-profile-card">
+            {/* Profile Snapshot — click to go to profile */}
+            <div className="cs-profile-card" onClick={() => navigate('/profile')} style={{ cursor: "pointer" }} title="View Profile">
               <div className="cs-avatar cs-avatar--lg">{MOCK_USER.avatar}</div>
               <div>
                 <div className="cs-font-bold cs-text-md">{MOCK_USER.name}</div>
