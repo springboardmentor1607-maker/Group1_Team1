@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
 import SubmitComplaint from "./pages/SubmitComplaint";
@@ -9,20 +9,22 @@ import Profile from "./pages/Profile";
 
 import "./App.css";
 
-function App() {
+export default function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        {/* Redirect home to dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        {/* Redirect root to login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+
+        {/* Auth pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+
+        {/* App pages */}
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/submit-complaint" element={<SubmitComplaint />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/submit-complaint" element={<SubmitComplaint />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
-
-export default App;

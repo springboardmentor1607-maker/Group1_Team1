@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../Login-Signup.css";
+import API from "../api";
 
 function CleanStreetLogo({ size = 100 }) {
   return (
@@ -122,15 +123,37 @@ export default function Signup() {
     return e;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const validationErrors = validate();
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
+
+  try {
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1400));
+
+    const res = await API.post("/api/auth/register", {
+      name: form.firstName + " " + form.lastName,
+      email: form.email,
+      password: form.password,
+      role: form.role
+    });
+
     setLoading(false);
+    console.log("Backend response:", res.data); // <-- log response in console
     setSuccess(true);
-  };
+
+  } catch (err) {
+    setLoading(false);
+    console.error("Backend error:", err.response ? err.response.data : err.message);
+    alert("Registration failed: " + (err.response?.data?.message || err.message));
+  }
+};
+
+
 
   const roles = [
     { key: "citizen", icon: "🧑‍💼", label: "Citizen" },

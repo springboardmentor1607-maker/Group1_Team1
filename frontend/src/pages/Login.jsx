@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../Login-Signup.css";
-
+import API from "../api"; 
 function CleanStreetLogo({ size = 100 }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
@@ -91,15 +91,34 @@ export default function Login() {
     setForm(f => ({ ...f, [name]: type === "checkbox" ? checked : value }));
     setError("");
   };
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.email || !form.password) { setError("Please fill in all fields."); return; }
+  if (!form.email || !form.password) {
+    setError("Please fill in all fields.");
+    return;
+  }
+
+  try {
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
+
+    const res = await API.post("/api/auth/login", {
+      email: form.email,
+      password: form.password,
+    });
+
+    console.log("LOGIN SUCCESS:", res.data);
+
     setLoading(false);
     navigate("/dashboard");
-  };
+
+  } catch (err) {
+    console.log("LOGIN ERROR:", err.response?.data);
+    setLoading(false);
+    setError(err.response?.data?.message || "Login failed");
+  }
+};
+
 
   return (
     <div className="auth-page">
