@@ -2,9 +2,9 @@ const express = require("express");
 const router = express.Router();
 const { protect } = require("../middleware/auth");
 const Complaint = require("../models/Complaint");
-const { getMyComplaints } = require('../controllers/complaintController');
+//const { getMyComplaints } = require('../controllers/complaintController');
 
-router.get('/my', protect, getMyComplaints);
+//router.get('/my', protect, getMyComplaints);
 
 // Get My Complaints
 router.get("/my-complaints", protect, async (req, res) => {
