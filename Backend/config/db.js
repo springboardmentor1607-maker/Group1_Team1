@@ -1,12 +1,16 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://nithyasridevi26_db_user:xtG2QgtrETEWdalu@cluster0.ultsjbw.mongodb.net/usernithya?appName=Cluster0');
+    const uri =
+      process.env.MONGODB_URI ||
+      "mongodb+srv://nithyasridevi26_db_user:xtG2QgtrETEWdalu@cluster0.ultsjbw.mongodb.net/usernithya?retryWrites=true&w=majority";
+
+    const conn = await mongoose.connect(uri);
+
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-   
+    console.error("❌ MongoDB connection failed:", error.message);
     process.exit(1);
   }
 };
