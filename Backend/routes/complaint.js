@@ -1,35 +1,38 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { protect } = require('../middleware/auth');
-const Complaint = require('../models/Complaint');
+const { protect } = require("../middleware/auth");
+const Complaint = require("../models/Complaint");
+const { getMyComplaints } = require('../controllers/complaintController');
 
-router.get('/my-complaints', protect, async (req, res) => {
+router.get('/my', protect, getMyComplaints);
+
+// Get My Complaints
+router.get("/my-complaints", protect, async (req, res) => {
   try {
     const complaints = await Complaint.find({ user_id: req.user.id })
       .sort({ createdAt: -1 });
+
     res.json(complaints);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-router.post('/', protect, async (req, res) => {
+// Create Complaint
+router.post("/", protect, async (req, res) => {
   try {
     const { title, description, category } = req.body;
-    
-    const complaint = new Complaint({
+
+    const complaint = await Complaint.create({
       user_id: req.user.id,
       title,
       description,
-      category: category || 'other'
+      category: category || "other",
     });
 
-    const createdComplaint = await complaint.save();
-    res.status(201).json(createdComplaint);
+    res.status(201).json(complaint);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 

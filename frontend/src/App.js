@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import SubmitComplaint from "./pages/SubmitComplaint";
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Profile from "./pages/Profile";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Profile from "./pages/Profile"; // keep if needed later
+
+import "./App.css";
 
 export default function App() {
   return (
@@ -20,9 +22,7 @@ export default function App() {
         <Route path="/dashboard"        element={<Dashboard />} />
         <Route path="/profile"          element={<Profile />} />
         <Route path="/submit-complaint" element={<SubmitComplaint />} />
-
-        {/* Catch-all fallback */}
-        <Route path="*"                 element={<Navigate to="/login" replace />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </BrowserRouter>
   );
