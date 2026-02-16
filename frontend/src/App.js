@@ -1,15 +1,11 @@
 import React from "react";
-import Profile from "./pages/Profile";
-
-function App() {
-  return <Profile />;
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import Dashboard from "./pages/Dashboard";
 import SubmitComplaint from "./pages/SubmitComplaint";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Profile from "./pages/Profile"; // keep if needed later
+import Profile from "./pages/Profile";
 
 import "./App.css";
 
