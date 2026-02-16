@@ -7,11 +7,6 @@ dotenv.config({ path: "./backend.env" });
 require('dotenv').config({ path: 'backend.env' });
 
 
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const connectDB = require('./config/db');
-
 // Load env vars
 
 connectDB();
