@@ -1,15 +1,7 @@
+import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import "../Dashboard.css";
-// adjust path based on your folder structure
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_USER = {
-  name: "Demo User",
-  username: "@demo_user",
-  role: "Citizen",
-  avatar: "DU",
-};
 
 const MOCK_COMPLAINTS = [
   {
@@ -518,6 +510,13 @@ function Chatbot() {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function UserDashboard() {
   const navigate = useNavigate();
+  const { user, getInitials } = useAuth();
+  const MOCK_USER = {
+    name: user?.name || "Demo User",
+    username: user?.username ? `@${user.username}` : "@demo_user",
+    role: user?.role || "Citizen",
+    avatar: user?.name ? getInitials(user.name) : "DU",
+  };
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -555,7 +554,7 @@ export default function UserDashboard() {
         <div className="cs-navbar__links">
           {[
             { label: "Dashboard", path: "/dashboard" },
-            { label: "Report Issue", path: "/report" },
+            { label: "Report Issue", path: "/submit-complaint" },
             { label: "View Complaints", path: "/complaints" },
           ].map(item => (
             <span
@@ -590,7 +589,7 @@ export default function UserDashboard() {
               Help keep your community clean and safe. Report issues, track
               progress, and see the impact of your civic action.
             </p>
-            <button className="cs-btn cs-btn--primary" onClick={() => navigate('/report')}>
+            <button className="cs-btn cs-btn--primary" onClick={() => navigate('/submit-complaint')}>
               ➕ Report New Issue
             </button>
           </div>
@@ -677,7 +676,7 @@ export default function UserDashboard() {
             <div className="cs-sidebar-card">
               <div className="cs-sidebar-card__title">⚡ Quick Actions</div>
               <div className="cs-flex-col cs-gap-sm">
-                <button className="cs-btn cs-btn--primary cs-btn--full" onClick={() => navigate('/report')}>➕ Report New Issue</button>
+                <button className="cs-btn cs-btn--primary cs-btn--full" onClick={() => navigate('/submit-complaint')}>➕ Report New Issue</button>
                 <button className="cs-btn cs-btn--secondary cs-btn--full" style={{ textAlign: "left" }} onClick={() => navigate('/complaints')}>📋 View All Complaints</button>
                 <button className="cs-btn cs-btn--secondary cs-btn--full" style={{ textAlign: "left" }} onClick={() => navigate('/map')}>🗺️ Issue Map</button>
               </div>
