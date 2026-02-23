@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "./AuthContext";
 import "../Login-Signup.css";
 import API from "../api"; 
 function CleanStreetLogo({ size = 100 }) {
@@ -81,6 +82,7 @@ function CleanStreetLogo({ size = 100 }) {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -108,7 +110,7 @@ const handleSubmit = async (e) => {
     });
 
     console.log("LOGIN SUCCESS:", res.data);
-
+    login(res.data.user);
     setLoading(false);
     navigate("/dashboard");
 

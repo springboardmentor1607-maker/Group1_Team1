@@ -1,3 +1,4 @@
+import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 import "../Profile.css";
@@ -84,13 +85,14 @@ function StatMini({ icon, value, label, colorClass }) {
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function Profile() {
     const navigate = useNavigate();
+    const { user, updateUser } = useAuth();
     const initialData = {
-        username: "demo_user",
-        email: "demo@cleanstreet.com",
-        fullName: "Demo User",
-        phone: "+1-555-123-4567",
-        location: "Downtown District",
-        bio: "Active citizen helping to improve our community through CleanStreet reporting.",
+        username: user?.username || "demo_user",
+        email: user?.email || "demo@cleanstreet.com",
+        fullName: user?.name || "Demo User",
+        phone: user?.phone || "+1-555-123-4567",
+        location: user?.location || "Downtown District",
+        bio: user?.bio || "Active citizen helping to improve our community through CleanStreet reporting.",
     };
 
     const [formData, setFormData] = useState(initialData);
@@ -102,8 +104,12 @@ function Profile() {
     const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
     const handleEdit = () => { setEditMode(true); setMessage(""); };
     const handleCancel = () => { setFormData(savedData); setEditMode(false); setMessage(""); };
-    const handleSave = () => { setSavedData(formData); setEditMode(false); setMessage("Profile updated successfully ✅"); };
-
+    const handleSave = () => {
+        setSavedData(formData);
+        updateUser({ name: formData.fullName, username: formData.username, email: formData.email, phone: formData.phone, location: formData.location, bio: formData.bio });
+        setEditMode(false);
+        setMessage("Profile updated successfully ✅");
+    };
     const fields = [
         { name: "username", label: "Username", icon: "👤", type: "text" },
         { name: "email", label: "Email", icon: "✉️", type: "email" },
