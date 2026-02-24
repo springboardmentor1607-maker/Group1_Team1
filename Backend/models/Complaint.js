@@ -1,52 +1,64 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const ComplaintSchema = new mongoose.Schema({
-  user_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const complaintSchema = new mongoose.Schema(
+  {
+    user_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    description: {
+      type: String,
+      required: true,
+    },
+
+    photo: {
+      type: String,
+    },
+
+    location_coords: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
+    },
+
+    address: {
+      type: String,
+      required: true,
+    },
+
+    assigned_to: {
+      type: String,
+      default: null,
+    },
+
+    status: {
+      type: String,
+      enum: ["received", "in_review", "resolved"],
+      default: "received",
+    },
   },
-  title: {
-    type: String,
-    required: [true, 'Please provide a title'],
-    trim: true,
-    maxlength: [100, 'Title cannot be more than 100 characters']
-  },
-  description: {
-    type: String,
-    required: [true, 'Please provide a description'],
-    maxlength: [500, 'Description cannot be more than 500 characters']
-  },
-  category: {
-    type: String,
-    enum: ['garbage', 'pothole', 'water_leakage', 'streetlight', 'other'],
-    default: 'other'
-  },
-  photo: {
-    type: String,
-    default: ''
-  },
-  location_coords: {
-    lat: { type: Number, default: 0 },
-    lng: { type: Number, default: 0 }
-  },
-  address: {
-    type: String,
-    default: ''
-  },
-  status: {
-    type: String,
-    enum: ['received', 'in_review', 'in_progress', 'resolved', 'rejected'],
-    default: 'received'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  {
+    timestamps: {
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
   }
-});
+);
 
-module.exports = mongoose.model('Complaint', ComplaintSchema);
+complaintSchema.index({ location_coords: "2dsphere" });
+
+module.exports = mongoose.model("Complaint", complaintSchema);
