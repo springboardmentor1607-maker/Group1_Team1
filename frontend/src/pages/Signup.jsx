@@ -143,7 +143,7 @@ const handleSubmit = async (e) => {
     });
 
     setLoading(false);
-    console.log("Backend response:", res.data); // <-- log response in console
+    console.log("Backend response:", res.data);
     setSuccess(true);
 
   } catch (err) {
@@ -153,13 +153,11 @@ const handleSubmit = async (e) => {
   }
 };
 
-
-
+  // ✅ Replaced "official" and "business" with a single "admin" role
   const roles = [
-    { key: "citizen", icon: "🧑‍💼", label: "Citizen" },
-    { key: "official", icon: "🏛️", label: "Official" },
-    { key: "volunteer", icon: "🤝", label: "Volunteer" },
-    { key: "business", icon: "🏢", label: "Business" },
+    { key: "citizen",   icon: "🧑‍💼", label: "Citizen"   },
+    { key: "volunteer", icon: "🤝",   label: "Volunteer" },
+    { key: "admin",     icon: "🛡️",   label: "Admin"     },
   ];
 
   return (
