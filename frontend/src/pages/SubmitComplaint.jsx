@@ -383,11 +383,8 @@ export default function SubmitComplaint() {
                 Submit Another
               </button>
             </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+        );
+    }
 
   // ── Main Form ───────────────────────────────────────────────────────────────
   return (
@@ -536,49 +533,17 @@ export default function SubmitComplaint() {
                     placeholder="e.g., Near City Hall"
                   />
                 </div>
+            </nav>
 
-                <div className="cs-form-group" style={{ marginBottom: 0 }}>
-                  <label className="cs-label">Description <span className="sc-required">*</span></label>
-                  <textarea
-                    className="cs-input cs-textarea"
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                    placeholder="Describe the issue in detail..."
-                    required
-                  />
+            {/* ── Hero ── */}
+            <div className="sc-hero">
+                <div className="sc-hero__content">
+                    <div className="sc-hero__eyebrow">📋 Report a Civic Issue</div>
+                    <h1 className="sc-hero__title">Submit a Complaint</h1>
+                    <p className="sc-hero__subtitle">
+                        Help improve your community by reporting civic issues. Fill in the details below and we'll get it to the right authorities.
+                    </p>
                 </div>
-              </div>
-
-              {/* Photo Upload */}
-              <div className="cs-sidebar-card sc-section">
-                <div className="cs-sidebar-card__title">📷 Photo Evidence <span className="sc-optional">(Optional)</span></div>
-                {!form.photoPreview ? (
-                  <label className="sc-dropzone">
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
-                    <div className="sc-dropzone-inner">
-                      <span className="sc-dropzone-icon">📁</span>
-                      <p className="sc-dropzone-text"><strong>Click to upload</strong> or drag and drop</p>
-                      <p className="sc-dropzone-hint">PNG, JPG, WEBP up to 10MB</p>
-                    </div>
-                  </label>
-                ) : (
-                  <div className="sc-photo-preview">
-                    <img src={form.photoPreview} alt="Preview" className="sc-photo-img" />
-                    <button type="button" className="sc-photo-remove" onClick={removePhoto}>✕ Remove Photo</button>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                <button type="button" className="cs-btn cs-btn--secondary" onClick={() => navigate('/dashboard')}>
-                  Cancel
-                </button>
-                <button type="submit" className="cs-btn cs-btn--primary">
-                  ➤ Submit Report
-                </button>
-              </div>
             </div>
 
             {/* ── Right: Map + Info ── */}
@@ -623,6 +588,8 @@ export default function SubmitComplaint() {
                 </div>
               </div>
 
+                    </div>
+                </form>
             </div>
           </div>
         </form>
