@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "./AuthContext";
 import "../Login-Signup.css";
 import API from "../api";
 
@@ -78,7 +79,6 @@ function CleanStreetLogo({ size = 100 }) {
   );
 }
 
-// Password strength checker
 function getStrength(password) {
   if (!password) return { score: 0, label: "", color: "" };
   let score = 0;
@@ -98,6 +98,7 @@ function getStrength(password) {
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "citizen" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -123,37 +124,30 @@ export default function Signup() {
     return e;
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) { setErrors(validationErrors); return; }
 
-  const validationErrors = validate();
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    return;
-  }
+    try {
+      setLoading(true);
+      const res = await API.post("/api/auth/register", {
+        name: form.firstName + " " + form.lastName,
+        email: form.email,
+        password: form.password,
+        role: form.role
+      });
+      const data = res.data;
+      localStorage.setItem('token', data.token);
+      login(data.user || data);
+      setLoading(false);
+      setSuccess(true);
+    } catch (err) {
+      setLoading(false);
+      setErrors({ general: err.response?.data?.message || "Registration failed. Please try again." });
+    }
+  };
 
-  try {
-    setLoading(true);
-
-    const res = await API.post("/api/auth/register", {
-      name: form.firstName + " " + form.lastName,
-      email: form.email,
-      password: form.password,
-      role: form.role
-    });
-
-    setLoading(false);
-    console.log("Backend response:", res.data);
-    setSuccess(true);
-
-  } catch (err) {
-    setLoading(false);
-    console.error("Backend error:", err.response ? err.response.data : err.message);
-    alert("Registration failed: " + (err.response?.data?.message || err.message));
-  }
-};
-
-  // ✅ Replaced "official" and "business" with a single "admin" role
   const roles = [
     { key: "citizen",   icon: "🧑‍💼", label: "Citizen"   },
     { key: "volunteer", icon: "🤝",   label: "Volunteer" },
@@ -221,7 +215,6 @@ const handleSubmit = async (e) => {
         <div className="auth-card">
 
           {success ? (
-            /* Success State */
             <div className="auth-success">
               <span className="auth-success__icon">🎉</span>
               <h2 className="auth-success__title">You're all set!</h2>
@@ -246,7 +239,12 @@ const handleSubmit = async (e) => {
 
               <form className="auth-form" onSubmit={handleSubmit}>
 
-                {/* Name row */}
+                {errors.general && (
+                  <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", display:"flex", alignItems:"center", gap:6 }}>
+                    ⚠️ {errors.general}
+                  </div>
+                )}
+
                 <div className="auth-row">
                   <div className="auth-group">
                     <label className="auth-label">First Name</label>
@@ -266,7 +264,6 @@ const handleSubmit = async (e) => {
                   </div>
                 </div>
 
-                {/* Email */}
                 <div className="auth-group">
                   <label className="auth-label">Email address</label>
                   <div className="auth-input-wrap">
@@ -276,7 +273,6 @@ const handleSubmit = async (e) => {
                   {errors.email && <span className="auth-error-msg">⚠ {errors.email}</span>}
                 </div>
 
-                {/* Password */}
                 <div className="auth-group">
                   <label className="auth-label">Password</label>
                   <div className="auth-input-wrap">
@@ -285,7 +281,6 @@ const handleSubmit = async (e) => {
                     <button type="button" className="auth-input-toggle" onClick={() => setShowPass(s => !s)} tabIndex={-1}>{showPass ? "🙈" : "👁️"}</button>
                   </div>
                   {errors.password && <span className="auth-error-msg">⚠ {errors.password}</span>}
-                  {/* Strength meter */}
                   {form.password && (
                     <div className="auth-strength">
                       <div className="auth-strength__bars">
@@ -300,16 +295,16 @@ const handleSubmit = async (e) => {
                   )}
                 </div>
 
-                {/* Role selector */}
                 <div className="auth-group">
                   <label className="auth-label">I am a…</label>
-                  <div className="auth-roles">
+                  <div className="auth-roles" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
                     {roles.map(r => (
                       <button
                         key={r.key}
                         type="button"
                         className={`auth-role-btn${form.role === r.key ? " auth-role-btn--active" : ""}`}
                         onClick={() => setForm(f => ({ ...f, role: r.key }))}
+                        style={r.key === "admin" ? { gridColumn: "1 / -1" } : {}}
                       >
                         <span className="auth-role-btn__icon">{r.icon}</span>
                         <span className="auth-role-btn__label">{r.label}</span>
@@ -318,7 +313,6 @@ const handleSubmit = async (e) => {
                   </div>
                 </div>
 
-                {/* Submit */}
                 <button className="auth-btn auth-btn--green" type="submit" disabled={loading}>
                   {loading ? (<><span className="auth-btn__spinner"/>Creating account…</>) : "Create Account 🌿"}
                 </button>
