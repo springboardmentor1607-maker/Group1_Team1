@@ -1,27 +1,28 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
-
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import SubmitComplaint from "./pages/SubmitComplaint";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Redirect root to login */}
-        <Route path="/"                 element={<Navigate to="/login" replace />} />
+    <Routes>
+      {/* default */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Auth pages */}
-        <Route path="/login"            element={<Login />} />
-        <Route path="/signup"           element={<Signup />} />
+      {/* auth */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
-        {/* App pages */}
+      {/* main */}
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/submit-complaint" element={<SubmitComplaint />} />
 
-
-        {/* Catch-all fallback */}
-        <Route path="*"                 element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+      {/* fallback */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 }
