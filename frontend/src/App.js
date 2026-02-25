@@ -1,27 +1,15 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
+import { Routes, Route, Navigate } from "react-router-dom"; // remove BrowserRouter import
 
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
-
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Redirect root to login */}
-        <Route path="/"                 element={<Navigate to="/login" replace />} />
-
-        {/* Auth pages */}
-        <Route path="/login"            element={<Login />} />
-        <Route path="/signup"           element={<Signup />} />
-
-        {/* App pages */}
-
-
-        {/* Catch-all fallback */}
-        <Route path="*"                 element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/"      element={<Navigate to="/login" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="*"      element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 }
