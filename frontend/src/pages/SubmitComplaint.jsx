@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
@@ -383,8 +385,11 @@ export default function SubmitComplaint() {
                 Submit Another
               </button>
             </div>
-        );
-    }
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Main Form ───────────────────────────────────────────────────────────────
   return (
@@ -533,17 +538,59 @@ export default function SubmitComplaint() {
                     placeholder="e.g., Near City Hall"
                   />
                 </div>
-            </nav>
 
-            {/* ── Hero ── */}
-            <div className="sc-hero">
-                <div className="sc-hero__content">
-                    <div className="sc-hero__eyebrow">📋 Report a Civic Issue</div>
-                    <h1 className="sc-hero__title">Submit a Complaint</h1>
-                    <p className="sc-hero__subtitle">
-                        Help improve your community by reporting civic issues. Fill in the details below and we'll get it to the right authorities.
-                    </p>
+                {/* Description Field */}
+                <div className="cs-form-group">
+                  <label className="cs-label">Description <span className="sc-required">*</span></label>
+                  <textarea
+                    className="cs-input"
+                    name="description"
+                    value={form.description}
+                    onChange={handleChange}
+                    rows="4"
+                    placeholder="Describe the issue in detail..."
+                    required
+                  />
                 </div>
+
+                {/* Photo Upload */}
+                <div className="cs-form-group">
+                  <label className="cs-label">Photo (Optional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhoto}
+                    className="cs-input"
+                  />
+                  {form.photoPreview && (
+                    <div style={{ marginTop: 12 }}>
+                      <img src={form.photoPreview} alt="Preview" style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: 200, 
+                        borderRadius: 8,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                      }} />
+                      <button
+                        type="button"
+                        onClick={removePhoto}
+                        style={{
+                          marginTop: 8,
+                          padding: '4px 12px',
+                          background: '#ef5350',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontSize: 12
+                        }}
+                      >
+                        Remove Photo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
             </div>
 
             {/* ── Right: Map + Info ── */}
@@ -588,9 +635,24 @@ export default function SubmitComplaint() {
                 </div>
               </div>
 
-                    </div>
-                </form>
+              {/* Submit Button */}
+              <div className="cs-sidebar-card sc-section" style={{ textAlign: 'center', paddingTop: 20 }}>
+                <button 
+                  type="submit" 
+                  className="cs-btn cs-btn--primary" 
+                  style={{ 
+                    width: '100%',
+                    padding: '12px 24px',
+                    fontSize: 16,
+                    fontWeight: 600
+                  }}
+                >
+                  🚀 Submit Complaint
+                </button>
+              </div>
+
             </div>
+
           </div>
         </form>
       </div>
