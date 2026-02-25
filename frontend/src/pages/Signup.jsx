@@ -123,37 +123,36 @@ export default function Signup() {
     return e;
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const validationErrors = validate();
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    return;
-  }
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const res = await API.post("/api/auth/register", {
-      name: form.firstName + " " + form.lastName,
-      email: form.email,
-      password: form.password,
-      role: form.role
-    });
+      const res = await API.post("/api/auth/register", {
+        name: form.firstName + " " + form.lastName,
+        email: form.email,
+        password: form.password,
+        role: form.role
+      });
 
-    setLoading(false);
-    console.log("Backend response:", res.data);
-    setSuccess(true);
+      setLoading(false);
+      console.log("Backend response:", res.data);
+      setSuccess(true);
 
-  } catch (err) {
-    setLoading(false);
-    console.error("Backend error:", err.response ? err.response.data : err.message);
-    alert("Registration failed: " + (err.response?.data?.message || err.message));
-  }
-};
+    } catch (err) {
+      setLoading(false);
+      console.error("Backend error:", err.response ? err.response.data : err.message);
+      alert("Registration failed: " + (err.response?.data?.message || err.message));
+    }
+  };
 
-  // ✅ Replaced "official" and "business" with a single "admin" role
   const roles = [
     { key: "citizen",   icon: "🧑‍💼", label: "Citizen"   },
     { key: "volunteer", icon: "🤝",   label: "Volunteer" },
@@ -303,13 +302,21 @@ const handleSubmit = async (e) => {
                 {/* Role selector */}
                 <div className="auth-group">
                   <label className="auth-label">I am a…</label>
-                  <div className="auth-roles">
+                  <div
+                    className="auth-roles"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "10px",
+                    }}
+                  >
                     {roles.map(r => (
                       <button
                         key={r.key}
                         type="button"
                         className={`auth-role-btn${form.role === r.key ? " auth-role-btn--active" : ""}`}
                         onClick={() => setForm(f => ({ ...f, role: r.key }))}
+                        style={r.key === "admin" ? { gridColumn: "1 / -1" } : {}}
                       >
                         <span className="auth-role-btn__icon">{r.icon}</span>
                         <span className="auth-role-btn__label">{r.label}</span>
