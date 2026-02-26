@@ -87,7 +87,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
   const [locError, setLocError] = useState('');
 
   useEffect(() => {
-    // Dynamically load Leaflet CSS
     if (!document.getElementById('leaflet-css')) {
       const link = document.createElement('link');
       link.id = 'leaflet-css';
@@ -96,7 +95,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
       document.head.appendChild(link);
     }
 
-    // Dynamically load Leaflet JS
     const initMap = () => {
       if (mapInstanceRef.current || !mapRef.current) return;
       const L = window.L;
@@ -109,7 +107,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
         maxZoom: 19,
       }).addTo(map);
 
-      // Custom green marker icon
       const greenIcon = L.divIcon({
         html: `<div style="
           background: #4caf50;
@@ -153,7 +150,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
     };
   }, []);
 
-  // If parent passes coords (e.g. from geolocation), fly there
   useEffect(() => {
     if (!selectedCoords || !mapInstanceRef.current) return;
     const { lat, lng } = selectedCoords;
@@ -198,7 +194,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
         setLocating(false);
         const address = await reverseGeocode(lat, lng);
         onLocationSelect({ lat, lng, address });
-        // fly map
         if (mapInstanceRef.current && window.L) {
           const L = window.L;
           mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 1.5 });
@@ -215,13 +210,7 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
 
   return (
     <div>
-      {/* Map toolbar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 10,
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <button
           type="button"
           onClick={handleGeolocate}
@@ -257,7 +246,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
         <div style={{ fontSize: 12, color: '#e53935', marginBottom: 8 }}>⚠ {locError}</div>
       )}
 
-      {/* Map container */}
       <div
         ref={mapRef}
         style={{
@@ -274,7 +262,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
         📍 Click the map or use "My Location" to mark the exact issue spot. The address will auto-fill.
       </p>
 
-      {/* Spinner keyframes */}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -283,7 +270,7 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function SubmitComplaint() {
   const navigate = useNavigate();
-  const { user, getInitials } = useAuth();
+  const { user, logout, getInitials } = useAuth();
 
   const displayName = user?.name || 'User';
   const avatar = user?.name ? getInitials(user.name) : 'U';
@@ -319,7 +306,6 @@ export default function SubmitComplaint() {
 
   const removePhoto = () => setForm(f => ({ ...f, photo: null, photoPreview: null }));
 
-  // Called by map when user clicks or geolocates
   const handleLocationSelect = ({ lat, lng, address }) => {
     setSelectedCoords({ lat, lng });
     setForm(f => ({
@@ -370,34 +356,52 @@ export default function SubmitComplaint() {
   }
 };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   const navLinks = [
     { label: 'Dashboard', path: '/dashboard' },
     { label: 'Report Issue', path: '/submit-complaint' },
     { label: 'View Complaints', path: '/complaints' },
   ];
 
+  // ── Navbar (shared) ─────────────────────────────────────────────────────────
+  const Navbar = ({ activePage }) => (
+    <nav className="cs-navbar">
+      <div className="cs-navbar__brand">
+        <CleanStreetLogo size={42} />
+        <span className="cs-navbar__name">CleanStreet</span>
+      </div>
+      <div className="cs-navbar__links">
+        {navLinks.map(item => (
+          <span
+            key={item.label}
+            className={`cs-navbar__link ${item.label === activePage ? 'cs-navbar__link--active' : ''}`}
+            onClick={() => navigate(item.path)}
+            style={{ cursor: 'pointer' }}
+          >
+            {item.label}
+          </span>
+        ))}
+      </div>
+      <div className="cs-navbar__actions">
+        <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={handleLogout} style={{ background: "#2563eb", color: "#fff", borderColor: "#2563eb" }}>
+          Logout
+        </button>
+        <div className="cs-avatar" onClick={() => navigate('/profile')} title="My Profile" style={{ cursor: 'pointer' }}>
+          {avatar}
+        </div>
+      </div>
+    </nav>
+  );
+
   // ── Success Screen ──────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className="cs-page">
-        <nav className="cs-navbar">
-          <div className="cs-navbar__brand">
-            <CleanStreetLogo size={42} />
-            <span className="cs-navbar__name">CleanStreet</span>
-          </div>
-          <div className="cs-navbar__links">
-            {navLinks.map(item => (
-              <span key={item.label} className="cs-navbar__link" onClick={() => navigate(item.path)} style={{ cursor: 'pointer' }}>
-                {item.label}
-              </span>
-            ))}
-          </div>
-          <div className="cs-navbar__actions">
-            <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => navigate('/login')}>Login</button>
-            <button className="cs-btn--register" onClick={() => navigate('/signup')}>Register</button>
-            <div className="cs-avatar" onClick={() => navigate('/profile')} style={{ cursor: 'pointer' }}>{avatar}</div>
-          </div>
-        </nav>
+        <Navbar activePage="" />
 
         <div className="sc-success-screen">
           <div className="sc-success-card">
@@ -430,30 +434,7 @@ export default function SubmitComplaint() {
   return (
     <div className="cs-page">
 
-      {/* Navbar */}
-      <nav className="cs-navbar">
-        <div className="cs-navbar__brand">
-          <CleanStreetLogo size={42} />
-          <span className="cs-navbar__name">CleanStreet</span>
-        </div>
-        <div className="cs-navbar__links">
-          {navLinks.map(item => (
-            <span
-              key={item.label}
-              className={`cs-navbar__link ${item.label === 'Report Issue' ? 'cs-navbar__link--active' : ''}`}
-              onClick={() => navigate(item.path)}
-              style={{ cursor: 'pointer' }}
-            >
-              {item.label}
-            </span>
-          ))}
-        </div>
-        <div className="cs-navbar__actions">
-          <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => navigate('/login')}>Login</button>
-          <button className="cs-btn--register" onClick={() => navigate('/signup')}>Register</button>
-          <div className="cs-avatar" onClick={() => navigate('/profile')} title="My Profile" style={{ cursor: 'pointer' }}>{avatar}</div>
-        </div>
-      </nav>
+      <Navbar activePage="Report Issue" />
 
       {/* Hero */}
       <div className="sc-hero">
@@ -536,11 +517,9 @@ export default function SubmitComplaint() {
                   </div>
                 </div>
 
-                {/* Hidden lat/lng fields */}
                 <input type="hidden" name="lat" value={form.lat} />
                 <input type="hidden" name="lng" value={form.lng} />
 
-                {/* Coordinates badge */}
                 {form.lat && form.lng && (
                   <div style={{
                     display: 'inline-flex',
@@ -574,6 +553,7 @@ export default function SubmitComplaint() {
                   />
                 </div>
 
+<<<<<<< HEAD
                 {/* Description Field */}
                 <div className="cs-form-group">
                   <label className="cs-label">Description <span className="sc-required">*</span></label>
@@ -583,10 +563,20 @@ export default function SubmitComplaint() {
                     value={form.description}
                     onChange={handleChange}
                     rows="4"
+=======
+                <div className="cs-form-group" style={{ marginBottom: 0 }}>
+                  <label className="cs-label">Description <span className="sc-required">*</span></label>
+                  <textarea
+                    className="cs-input cs-textarea"
+                    name="description"
+                    value={form.description}
+                    onChange={handleChange}
+>>>>>>> Anusha
                     placeholder="Describe the issue in detail..."
                     required
                   />
                 </div>
+<<<<<<< HEAD
 
                 {/* Photo Upload */}
                 <div className="cs-form-group">
@@ -626,6 +616,39 @@ export default function SubmitComplaint() {
                 </div>
               </div>
 
+=======
+              </div>
+
+              {/* Photo Upload */}
+              <div className="cs-sidebar-card sc-section">
+                <div className="cs-sidebar-card__title">📷 Photo Evidence <span className="sc-optional">(Optional)</span></div>
+                {!form.photoPreview ? (
+                  <label className="sc-dropzone">
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
+                    <div className="sc-dropzone-inner">
+                      <span className="sc-dropzone-icon">📁</span>
+                      <p className="sc-dropzone-text"><strong>Click to upload</strong> or drag and drop</p>
+                      <p className="sc-dropzone-hint">PNG, JPG, WEBP up to 10MB</p>
+                    </div>
+                  </label>
+                ) : (
+                  <div className="sc-photo-preview">
+                    <img src={form.photoPreview} alt="Preview" className="sc-photo-img" />
+                    <button type="button" className="sc-photo-remove" onClick={removePhoto}>✕ Remove Photo</button>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                <button type="button" className="cs-btn cs-btn--secondary" onClick={() => navigate('/dashboard')}>
+                  Cancel
+                </button>
+                <button type="submit" className="cs-btn cs-btn--primary">
+                  ➤ Submit Report
+                </button>
+              </div>
+>>>>>>> Anusha
             </div>
 
             {/* ── Right: Map + Info ── */}
@@ -670,6 +693,7 @@ export default function SubmitComplaint() {
                 </div>
               </div>
 
+<<<<<<< HEAD
               {/* Submit Button */}
               <div className="cs-sidebar-card sc-section" style={{ textAlign: 'center', paddingTop: 20 }}>
                 <button 
@@ -686,6 +710,8 @@ export default function SubmitComplaint() {
                 </button>
               </div>
 
+=======
+>>>>>>> Anusha
             </div>
 
           </div>
