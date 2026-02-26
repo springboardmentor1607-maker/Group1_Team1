@@ -87,12 +87,12 @@ function Profile() {
 
     // Dynamic data from AuthContext with fallbacks
     const initialData = {
-        username: user?.username || "demo_user",
-        email: user?.email || "demo@cleanstreet.com",
-        fullName: user?.name || "Demo User",
-        phone: user?.phone || "+1-555-123-4567",
-        location: user?.location || "Downtown District",
-        bio: user?.bio || "Active citizen helping to improve our community through CleanStreet reporting.",
+        username: user?.username || "",
+        email: user?.email || "",
+        fullName: user?.name || "",
+        phone: user?.phone || "",
+        location: user?.location || "",
+        bio: user?.bio || "",
     };
 
     const [formData, setFormData] = useState(initialData);
@@ -174,11 +174,16 @@ function Profile() {
                         <h1 className="pf-hero__title">{savedData.fullName}</h1>
                         <p className="pf-hero__sub">@{savedData.username} · Member since {user?.memberSince || "July 2025"}</p>
                     </div>
+                    {/*
+                      TODO (Backend): Replace these zeros with real user stats.
+                      Suggested endpoint: GET /api/users/me/stats
+                      Expected response: { totalReports, resolved, votes, badges }
+                    */}
                     <div className="pf-hero__stats">
-                        <StatMini icon="⚠️" value="4" label="Reports" colorClass="pf-stat--blue" />
-                        <StatMini icon="✅" value="1" label="Resolved" colorClass="pf-stat--green" />
-                        <StatMini icon="👍" value="24" label="Votes" colorClass="pf-stat--purple" />
-                        <StatMini icon="🏅" value="3" label="Badges" colorClass="pf-stat--yellow" />
+                        <StatMini icon="⚠️" value="0" label="Reports" colorClass="pf-stat--blue" />
+                        <StatMini icon="✅" value="0" label="Resolved" colorClass="pf-stat--green" />
+                        <StatMini icon="👍" value="0" label="Votes" colorClass="pf-stat--purple" />
+                        <StatMini icon="🏅" value="0" label="Badges" colorClass="pf-stat--yellow" />
                     </div>
                 </div>
 
@@ -205,7 +210,12 @@ function Profile() {
                             </div>
                             <p className="pf-avatar-card__since">Member since {user?.memberSince || "July 3, 2025"}</p>
                         </div>
-
+                        {/* 
+                            TODO (Backend): Badges are currently static placeholders.
+                            Suggested endpoint: GET /api/users/me/badges
+                            Expected response: [{ id, name, icon, description, earned: boolean }]
+                            Map over the array and show locked/unlocked state dynamically.
+                        */}
                         {/* Badges card */}
                         <div className="pf-badges-card">
                             <div className="pf-badges-card__title">🏅 Civic Badges</div>
