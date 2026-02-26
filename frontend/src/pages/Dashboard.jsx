@@ -421,6 +421,7 @@ export default function UserDashboard() {
             <button
               className="cs-btn cs-btn--outline cs-btn--sm"
               onClick={handleLogout}
+              style={{ background: '#2563eb', color: '#fff', borderColor: '#2563eb' }}
             >
               Logout
             </button>

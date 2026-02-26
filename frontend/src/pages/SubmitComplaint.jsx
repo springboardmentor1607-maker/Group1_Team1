@@ -71,6 +71,184 @@ function CleanStreetLogo({ size = 44 }) {
     );
 }
 
+// ─── Leaflet Map Component ────────────────────────────────────────────────────
+function LocationMap({ onLocationSelect, selectedCoords }) {
+    const mapRef = useRef(null);
+    const mapInstanceRef = useRef(null);
+    const markerRef = useRef(null);
+    const [locating, setLocating] = useState(false);
+    const [locError, setLocError] = useState('');
+
+    useEffect(() => {
+        // Inject Leaflet CSS once
+        if (!document.getElementById('leaflet-css')) {
+            const link = document.createElement('link');
+            link.id = 'leaflet-css';
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            document.head.appendChild(link);
+        }
+
+        const initMap = () => {
+            if (mapInstanceRef.current || !mapRef.current) return;
+            const L = window.L;
+            if (!L) return;
+
+            const map = L.map(mapRef.current, { zoomControl: true }).setView([20.5937, 78.9629], 5);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19,
+            }).addTo(map);
+
+            // Custom green teardrop pin icon
+            const greenIcon = L.divIcon({
+                html: `<div style="
+                    background: #4caf50;
+                    width: 28px; height: 28px;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    border: 3px solid white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                "></div>`,
+                iconSize: [28, 28],
+                iconAnchor: [14, 28],
+                className: '',
+            });
+
+            map.on('click', async (e) => {
+                const { lat, lng } = e.latlng;
+                placeMarker(L, map, greenIcon, lat, lng);
+                const address = await reverseGeocode(lat, lng);
+                onLocationSelect({ lat, lng, address });
+            });
+
+            mapInstanceRef.current = map;
+            mapInstanceRef.current._greenIcon = greenIcon;
+        };
+
+        if (window.L) {
+            initMap();
+        } else {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.onload = initMap;
+            document.head.appendChild(script);
+        }
+
+        return () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, []);
+
+    // Fly to coords when set from outside (e.g. future forward geocoding)
+    useEffect(() => {
+        if (!selectedCoords || !mapInstanceRef.current) return;
+        const { lat, lng } = selectedCoords;
+        const map = mapInstanceRef.current;
+        const L = window.L;
+        if (!L) return;
+        map.flyTo([lat, lng], 16, { duration: 1.5 });
+        placeMarker(L, map, map._greenIcon, lat, lng);
+    }, [selectedCoords]);
+
+    const placeMarker = (L, map, icon, lat, lng) => {
+        if (markerRef.current) markerRef.current.remove();
+        markerRef.current = L.marker([lat, lng], { icon })
+            .addTo(map)
+            .bindPopup(`<b>📍 Issue Location</b><br/>${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+            .openPopup();
+    };
+
+    const reverseGeocode = async (lat, lng) => {
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+            );
+            const data = await res.json();
+            return data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        } catch {
+            return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
+    };
+
+    const handleGeolocate = () => {
+        if (!navigator.geolocation) {
+            setLocError('Geolocation not supported by your browser.');
+            return;
+        }
+        setLocating(true);
+        setLocError('');
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                setLocating(false);
+                const address = await reverseGeocode(lat, lng);
+                onLocationSelect({ lat, lng, address });
+                if (mapInstanceRef.current && window.L) {
+                    const L = window.L;
+                    mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 1.5 });
+                    placeMarker(L, mapInstanceRef.current, mapInstanceRef.current._greenIcon, lat, lng);
+                }
+            },
+            () => {
+                setLocating(false);
+                setLocError('Could not get your location. Please click on the map instead.');
+            },
+            { timeout: 10000 }
+        );
+    };
+
+    return (
+        <div>
+            {/* Use My Location button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <button
+                    type="button"
+                    onClick={handleGeolocate}
+                    disabled={locating}
+                    className="sc-locate-btn"
+                >
+                    {locating ? (
+                        <>
+                            <span className="sc-locate-spinner" />
+                            Locating…
+                        </>
+                    ) : (
+                        <>📡 Use My Location</>
+                    )}
+                </button>
+                <span style={{ fontSize: 12, color: '#888' }}>or click the map to pin</span>
+            </div>
+
+            {locError && (
+                <div style={{ fontSize: 12, color: '#e53935', marginBottom: 8 }}>⚠ {locError}</div>
+            )}
+
+            {/* Map container */}
+            <div
+                ref={mapRef}
+                style={{
+                    height: 300,
+                    width: '100%',
+                    borderRadius: 12,
+                    border: '2px solid #e8f5e9',
+                    overflow: 'hidden',
+                    zIndex: 0,
+                }}
+            />
+
+            <p style={{ fontSize: 12, color: '#888', marginTop: 8, marginBottom: 0 }}>
+                📍 Click the map or use "My Location" to mark the exact issue spot. The address will auto-fill.
+            </p>
+        </div>
+    );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function SubmitComplaint() {
     const navigate = useNavigate();
@@ -79,6 +257,7 @@ export default function SubmitComplaint() {
     const avatar = user?.name ? getInitials(user.name) : 'U';
 
     const [submitted, setSubmitted] = useState(false);
+    const [selectedCoords, setSelectedCoords] = useState(null);
     const [form, setForm] = useState({
         title: '',
         type: '',
@@ -88,12 +267,9 @@ export default function SubmitComplaint() {
         description: '',
         photo: null,
         photoPreview: null,
+        lat: '',
+        lng: '',
     });
-
-    const addressTimeoutRef = useRef(null);
-    const mapRef = useRef(null);
-    const leafletMap = useRef(null);
-    const markerRef = useRef(null);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -110,32 +286,14 @@ export default function SubmitComplaint() {
 
     const removePhoto = () => setForm(f => ({ ...f, photo: null, photoPreview: null }));
 
-    // Address input → forward geocode → move map pin
-    const handleAddressChange = (e) => {
-        const value = e.target.value;
-        setForm(f => ({ ...f, address: value }));
-
-        if (addressTimeoutRef.current) clearTimeout(addressTimeoutRef.current);
-        addressTimeoutRef.current = setTimeout(() => {
-            if (value.trim().length < 5) return;
-            fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&limit=1&addressdetails=1`, {
-                headers: { 'Accept-Language': 'en', 'Accept': 'application/json' }
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.length > 0) {
-                        const { lat, lon } = data[0];
-                        const L = window.L;
-                        const map = leafletMap.current;
-                        if (!map || !L) return;
-                        map.setView([parseFloat(lat), parseFloat(lon)], 15);
-                        if (markerRef.current) markerRef.current.remove();
-                        markerRef.current = L.marker([parseFloat(lat), parseFloat(lon)])
-                            .addTo(map).bindPopup('📍 Issue location').openPopup();
-                    }
-                })
-                .catch(() => { });
-        }, 800);
+    const handleLocationSelect = ({ lat, lng, address }) => {
+        setSelectedCoords({ lat, lng });
+        setForm(f => ({
+            ...f,
+            lat: lat.toFixed(6),
+            lng: lng.toFixed(6),
+            address: address || f.address,
+        }));
     };
 
     const handleSubmit = (e) => {
@@ -148,67 +306,24 @@ export default function SubmitComplaint() {
         navigate('/login');
     };
 
-    // Map click → reverse geocode → fill address field
-    useEffect(() => {
-        if (leafletMap.current) return;
-        const L = window.L;
-        if (!L || !mapRef.current) return;
+    const navLinks = [
+        { label: 'Dashboard', path: '/dashboard' },
+        { label: 'Report Issue', path: '/submit-complaint' },
+        { label: 'View Complaints', path: '/complaints' },
+    ];
 
-        const map = L.map(mapRef.current).setView([40.7128, -74.0060], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        map.on('click', (e) => {
-            const { lat, lng } = e.latlng;
-            if (markerRef.current) markerRef.current.remove();
-            markerRef.current = L.marker([lat, lng]).addTo(map)
-                .bindPopup('📍 Issue location').openPopup();
-
-            fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
-                headers: { 'Accept-Language': 'en', 'Accept': 'application/json' }
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.address) {
-                        const a = data.address;
-                        const parts = [
-                            a.house_number,
-                            a.road || a.pedestrian || a.footway,
-                            a.suburb || a.neighbourhood || a.quarter,
-                            a.city || a.town || a.village || a.county,
-                            a.state,
-                            a.country,
-                        ].filter(Boolean);
-                        setForm(f => ({ ...f, address: parts.join(', ') }));
-                    } else {
-                        setForm(f => ({ ...f, address: data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}` }));
-                    }
-                })
-                .catch(() => {
-                    setForm(f => ({ ...f, address: `${lat.toFixed(5)}, ${lng.toFixed(5)}` }));
-                });
-        });
-
-        leafletMap.current = map;
-    }, [submitted]);
-
-    // ── Shared Navbar ──
-    const Navbar = () => (
+    // ── Navbar ───────────────────────────────────────────────────────────────
+    const Navbar = ({ activePage }) => (
         <nav className="cs-navbar">
             <div className="cs-navbar__brand">
                 <CleanStreetLogo size={42} />
                 <span className="cs-navbar__name">CleanStreet</span>
             </div>
             <div className="cs-navbar__links">
-                {[
-                    { label: 'Dashboard', path: '/dashboard' },
-                    { label: 'Report Issue', path: '/submit-complaint' },
-                    { label: 'View Complaints', path: '/complaints' },
-                ].map(item => (
+                {navLinks.map(item => (
                     <span
                         key={item.label}
-                        className={`cs-navbar__link ${item.label === 'Report Issue' ? 'cs-navbar__link--active' : ''}`}
+                        className={`cs-navbar__link ${item.label === activePage ? 'cs-navbar__link--active' : ''}`}
                         onClick={() => navigate(item.path)}
                         style={{ cursor: 'pointer' }}
                     >
@@ -218,35 +333,53 @@ export default function SubmitComplaint() {
             </div>
             <div className="cs-navbar__actions">
                 {user ? (
-                    <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={handleLogout}>Logout</button>
+                    <button
+                        className="cs-btn cs-btn--outline cs-btn--sm"
+                        onClick={handleLogout}
+                        style={{ background: '#2563eb', color: '#fff', borderColor: '#2563eb' }}
+                    >
+                        Logout
+                    </button>
                 ) : (
                     <>
                         <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => navigate('/login')}>Login</button>
                         <button className="cs-btn--register" onClick={() => navigate('/signup')}>Register</button>
                     </>
                 )}
-                <div className="cs-avatar" onClick={() => navigate('/profile')} title="My Profile" style={{ cursor: 'pointer' }}>{avatar}</div>
+                <div className="cs-avatar" onClick={() => navigate('/profile')} title="My Profile" style={{ cursor: 'pointer' }}>
+                    {avatar}
+                </div>
             </div>
         </nav>
     );
 
-    // ── Success Screen ──
+    // ── Success Screen ────────────────────────────────────────────────────────
     if (submitted) {
         return (
             <div className="cs-page">
-                <Navbar />
+                <Navbar activePage="" />
                 <div className="sc-success-screen">
                     <div className="sc-success-card">
                         <div className="sc-success-icon">✅</div>
                         <h2>Report Submitted!</h2>
                         <p>Your complaint has been received and will be reviewed by local authorities shortly.</p>
                         <p className="sc-success-sub">You'll be notified of any updates via your dashboard.</p>
+                        {form.lat && form.lng && (
+                            <p style={{ fontSize: 13, color: '#888', marginTop: 8 }}>
+                                📍 Pinned at {parseFloat(form.lat).toFixed(4)}, {parseFloat(form.lng).toFixed(4)}
+                            </p>
+                        )}
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
-                            <button className="cs-btn cs-btn--primary" onClick={() => navigate('/dashboard')}>Go to Dashboard</button>
+                            <button className="cs-btn cs-btn--primary" onClick={() => navigate('/dashboard')}>
+                                Go to Dashboard
+                            </button>
                             <button className="cs-btn cs-btn--secondary" onClick={() => {
                                 setSubmitted(false);
-                                setForm({ title: '', type: '', priority: '', address: '', landmark: '', description: '', photo: null, photoPreview: null });
-                            }}>Submit Another</button>
+                                setSelectedCoords(null);
+                                setForm({ title: '', type: '', priority: '', address: '', landmark: '', description: '', photo: null, photoPreview: null, lat: '', lng: '' });
+                            }}>
+                                Submit Another
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -254,10 +387,10 @@ export default function SubmitComplaint() {
         );
     }
 
-    // ── Main Form ──
+    // ── Main Form ─────────────────────────────────────────────────────────────
     return (
         <div className="cs-page">
-            <Navbar />
+            <Navbar activePage="Report Issue" />
 
             {/* Hero */}
             <div className="sc-hero">
@@ -275,8 +408,10 @@ export default function SubmitComplaint() {
                 <form onSubmit={handleSubmit}>
                     <div className="sc-form-grid">
 
-                        {/* Left Column */}
+                        {/* ── Left: Form Fields ── */}
                         <div className="sc-form-col">
+
+                            {/* Issue Details card */}
                             <div className="cs-sidebar-card sc-section">
                                 <div className="cs-sidebar-card__title">📝 Issue Details</div>
 
@@ -325,32 +460,76 @@ export default function SubmitComplaint() {
                                         </div>
                                     </div>
                                     <div className="cs-form-group">
-                                        <label className="cs-label">Address <span className="sc-required">*</span></label>
+                                        <label className="cs-label">
+                                            Address <span className="sc-required">*</span>
+                                            {form.lat && (
+                                                <span style={{ fontSize: 11, color: '#4caf50', marginLeft: 6 }}>
+                                                    📍 Auto-filled from map
+                                                </span>
+                                            )}
+                                        </label>
                                         <input
                                             className="cs-input"
                                             name="address"
                                             value={form.address}
-                                            onChange={handleAddressChange}
-                                            placeholder="Enter street address"
+                                            onChange={handleChange}
+                                            placeholder="Pin on map or type address"
                                             required
                                         />
                                     </div>
                                 </div>
 
+                                {/* Hidden lat/lng fields for form submission */}
+                                <input type="hidden" name="lat" value={form.lat} />
+                                <input type="hidden" name="lng" value={form.lng} />
+
+                                {/* Coordinate pill shown when location is pinned */}
+                                {form.lat && form.lng && (
+                                    <div style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                                        background: '#e8f5e9', border: '1px solid #a5d6a7',
+                                        borderRadius: 20, padding: '4px 12px',
+                                        fontSize: 12, color: '#2e7d32', marginBottom: 12,
+                                    }}>
+                                        📍 {parseFloat(form.lat).toFixed(4)}, {parseFloat(form.lng).toFixed(4)}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setForm(f => ({ ...f, lat: '', lng: '' }));
+                                                setSelectedCoords(null);
+                                            }}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 13, padding: 0, lineHeight: 1 }}
+                                        >✕</button>
+                                    </div>
+                                )}
+
                                 {/* Landmark */}
                                 <div className="cs-form-group">
                                     <label className="cs-label">Nearby Landmark <span className="sc-optional">(Optional)</span></label>
-                                    <input className="cs-input" name="landmark" value={form.landmark} onChange={handleChange} placeholder="e.g., Near City Hall" />
+                                    <input
+                                        className="cs-input"
+                                        name="landmark"
+                                        value={form.landmark}
+                                        onChange={handleChange}
+                                        placeholder="e.g., Near City Hall"
+                                    />
                                 </div>
 
                                 {/* Description */}
                                 <div className="cs-form-group" style={{ marginBottom: 0 }}>
                                     <label className="cs-label">Description <span className="sc-required">*</span></label>
-                                    <textarea className="cs-input cs-textarea" name="description" value={form.description} onChange={handleChange} placeholder="Describe the issue in detail..." required />
+                                    <textarea
+                                        className="cs-input cs-textarea"
+                                        name="description"
+                                        value={form.description}
+                                        onChange={handleChange}
+                                        placeholder="Describe the issue in detail..."
+                                        required
+                                    />
                                 </div>
                             </div>
 
-                            {/* Photo Upload */}
+                            {/* Photo Upload card */}
                             <div className="cs-sidebar-card sc-section">
                                 <div className="cs-sidebar-card__title">📷 Photo Evidence <span className="sc-optional">(Optional)</span></div>
                                 {!form.photoPreview ? (
@@ -370,31 +549,41 @@ export default function SubmitComplaint() {
                                 )}
                             </div>
 
-                            {/* Buttons */}
+                            {/* Action buttons */}
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                                <button type="button" className="cs-btn cs-btn--secondary" onClick={() => navigate('/dashboard')}>Cancel</button>
-                                <button type="submit" className="cs-btn cs-btn--primary">➤ Submit Report</button>
+                                <button type="button" className="cs-btn cs-btn--secondary" onClick={() => navigate('/dashboard')}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="cs-btn cs-btn--primary">
+                                    ➤ Submit Report
+                                </button>
                             </div>
                         </div>
 
-                        {/* Right Column */}
+                        {/* ── Right: Map + Info ── */}
                         <div className="sc-side-col">
+
+                            {/* Map card */}
                             <div className="cs-sidebar-card sc-section">
-                                <div className="cs-sidebar-card__title">📍 Location on Map</div>
-                                <div ref={mapRef} className="sc-map" />
-                                <p className="sc-map-hint">Click on the map to mark the location, or type an address in the field above.</p>
+                                <div className="cs-sidebar-card__title">📍 Pin Location on Map</div>
+                                <LocationMap
+                                    onLocationSelect={handleLocationSelect}
+                                    selectedCoords={selectedCoords}
+                                />
                             </div>
 
+                            {/* Tips card */}
                             <div className="cs-health-card sc-tips-card">
                                 <div className="cs-health-card__label">💡 Tips for a Good Report</div>
                                 <div className="sc-tips-list">
-                                    <div className="sc-tip">✓ Be specific about the location</div>
+                                    <div className="sc-tip">✓ Pin the exact location on the map</div>
                                     <div className="sc-tip">✓ Add a clear photo if possible</div>
                                     <div className="sc-tip">✓ Describe the issue thoroughly</div>
                                     <div className="sc-tip">✓ Set the correct priority level</div>
                                 </div>
                             </div>
 
+                            {/* What happens next card */}
                             <div className="cs-sidebar-card sc-section">
                                 <div className="cs-sidebar-card__title">🔄 What Happens Next?</div>
                                 <div className="sc-steps">
@@ -412,8 +601,8 @@ export default function SubmitComplaint() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
+                        </div>
                     </div>
                 </form>
             </div>

@@ -144,7 +144,7 @@ function Profile() {
                 <div className="pf-navbar__actions">
                     {/* Logout when logged in, Login+Register when not */}
                     {user ? (
-                        <button className="pf-btn pf-btn--outline" onClick={handleLogout} style={{ fontSize: 13, padding: "6px 14px" }}>
+                        <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={handleLogout} style={{ background: '#2563eb', color: '#fff', borderColor: '#2563eb' }}>
                             Logout
                         </button>
                     ) : (
