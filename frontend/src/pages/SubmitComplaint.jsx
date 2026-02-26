@@ -553,7 +553,6 @@ export default function SubmitComplaint() {
                   />
                 </div>
 
-<<<<<<< HEAD
                 {/* Description Field */}
                 <div className="cs-form-group">
                   <label className="cs-label">Description <span className="sc-required">*</span></label>
@@ -563,20 +562,10 @@ export default function SubmitComplaint() {
                     value={form.description}
                     onChange={handleChange}
                     rows="4"
-=======
-                <div className="cs-form-group" style={{ marginBottom: 0 }}>
-                  <label className="cs-label">Description <span className="sc-required">*</span></label>
-                  <textarea
-                    className="cs-input cs-textarea"
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
->>>>>>> Anusha
                     placeholder="Describe the issue in detail..."
                     required
                   />
                 </div>
-<<<<<<< HEAD
 
                 {/* Photo Upload */}
                 <div className="cs-form-group">
@@ -616,39 +605,6 @@ export default function SubmitComplaint() {
                 </div>
               </div>
 
-=======
-              </div>
-
-              {/* Photo Upload */}
-              <div className="cs-sidebar-card sc-section">
-                <div className="cs-sidebar-card__title">📷 Photo Evidence <span className="sc-optional">(Optional)</span></div>
-                {!form.photoPreview ? (
-                  <label className="sc-dropzone">
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
-                    <div className="sc-dropzone-inner">
-                      <span className="sc-dropzone-icon">📁</span>
-                      <p className="sc-dropzone-text"><strong>Click to upload</strong> or drag and drop</p>
-                      <p className="sc-dropzone-hint">PNG, JPG, WEBP up to 10MB</p>
-                    </div>
-                  </label>
-                ) : (
-                  <div className="sc-photo-preview">
-                    <img src={form.photoPreview} alt="Preview" className="sc-photo-img" />
-                    <button type="button" className="sc-photo-remove" onClick={removePhoto}>✕ Remove Photo</button>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                <button type="button" className="cs-btn cs-btn--secondary" onClick={() => navigate('/dashboard')}>
-                  Cancel
-                </button>
-                <button type="submit" className="cs-btn cs-btn--primary">
-                  ➤ Submit Report
-                </button>
-              </div>
->>>>>>> Anusha
             </div>
 
             {/* ── Right: Map + Info ── */}
@@ -693,7 +649,6 @@ export default function SubmitComplaint() {
                 </div>
               </div>
 
-<<<<<<< HEAD
               {/* Submit Button */}
               <div className="cs-sidebar-card sc-section" style={{ textAlign: 'center', paddingTop: 20 }}>
                 <button 
@@ -710,8 +665,6 @@ export default function SubmitComplaint() {
                 </button>
               </div>
 
-=======
->>>>>>> Anusha
             </div>
 
           </div>
