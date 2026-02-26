@@ -333,22 +333,15 @@ function Profile() {
                                         <p className="pf-card__sub">Your latest actions on CleanStreet</p>
                                     </div>
                                 </div>
+                                {/*
+                                    TODO (Backend): Fetch real activity from API.
+                                    Suggested endpoint: GET /api/users/me/activity?limit=10
+                                    Expected response: [{ icon, text, time, color }]
+                                */}
                                 <div className="pf-activity-list">
-                                    {[
-                                        { icon: "✅", text: "Pothole on Main Street resolved", time: "2 hours ago", color: "#22c55e" },
-                                        { icon: "➕", text: "Reported broken streetlight on Elm Ave", time: "4 hours ago", color: "#3b82f6" },
-                                        { icon: "🔄", text: "Garbage dump complaint updated", time: "6 hours ago", color: "#f59e0b" },
-                                        { icon: "💬", text: "New comment on water leak report", time: "1 day ago", color: "#8b5cf6" },
-                                        { icon: "👍", text: "Voted on 3 community issues", time: "2 days ago", color: "#06b6d4" },
-                                    ].map((a, i) => (
-                                        <div key={i} className="pf-activity-item">
-                                            <div className="pf-activity-item__icon" style={{ background: a.color + "18" }}>{a.icon}</div>
-                                            <div className="pf-activity-item__body">
-                                                <p className="pf-activity-item__text">{a.text}</p>
-                                                <p className="pf-activity-item__time">{a.time}</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                    <div style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "24px 0" }}>
+                                        No recent activity yet.
+                                    </div>
                                 </div>
                             </div>
                         )}
