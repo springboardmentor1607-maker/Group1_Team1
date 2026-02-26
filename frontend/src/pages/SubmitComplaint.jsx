@@ -350,7 +350,7 @@ export default function SubmitComplaint() {
         ))}
       </div>
       <div className="cs-navbar__actions">
-        <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={handleLogout}>
+        <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={handleLogout} style={{ background: "#2563eb", color: "#fff", borderColor: "#2563eb" }}>
           Logout
         </button>
         <div className="cs-avatar" onClick={() => navigate('/profile')} title="My Profile" style={{ cursor: 'pointer' }}>
