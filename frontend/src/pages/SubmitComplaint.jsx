@@ -330,10 +330,45 @@ export default function SubmitComplaint() {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const token = localStorage.getItem("token"); // adjust if different
+
+    const formData = new FormData();
+    formData.append("title", form.title);
+    formData.append("description", form.description);
+    formData.append("latitude", form.lat);
+    formData.append("longitude", form.lng);
+    formData.append("address", form.address);
+
+    if (form.photo) {
+      formData.append("photo", form.photo);
+    }
+
+    const res = await fetch("http://localhost:5000/api/complaints", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to submit");
+    }
+
+    console.log("SUCCESS:", data);
     setSubmitted(true);
-  };
+
+  } catch (err) {
+    console.error("Submit error:", err);
+    alert("Failed to submit complaint");
+  }
+};
 
   const navLinks = [
     { label: 'Dashboard', path: '/dashboard' },
