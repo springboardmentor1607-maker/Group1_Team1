@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import "../Dashboard.css";
+import Navbar from "./Navbar";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
@@ -74,11 +75,14 @@ function CleanStreetLogo({ size = 44 }) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    Resolved:  { bg: "#dcfce7", color: "#166534", dot: "#22c55e" },
-    Assigned:  { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b" },
-    Pending:   { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6" },
+    resolved:   { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved"   },
+    assigned:   { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"   },
+    pending:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"    },
+    in_review:  { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review"  },
+    received:   { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received"   },
   };
-  const s = map[status] || map["Pending"];
+  const key = status?.toLowerCase().replace(" ", "_") || "pending";
+  const s = map[key] || map["pending"];
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
@@ -87,7 +91,27 @@ function StatusBadge({ status }) {
       fontSize: 12, fontWeight: 600,
     }}>
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
-      {status}
+      {s.label}
+    </span>
+  );
+}
+
+// ─── Priority Badge ───────────────────────────────────────────────────────────
+function PriorityBadge({ priority }) {
+  const map = {
+    critical: { bg: "#fee2e2", color: "#991b1b" },
+    high:     { bg: "#ffedd5", color: "#9a3412" },
+    medium:   { bg: "#fef9c3", color: "#92400e" },
+    low:      { bg: "#dcfce7", color: "#166534" },
+  };
+  const s = map[priority?.toLowerCase()] || map["low"];
+  return (
+    <span style={{
+      background: s.bg, color: s.color,
+      padding: "2px 8px", borderRadius: 9999,
+      fontSize: 11, fontWeight: 700, textTransform: "capitalize",
+    }}>
+      {priority || "—"}
     </span>
   );
 }
@@ -103,119 +127,150 @@ function StatCard({ icon, count, label, accent }) {
   );
 }
 
+// ─── Table styles ─────────────────────────────────────────────────────────────
+const TH = ({ children, style }) => (
+  <th style={{
+    padding: "10px 14px", textAlign: "left", fontSize: 12,
+    fontWeight: 700, color: "#6b7280", textTransform: "uppercase",
+    letterSpacing: 0.5, borderBottom: "2px solid #f3f4f6",
+    background: "#f9fafb", ...style,
+  }}>{children}</th>
+);
+
+const TD = ({ children, style }) => (
+  <td style={{
+    padding: "12px 14px", fontSize: 13, color: "#374151",
+    borderBottom: "1px solid #f3f4f6", verticalAlign: "middle", ...style,
+  }}>{children}</td>
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 function AdminDashboard() {
   const navigate = useNavigate();
   const { user, logout, getInitials } = useAuth();
 
-  const [complaints, setComplaints] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
+  const [complaints, setComplaints]   = useState([]);
+  const [users, setUsers]             = useState([]);
+  const [volunteers, setVolunteers]   = useState([]);
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [loading, setLoading] = useState(false);
 
-  // Demo volunteers — TODO (Backend): fetch from GET /api/volunteers
-  const volunteers = [
-    { id: 1, name: "Nithya" },
-    { id: 2, name: "Anusha" },
-    { id: 3, name: "Anshu" },
-    { id: 4, name: "Dheeraj" },
-    { id: 5, name: "Abishek" },
-    { id: 6, name: "Rashmi" },
-    { id: 7, name: "Shraddha" }
-  ];
-
-  useEffect(() => {
-    /*
-      TODO (Backend): Replace localStorage with real API call.
-      Suggested endpoint: GET /api/complaints (admin view — all complaints)
-      Expected response: array of complaint objects
-    */
-    const stored = JSON.parse(localStorage.getItem("complaints")) || [];
-    setComplaints(stored);
-  }, []);
-
-  const assignVolunteer = (id) => {
-    const volunteerName = assignSelections[id];
-    if (!volunteerName) return;
-    const updated = complaints.map((c) =>
-      c.id === id ? { ...c, assignedTo: volunteerName, status: "Assigned" } : c
-    );
-    setComplaints(updated);
-    localStorage.setItem("complaints", JSON.stringify(updated));
-    // TODO (Backend): PATCH /api/complaints/:id { assignedTo, status: "Assigned" }
-  };
-
-  const markResolved = (id) => {
-    const updated = complaints.map((c) =>
-      c.id === id ? { ...c, status: "Resolved" } : c
-    );
-    setComplaints(updated);
-    localStorage.setItem("complaints", JSON.stringify(updated));
-    // TODO (Backend): PATCH /api/complaints/:id { status: "Resolved" }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  const total    = complaints.length;
-  const assigned = complaints.filter(c => c.status === "Assigned").length;
-  const resolved = complaints.filter(c => c.status === "Resolved").length;
-  const pending  = total - assigned - resolved;
-
+  const token = localStorage.getItem("token");
   const avatar = user?.name ? getInitials(user.name) : "AD";
 
+  // ── Fetch all data ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetchComplaints();
+    fetchUsers();
+  }, []);
+
+  const fetchComplaints = async () => {
+    try {
+      // TODO (Backend): GET /api/complaints — admin sees all complaints
+      const res = await fetch("http://localhost:5000/api/complaints", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) setComplaints(Array.isArray(data) ? data : data.complaints || []);
+    } catch (err) {
+      console.error("Failed to fetch complaints", err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      // TODO (Backend): GET /api/users — admin sees all users
+      const res = await fetch("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const allUsers = Array.isArray(data) ? data : data.users || [];
+        setUsers(allUsers);
+        setVolunteers(allUsers.filter(u => u.role === "volunteer"));
+      }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
+  };
+
+  const assignVolunteer = async (complaintId) => {
+    const volunteerId = assignSelections[complaintId];
+    if (!volunteerId) return;
+    try {
+      // TODO (Backend): PATCH /api/complaints/:id/assign { volunteerId }
+      const res = await fetch(`http://localhost:5000/api/complaints/${complaintId}/assign`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ volunteerId }),
+      });
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Assign failed", err);
+    }
+  };
+
+  const markResolved = async (complaintId) => {
+    try {
+      // TODO (Backend): PATCH /api/complaints/:id { status: "resolved" }
+      const res = await fetch(`http://localhost:5000/api/complaints/${complaintId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: "resolved" }),
+      });
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Resolve failed", err);
+    }
+  };
+
+  const changeUserRole = async (userId, newRole) => {
+    try {
+      // TODO (Backend): PATCH /api/users/:id/role { role }
+      const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (res.ok) fetchUsers();
+    } catch (err) {
+      console.error("Role change failed", err);
+    }
+  };
+
+  const handleLogout = () => { logout(); navigate("/login"); };
+
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  const total    = complaints.length;
+  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+  const resolved = complaints.filter(c => c.status === "resolved").length;
+  const inProg   = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+
   const filteredComplaints = complaints.filter(c => {
-    const matchStatus = statusFilter === "all" || c.status?.toLowerCase() === statusFilter;
+    const matchStatus = statusFilter === "all" || c.status === statusFilter;
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.address?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchStatus && matchSearch;
   });
 
   const sidebarItems = [
-    { key: "overview",    icon: "📊", label: "Overview"          },
-    { key: "complaints",  icon: "📋", label: "Manage Complaints" },
-    { key: "volunteers",  icon: "🤝", label: "Volunteers"        },
+    { key: "overview",   icon: "📊", label: "Overview"          },
+    { key: "complaints", icon: "📋", label: "Complaints"        },
+    { key: "users",      icon: "👥", label: "User Management"   },
+    { key: "volunteers", icon: "🤝", label: "Volunteers"        },
   ];
 
   return (
     <div className="cs-page" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
 
       {/* ── Navbar ── */}
-      <nav className="cs-navbar">
-        <div className="cs-navbar__brand">
-          <CleanStreetLogo size={42} />
-          <span className="cs-navbar__name">CleanStreet</span>
-          <span style={{
-            background: "#1e3a8a", color: "#93c5fd",
-            fontSize: 11, fontWeight: 700, padding: "2px 8px",
-            borderRadius: 9999, letterSpacing: 0.5, marginLeft: 4,
-          }}>ADMIN</span>
-        </div>
-        <div className="cs-navbar__links">
-          <span className="cs-navbar__link cs-navbar__link--active">Admin Panel</span>
-          <span className="cs-navbar__link" onClick={() => navigate("/dashboard")} style={{ cursor: "pointer" }}>
-            User Dashboard
-          </span>
-        </div>
-        <div className="cs-navbar__actions">
-          <button
-            className="cs-btn cs-btn--outline cs-btn--sm"
-            onClick={handleLogout}
-            style={{ background: "#2563eb", color: "#fff", borderColor: "#2563eb" }}
-          >
-            Logout
-          </button>
-          <div className="cs-avatar" title={user?.name || "Admin"}>
-            {avatar}
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
-      {/* ── Body: Sidebar + Content ── */}
       <div style={{ display: "flex", flex: 1 }}>
 
         {/* ── Sidebar ── */}
@@ -232,25 +287,22 @@ function AdminDashboard() {
               Navigation
             </div>
             {sidebarItems.map(item => (
-              <button
-                key={item.key}
-                onClick={() => setActiveTab(item.key)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  width: "100%", padding: "10px 12px",
-                  borderRadius: 8, border: "none", cursor: "pointer",
-                  fontFamily: "inherit", fontSize: 14, fontWeight: activeTab === item.key ? 600 : 400,
-                  background: activeTab === item.key ? "#eff6ff" : "transparent",
-                  color: activeTab === item.key ? "#2563eb" : "#374151",
-                  marginBottom: 4,
-                  transition: "all 0.15s ease",
-                }}
-              >
+              <button key={item.key} onClick={() => setActiveTab(item.key)} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                width: "100%", padding: "10px 12px",
+                borderRadius: 8, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 14,
+                fontWeight: activeTab === item.key ? 600 : 400,
+                background: activeTab === item.key ? "#eff6ff" : "transparent",
+                color: activeTab === item.key ? "#2563eb" : "#374151",
+                marginBottom: 4, transition: "all 0.15s ease",
+              }}>
                 <span style={{ fontSize: 16 }}>{item.icon}</span>
                 {item.label}
                 {item.key === "complaints" && total > 0 && (
                   <span style={{
-                    marginLeft: "auto", background: activeTab === item.key ? "#2563eb" : "#e5e7eb",
+                    marginLeft: "auto",
+                    background: activeTab === item.key ? "#2563eb" : "#e5e7eb",
                     color: activeTab === item.key ? "#fff" : "#6b7280",
                     fontSize: 11, fontWeight: 700,
                     padding: "1px 7px", borderRadius: 9999,
@@ -259,8 +311,6 @@ function AdminDashboard() {
               </button>
             ))}
           </div>
-
-          {/* Admin info at bottom */}
           <div style={{ marginTop: "auto", padding: "16px", borderTop: "1px solid #f3f4f6" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div className="cs-avatar" style={{ width: 32, height: 32, fontSize: 12 }}>{avatar}</div>
@@ -275,7 +325,7 @@ function AdminDashboard() {
         {/* ── Main Content ── */}
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
 
-          {/* ── Overview Tab ── */}
+          {/* ══ OVERVIEW TAB ══ */}
           {activeTab === "overview" && (
             <div>
               <div style={{ marginBottom: 24 }}>
@@ -283,26 +333,21 @@ function AdminDashboard() {
                 <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Monitor all civic complaints across the platform.</p>
               </div>
 
-              {/* Stat Cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={total}    label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={pending}   label="Pending"          accent="#f59e0b" />
-                <StatCard icon="🔄" count={assigned}  label="Assigned"         accent="#8b5cf6" />
-                <StatCard icon="✅" count={resolved}  label="Resolved"         accent="#22c55e" />
+                <StatCard icon="⚠️" count={total}     label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={pending}    label="Pending"          accent="#f59e0b" />
+                <StatCard icon="🔄" count={inProg}     label="In Progress"      accent="#8b5cf6" />
+                <StatCard icon="✅" count={resolved}   label="Resolved"         accent="#22c55e" />
               </div>
 
-              {/* Recent complaints preview */}
               <div className="cs-card">
                 <div className="cs-section-header" style={{ marginBottom: 16 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>Recent Complaints</div>
                     <div style={{ fontSize: 13, color: "#6b7280" }}>Latest submissions from citizens</div>
                   </div>
-                  <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>
-                    View All →
-                  </button>
+                  <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>View All →</button>
                 </div>
-
                 {complaints.length === 0 ? (
                   <div className="cs-empty">
                     <div className="cs-empty__icon">📭</div>
@@ -310,61 +355,63 @@ function AdminDashboard() {
                     <div className="cs-empty__desc">Complaints submitted by citizens will appear here.</div>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {complaints.slice(0, 5).map(c => (
-                      <div key={c.id} style={{
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        padding: "12px 16px", background: "#f9fafb",
-                        borderRadius: 10, border: "1px solid #f3f4f6",
-                      }}>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>{c.title}</div>
-                          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
-                            Assigned to: {c.assignedTo || "—"}
-                          </div>
-                        </div>
-                        <StatusBadge status={c.status || "Pending"} />
-                      </div>
-                    ))}
-                  </div>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <TH>Title</TH>
+                        <TH>Type</TH>
+                        <TH>Priority</TH>
+                        <TH>Status</TH>
+                        <TH>Date</TH>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {complaints.slice(0, 5).map(c => (
+                        <tr key={c._id || c.id} style={{ transition: "background 0.1s" }}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <TD style={{ fontWeight: 600 }}>{c.title}</TD>
+                          <TD style={{ color: "#6b7280" }}>{c.type || c.issueType || "—"}</TD>
+                          <TD><PriorityBadge priority={c.priority} /></TD>
+                          <TD><StatusBadge status={c.status} /></TD>
+                          <TD style={{ color: "#9ca3af" }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}</TD>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </div>
             </div>
           )}
 
-          {/* ── Manage Complaints Tab ── */}
+          {/* ══ COMPLAINTS TAB ══ */}
           {activeTab === "complaints" && (
             <div>
-              <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 20 }}>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Manage Complaints</h1>
-                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Assign volunteers and resolve civic issues.</p>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Assign volunteers and update complaint status.</p>
               </div>
 
               {/* Filter bar */}
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
-                    { key: "all",      label: "All",      count: total    },
-                    { key: "pending",  label: "Pending",  count: pending  },
-                    { key: "assigned", label: "Assigned", count: assigned },
-                    { key: "resolved", label: "Resolved", count: resolved },
+                    { key: "all",       label: "All",        count: total    },
+                    { key: "received",  label: "Pending",    count: pending  },
+                    { key: "in_review", label: "In Progress",count: inProg   },
+                    { key: "resolved",  label: "Resolved",   count: resolved },
                   ].map(f => (
-                    <button
-                      key={f.key}
+                    <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
-                      onClick={() => setStatusFilter(f.key)}
-                    >
-                      {f.label}
-                      <span className="cs-filter-tab__count">{f.count}</span>
+                      onClick={() => setStatusFilter(f.key)}>
+                      {f.label}<span className="cs-filter-tab__count">{f.count}</span>
                     </button>
                   ))}
                 </div>
-                <input
-                  className="cs-input cs-search-input"
+                <input className="cs-input cs-search-input"
                   placeholder="🔍 Search complaints..."
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
+                  onChange={e => setSearchQuery(e.target.value)} />
               </div>
 
               {filteredComplaints.length === 0 ? (
@@ -374,103 +421,210 @@ function AdminDashboard() {
                   <div className="cs-empty__desc">Try adjusting your search or filter.</div>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  {filteredComplaints.map(c => (
-                    <div key={c.id} className="cs-card" style={{ padding: "20px 24px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 4 }}>{c.title}</div>
-                          <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>{c.description}</div>
-                        </div>
-                        <StatusBadge status={c.status || "Pending"} />
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 8, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
-                        <span style={{ fontSize: 12, color: "#6b7280", marginRight: 4 }}>
-                          Assigned to: <strong>{c.assignedTo || "Not assigned"}</strong>
-                        </span>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
-                          {/* Volunteer select */}
-                          <select
-                            className="cs-input"
-                            style={{ padding: "6px 12px", fontSize: 13, width: "auto", minWidth: 160 }}
-                            value={assignSelections[c.id] || ""}
-                            onChange={e => setAssignSelections(prev => ({ ...prev, [c.id]: e.target.value }))}
-                          >
-                            <option value="" disabled>Select volunteer</option>
-                            {volunteers.map(v => (
-                              <option key={v.id} value={v.name}>{v.name}</option>
-                            ))}
-                          </select>
-
-                          <button
-                            className="cs-btn cs-btn--outline cs-btn--sm"
-                            onClick={() => assignVolunteer(c.id)}
-                            disabled={!assignSelections[c.id]}
-                          >
-                            Assign
-                          </button>
-
-                          {c.status !== "Resolved" && (
-                            <button
-                              className="cs-btn cs-btn--primary cs-btn--sm"
-                              onClick={() => markResolved(c.id)}
-                            >
-                              ✓ Mark Resolved
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <TH>Title</TH>
+                        <TH>Type</TH>
+                        <TH>Priority</TH>
+                        <TH>Reporter</TH>
+                        <TH>Status</TH>
+                        <TH>Assign Volunteer</TH>
+                        <TH>Actions</TH>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredComplaints.map(c => (
+                        <tr key={c._id || c.id}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <TD>
+                            <div style={{ fontWeight: 600, color: "#111827" }}>{c.title}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.address || "No address"}</div>
+                          </TD>
+                          <TD style={{ color: "#6b7280", textTransform: "capitalize" }}>{c.type || c.issueType || "—"}</TD>
+                          <TD><PriorityBadge priority={c.priority} /></TD>
+                          <TD style={{ color: "#374151" }}>{c.reportedBy?.name || c.user?.name || "—"}</TD>
+                          <TD><StatusBadge status={c.status} /></TD>
+                          <TD>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              <select
+                                className="cs-input"
+                                style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
+                                value={assignSelections[c._id || c.id] || ""}
+                                onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}
+                              >
+                                <option value="">— Select Volunteer —</option>
+                                {volunteers.map(v => (
+                                  <option key={v._id} value={v._id}>{v.name}</option>
+                                ))}
+                              </select>
+                              {c.assignedTo && (
+                                <div style={{ fontSize: 11, color: "#9ca3af" }}>
+                                  Current: {c.assignedTo?.name || c.assignedTo}
+                                </div>
+                              )}
+                            </div>
+                          </TD>
+                          <TD>
+                            <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
+                              <button
+                                className="cs-btn cs-btn--outline cs-btn--sm"
+                                style={{ fontSize: 11 }}
+                                onClick={() => assignVolunteer(c._id || c.id)}
+                                disabled={!assignSelections[c._id || c.id]}
+                              >Assign</button>
+                              {c.status !== "resolved" && (
+                                <button
+                                  className="cs-btn cs-btn--primary cs-btn--sm"
+                                  style={{ fontSize: 11 }}
+                                  onClick={() => markResolved(c._id || c.id)}
+                                >✓ Resolve</button>
+                              )}
+                            </div>
+                          </TD>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
           )}
 
-          {/* ── Volunteers Tab ── */}
+          {/* ══ USER MANAGEMENT TAB ══ */}
+          {activeTab === "users" && (
+            <div>
+              <div style={{ marginBottom: 20 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>User Management</h1>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
+                  {users.length} registered users · Manage roles and access.
+                </p>
+              </div>
+
+              {users.length === 0 ? (
+                <div className="cs-empty">
+                  <div className="cs-empty__icon">👥</div>
+                  <div className="cs-empty__title">No users found</div>
+                  <div className="cs-empty__desc">
+                    {/* TODO (Backend): GET /api/users must return all users for admin */}
+                    Users will appear here once the backend endpoint is connected.
+                  </div>
+                </div>
+              ) : (
+                <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        <TH>Name</TH>
+                        <TH>Email</TH>
+                        <TH>Current Role</TH>
+                        <TH>Location</TH>
+                        <TH>Joined</TH>
+                        <TH>Actions</TH>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(u => (
+                        <tr key={u._id}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <TD>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div className="cs-avatar" style={{ width: 30, height: 30, fontSize: 11, flexShrink: 0 }}>
+                                {u.name?.substring(0, 2).toUpperCase() || "??"}
+                              </div>
+                              <span style={{ fontWeight: 600 }}>{u.name}</span>
+                            </div>
+                          </TD>
+                          <TD style={{ color: "#6b7280" }}>{u.email}</TD>
+                          <TD>
+                            <span style={{
+                              background: u.role === "admin" ? "#fef2f2" : u.role === "volunteer" ? "#eff6ff" : "#f0fdf4",
+                              color: u.role === "admin" ? "#dc2626" : u.role === "volunteer" ? "#2563eb" : "#16a34a",
+                              padding: "2px 10px", borderRadius: 9999,
+                              fontSize: 12, fontWeight: 600, textTransform: "capitalize",
+                            }}>{u.role || "citizen"}</span>
+                          </TD>
+                          <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
+                          <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
+                          <TD>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {u.role !== "volunteer" && (
+                                <button
+                                  className="cs-btn cs-btn--outline cs-btn--sm"
+                                  style={{ fontSize: 11 }}
+                                  onClick={() => changeUserRole(u._id, "volunteer")}
+                                >Make Volunteer</button>
+                              )}
+                              {u.role !== "citizen" && u.role !== "admin" && (
+                                <button
+                                  className="cs-btn cs-btn--outline cs-btn--sm"
+                                  style={{ fontSize: 11 }}
+                                  onClick={() => changeUserRole(u._id, "citizen")}
+                                >Make Citizen</button>
+                              )}
+                            </div>
+                          </TD>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ VOLUNTEERS TAB ══ */}
           {activeTab === "volunteers" && (
             <div>
-              <div style={{ marginBottom: 24 }}>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteers</h1>
-                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Manage your volunteer team.</p>
+              <div style={{ marginBottom: 20 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
+                  {volunteers.length} active volunteers.
+                </p>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
-                {volunteers.map(v => {
-                  const assignedCount = complaints.filter(c => c.assignedTo === v.name).length;
-                  const resolvedCount = complaints.filter(c => c.assignedTo === v.name && c.status === "Resolved").length;
-                  return (
-                    <div key={v.id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
-                      <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>
-                        {v.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
-                      <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>Volunteer</div>
-                      <div style={{ display: "flex", justifyContent: "center", gap: 20 }}>
-                        <div style={{ textAlign: "center" }}>
-                          <div style={{ fontWeight: 700, fontSize: 18, color: "#2563eb" }}>{assignedCount}</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
-                        </div>
-                        <div style={{ textAlign: "center" }}>
-                          <div style={{ fontWeight: 700, fontSize: 18, color: "#22c55e" }}>{resolvedCount}</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="cs-empty" style={{ marginTop: 16 }}>
-                <div className="cs-empty__icon">🤝</div>
-                <div className="cs-empty__title">More volunteers coming soon</div>
-                <div className="cs-empty__desc">
-                  {/* TODO (Backend): Fetch real volunteers from GET /api/volunteers */}
-                  Volunteer management will be fully dynamic once the backend is connected.
+              {volunteers.length === 0 ? (
+                <div className="cs-empty">
+                  <div className="cs-empty__icon">🤝</div>
+                  <div className="cs-empty__title">No volunteers yet</div>
+                  <div className="cs-empty__desc">Promote citizens to volunteer from the User Management tab.</div>
                 </div>
-              </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+                  {volunteers.map(v => {
+                    const assigned = complaints.filter(c => c.assignedTo?._id === v._id || c.assignedTo === v._id).length;
+                    const resolved = complaints.filter(c => (c.assignedTo?._id === v._id || c.assignedTo === v._id) && c.status === "resolved").length;
+                    return (
+                      <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
+                        <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>
+                          {v.name?.substring(0, 2).toUpperCase() || "V"}
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
+                        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{assigned}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{resolved}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
+                          </div>
+                        </div>
+                        <button
+                          className="cs-btn cs-btn--outline cs-btn--sm"
+                          style={{ marginTop: 12, width: "100%", fontSize: 12 }}
+                          onClick={() => changeUserRole(v._id, "citizen")}
+                        >Remove Volunteer</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

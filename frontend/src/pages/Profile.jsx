@@ -2,6 +2,7 @@ import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 import "../Profile.css";
+import Navbar from "./Navbar";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 34 }) {
@@ -131,38 +132,7 @@ function Profile() {
         <div className="pf-page">
 
             {/* ── Navbar ── */}
-            <nav className="pf-navbar">
-                <div className="pf-navbar__brand">
-                    <CleanStreetLogo size={42} />
-                    <span className="pf-navbar__name">CleanStreet</span>
-                </div>
-                <div className="pf-navbar__links">
-                    <span className="pf-navbar__link" onClick={() => navigate('/dashboard')} style={{ cursor: "pointer" }}>Dashboard</span>
-                    <span className="pf-navbar__link" onClick={() => navigate('/submit-complaint')} style={{ cursor: "pointer" }}>Report Issue</span>
-                    <span className="pf-navbar__link" onClick={() => navigate('/complaints')} style={{ cursor: "pointer" }}>View Complaints</span>
-                </div>
-                <div className="pf-navbar__actions">
-                    {/* Logout when logged in, Login+Register when not */}
-                    {user ? (
-                        <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={handleLogout} style={{ background: '#2563eb', color: '#fff', borderColor: '#2563eb' }}>
-                            Logout
-                        </button>
-                    ) : (
-                        <>
-                            <button className="pf-btn pf-btn--outline" onClick={() => navigate('/login')} style={{ fontSize: 13, padding: "6px 14px" }}>Login</button>
-                            <button className="pf-btn pf-btn--primary" onClick={() => navigate('/signup')} style={{ fontSize: 13, padding: "6px 14px" }}>Register</button>
-                        </>
-                    )}
-                    <div
-                        className="pf-navbar__avatar"
-                        onClick={() => navigate('/profile')}
-                        title="My Profile"
-                        style={{ cursor: "pointer", outline: "2px solid #2563eb", outlineOffset: "2px" }}
-                    >
-                        {avatarText}
-                    </div>
-                </div>
-            </nav>
+            <Navbar />
 
             {/* ── Page body ── */}
             <div className="pf-body">
@@ -210,12 +180,7 @@ function Profile() {
                             </div>
                             <p className="pf-avatar-card__since">Member since {user?.memberSince || "July 3, 2025"}</p>
                         </div>
-                        {/* 
-                            TODO (Backend): Badges are currently static placeholders.
-                            Suggested endpoint: GET /api/users/me/badges
-                            Expected response: [{ id, name, icon, description, earned: boolean }]
-                            Map over the array and show locked/unlocked state dynamically.
-                        */}
+
                         {/* Badges card */}
                         <div className="pf-badges-card">
                             <div className="pf-badges-card__title">🏅 Civic Badges</div>
@@ -333,15 +298,22 @@ function Profile() {
                                         <p className="pf-card__sub">Your latest actions on CleanStreet</p>
                                     </div>
                                 </div>
-                                {/*
-                                    TODO (Backend): Fetch real activity from API.
-                                    Suggested endpoint: GET /api/users/me/activity?limit=10
-                                    Expected response: [{ icon, text, time, color }]
-                                */}
                                 <div className="pf-activity-list">
-                                    <div style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "24px 0" }}>
-                                        No recent activity yet.
-                                    </div>
+                                    {[
+                                        { icon: "✅", text: "Pothole on Main Street resolved", time: "2 hours ago", color: "#22c55e" },
+                                        { icon: "➕", text: "Reported broken streetlight on Elm Ave", time: "4 hours ago", color: "#3b82f6" },
+                                        { icon: "🔄", text: "Garbage dump complaint updated", time: "6 hours ago", color: "#f59e0b" },
+                                        { icon: "💬", text: "New comment on water leak report", time: "1 day ago", color: "#8b5cf6" },
+                                        { icon: "👍", text: "Voted on 3 community issues", time: "2 days ago", color: "#06b6d4" },
+                                    ].map((a, i) => (
+                                        <div key={i} className="pf-activity-item">
+                                            <div className="pf-activity-item__icon" style={{ background: a.color + "18" }}>{a.icon}</div>
+                                            <div className="pf-activity-item__body">
+                                                <p className="pf-activity-item__text">{a.text}</p>
+                                                <p className="pf-activity-item__time">{a.time}</p>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}

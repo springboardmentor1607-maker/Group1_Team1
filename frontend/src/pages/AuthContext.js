@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
       phone: userData.phone || '',
       location: userData.location || '',
       bio: userData.bio || '',
-      role: userData.role || 'Citizen',
+      role: userData.role?.toLowerCase() || 'citizen',
       avatar: userData.avatar || null,
       memberSince: userData.memberSince || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     };

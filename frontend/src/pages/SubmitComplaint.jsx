@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import '../SubmitComplaint.css';
+import Navbar from './Navbar';
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
@@ -337,52 +338,11 @@ export default function SubmitComplaint() {
         { label: 'View Complaints', path: '/complaints' },
     ];
 
-    // ── Navbar ───────────────────────────────────────────────────────────────
-    const Navbar = ({ activePage }) => (
-        <nav className="cs-navbar">
-            <div className="cs-navbar__brand">
-                <CleanStreetLogo size={42} />
-                <span className="cs-navbar__name">CleanStreet</span>
-            </div>
-            <div className="cs-navbar__links">
-                {navLinks.map(item => (
-                    <span
-                        key={item.label}
-                        className={`cs-navbar__link ${item.label === activePage ? 'cs-navbar__link--active' : ''}`}
-                        onClick={() => navigate(item.path)}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        {item.label}
-                    </span>
-                ))}
-            </div>
-            <div className="cs-navbar__actions">
-                {user ? (
-                    <button
-                        className="cs-btn cs-btn--outline cs-btn--sm"
-                        onClick={handleLogout}
-                        style={{ background: '#2563eb', color: '#fff', borderColor: '#2563eb' }}
-                    >
-                        Logout
-                    </button>
-                ) : (
-                    <>
-                        <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => navigate('/login')}>Login</button>
-                        <button className="cs-btn--register" onClick={() => navigate('/signup')}>Register</button>
-                    </>
-                )}
-                <div className="cs-avatar" onClick={() => navigate('/profile')} title="My Profile" style={{ cursor: 'pointer' }}>
-                    {avatar}
-                </div>
-            </div>
-        </nav>
-    );
-
     // ── Success Screen ────────────────────────────────────────────────────────
     if (submitted) {
         return (
             <div className="cs-page">
-                <Navbar activePage="" />
+                <Navbar />
                 <div className="sc-success-screen">
                     <div className="sc-success-card">
                         <div className="sc-success-icon">✅</div>
@@ -415,7 +375,7 @@ export default function SubmitComplaint() {
     // ── Main Form ─────────────────────────────────────────────────────────────
     return (
         <div className="cs-page">
-            <Navbar activePage="Report Issue" />
+            <Navbar />
 
             {/* Hero */}
             <div className="sc-hero">

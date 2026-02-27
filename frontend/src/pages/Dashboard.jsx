@@ -2,6 +2,7 @@ import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "../Dashboard.css";
+import Navbar from "./Navbar";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_LABELS = { received: "Received", in_review: "In Review", resolved: "Resolved" };
@@ -334,12 +335,7 @@ export default function UserDashboard() {
   useEffect(() => {
     async function fetchComplaints() {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch("/api/complaints", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch("/api/complaints");
         const data = await res.json();
         setComplaints(data);
       } catch (err) {
@@ -400,47 +396,7 @@ export default function UserDashboard() {
     <div className="cs-page">
 
       {/* ── Navbar ── */}
-      <nav className="cs-navbar">
-        <div className="cs-navbar__brand">
-          <CleanStreetLogo size={42} />
-          <span className="cs-navbar__name">CleanStreet</span>
-        </div>
-        <div className="cs-navbar__links">
-          {[
-            { label: "Dashboard", path: "/dashboard" },
-            { label: "Report Issue", path: "/submit-complaint" },
-            { label: "View Complaints", path: "/complaints" },
-          ].map(item => (
-            <span
-              key={item.label}
-              className={`cs-navbar__link ${item.label === "Dashboard" ? "cs-navbar__link--active" : ""}`}
-              onClick={() => navigate(item.path)}
-            >
-              {item.label}
-            </span>
-          ))}
-        </div>
-        <div className="cs-navbar__actions">
-          {/* Show Logout when logged in, Login+Register when not */}
-          {user ? (
-            <button
-              className="cs-btn cs-btn--outline cs-btn--sm"
-              onClick={handleLogout}
-              style={{ background: '#2563eb', color: '#fff', borderColor: '#2563eb' }}
-            >
-              Logout
-            </button>
-          ) : (
-            <>
-              <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => navigate("/login")}>Login</button>
-              <button className="cs-btn--register" onClick={() => navigate("/signup")}>Register</button>
-            </>
-          )}
-          <div className="cs-avatar" onClick={() => navigate("/profile")} title="My Profile">
-            {MOCK_USER.avatar}
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* ── Main Content ── */}
       <div className="cs-main-content">
