@@ -1,6 +1,4 @@
-
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import '../SubmitComplaint.css';
@@ -391,7 +389,7 @@ export default function SubmitComplaint() {
 
     const removePhoto = () => setForm(f => ({ ...f, photo: null, photoPreview: null }));
 
-    const handleLocationSelect = ({ lat, lng, address }) => {
+    const handleLocationSelect = useCallback(({ lat, lng, address }) => {
         setSelectedCoords({ lat, lng });
         setForm(f => ({
             ...f,
@@ -399,7 +397,7 @@ export default function SubmitComplaint() {
             lng: lng.toFixed(6),
             address: address || f.address,
         }));
-    };
+    }, []);
 
     const handleSubmit = (e) => {
         e.preventDefault();
