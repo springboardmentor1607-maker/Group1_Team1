@@ -7,9 +7,13 @@ function AdminDashboard() {
 
   // 🔹 Demo volunteers (temporary)
   const volunteers = [
-    { id: 1, name: "Rahul" },
-    { id: 2, name: "Anita" },
-    { id: 3, name: "Vikram" }
+    { id: 1, name: "Nithya" },
+    { id: 2, name: "Anusha" },
+    { id: 3, name: "Deeraj" },
+    { id: 4, name: "Anshu" },
+    { id: 5, name: "Rasmi" },
+    { id: 6, name: "Shraddha" },
+    { id: 7, name: "Abhisek" }
   ];
 
   useEffect(() => {
