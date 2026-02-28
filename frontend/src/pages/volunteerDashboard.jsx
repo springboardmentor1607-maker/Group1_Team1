@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import "../Dashboard.css";
 import API from "../api";
+import Navbar from "./Navbar";
 
 const priorityColor = {
   High:   { bg: "#fff0f0", text: "#c0392b" },
@@ -24,21 +24,16 @@ const categoryIcon = {
   Sanitation:         "🚰",
 };
 
-const POLL_INTERVAL = 15000; // auto-refresh every 15 seconds
+const POLL_INTERVAL = 15000;
 
 export default function VolunteerDashboard() {
-  const navigate = useNavigate();
-  const { user, getInitials, logout } = useAuth();
+  const { user } = useAuth();
+  const userName = user?.name || "Volunteer";
 
-  const userName   = user?.name || "Volunteer";
-  const userAvatar = user?.name ? getInitials(user.name) : "V";
-
-  const [issues, setIssues]           = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState("");
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [newBadge, setNewBadge]       = useState(0); // count of newly assigned tasks
-
+  const [issues, setIssues]               = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState("");
+  const [lastUpdated, setLastUpdated]     = useState(null);
   const [activeTab, setActiveTab]         = useState("All");
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [search, setSearch]               = useState("");
@@ -46,21 +41,11 @@ export default function VolunteerDashboard() {
 
   const tabs = ["All", "Assigned", "In Progress", "Resolved"];
 
-  // ── Fetch assigned issues from backend ──
   const fetchIssues = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const res = await API.get("/api/issues/assigned");
-      const fetched = res.data || [];
-
-      setIssues((prev) => {
-        // Detect newly added tasks since last fetch
-        const prevIds = new Set(prev.map((i) => String(i._id || i.id)));
-        const added   = fetched.filter((i) => !prevIds.has(String(i._id || i.id)));
-        if (added.length > 0) setNewBadge((n) => n + added.length);
-        return fetched;
-      });
-
+      setIssues(res.data || []);
       setLastUpdated(new Date());
       setError("");
     } catch (err) {
@@ -70,19 +55,12 @@ export default function VolunteerDashboard() {
     }
   }, []);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchIssues(false);
-  }, [fetchIssues]);
+  useEffect(() => { fetchIssues(false); }, [fetchIssues]);
 
-  // ── Auto-poll every 15s to catch admin-assigned tasks ──
   useEffect(() => {
     const timer = setInterval(() => fetchIssues(true), POLL_INTERVAL);
     return () => clearInterval(timer);
   }, [fetchIssues]);
-
-  // Clear new-task badge when user clicks the notification
-  const clearBadge = () => setNewBadge(0);
 
   const counts = {
     total:      issues.length,
@@ -105,15 +83,12 @@ export default function VolunteerDashboard() {
     tab === "In Progress" ? counts.inProgress :
     counts.resolved;
 
-  // ── Update status via API ──
   const updateStatus = async (id, newStatus) => {
     try {
       setUpdating(true);
       await API.patch(`/api/issues/${id}/status`, { status: newStatus });
       setIssues((prev) =>
-        prev.map((i) =>
-          String(i._id || i.id) === String(id) ? { ...i, status: newStatus } : i
-        )
+        prev.map((i) => String(i._id || i.id) === String(id) ? { ...i, status: newStatus } : i)
       );
       if (selectedIssue) {
         setSelectedIssue((prev) => ({ ...prev, status: newStatus }));
@@ -125,126 +100,20 @@ export default function VolunteerDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
   const issueId   = (issue) => String(issue._id || issue.id);
   const issueDate = (issue) =>
     issue.createdAt || issue.reportedAt
       ? new Date(issue.createdAt || issue.reportedAt).toLocaleDateString()
       : "—";
   const issueRef  = (issue) =>
-    issue._id
-      ? "#" + String(issue._id).slice(-5).toUpperCase()
-      : issue.id || "—";
+    issue._id ? "#" + String(issue._id).slice(-5).toUpperCase() : issue.id || "—";
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: "#f4f6fb", minHeight: "100vh" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-      {/* ── Navbar ── */}
-      <nav style={{
-        background: "#fff", borderBottom: "1px solid #e5e9f2",
-        padding: "0 32px", height: 64, display: "flex", alignItems: "center",
-        justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="40" height="40">
-            <defs>
-              <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#29b6f6"/><stop offset="100%" stopColor="#81d4fa"/>
-              </linearGradient>
-              <linearGradient id="grassGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#388e3c"/>
-              </linearGradient>
-              <linearGradient id="roadGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#78909c"/><stop offset="100%" stopColor="#546e7a"/>
-              </linearGradient>
-              <clipPath id="circleClip"><circle cx="100" cy="100" r="86"/></clipPath>
-            </defs>
-            <circle cx="100" cy="100" r="98" fill="white"/>
-            <circle cx="100" cy="100" r="98" fill="none" stroke="#4caf50" strokeWidth="4"/>
-            <circle cx="100" cy="100" r="90" fill="none" stroke="#4caf50" strokeWidth="2.5"/>
-            <circle cx="100" cy="100" r="87" fill="url(#skyGrad)"/>
-            <g clipPath="url(#circleClip)">
-              <g fill="white" opacity="0.95">
-                <rect x="25" y="78" width="16" height="32"/>
-                <rect x="27" y="80" width="3" height="3" fill="#90caf9"/>
-                <rect x="32" y="80" width="3" height="3" fill="#90caf9"/>
-                <rect x="42" y="60" width="18" height="50"/>
-                <rect x="44" y="64" width="4" height="4" fill="#90caf9"/>
-                <rect x="51" y="64" width="4" height="4" fill="#90caf9"/>
-                <rect x="62" y="50" width="20" height="60"/>
-                <rect x="64" y="54" width="5" height="5" fill="#90caf9"/>
-                <rect x="72" y="54" width="5" height="5" fill="#90caf9"/>
-                <rect x="84" y="58" width="18" height="52"/>
-                <rect x="86" y="62" width="4" height="4" fill="#90caf9"/>
-                <rect x="104" y="65" width="16" height="45"/>
-                <rect x="106" y="68" width="4" height="4" fill="#90caf9"/>
-                <rect x="121" y="74" width="16" height="36"/>
-                <rect x="123" y="78" width="3" height="3" fill="#90caf9"/>
-              </g>
-              <ellipse cx="100" cy="130" rx="95" ry="45" fill="#81c784"/>
-              <path d="M13,145 Q50,108 100,118 Q150,108 187,145 L187,187 L13,187 Z" fill="url(#grassGrad)"/>
-              <path d="M85,187 Q90,148 100,118 Q110,148 115,187 Z" fill="url(#roadGrad)"/>
-              <circle cx="48" cy="128" r="10" fill="#388e3c"/>
-              <circle cx="152" cy="128" r="10" fill="#388e3c"/>
-            </g>
-            <circle cx="100" cy="100" r="87" fill="none" stroke="#4caf50" strokeWidth="3"/>
-            <path id="textArc2" d="M 28,100 A 72,72 0 0,1 172,100" fill="none"/>
-            <text fontFamily="'Arial Rounded MT Bold','Arial',sans-serif" fontSize="17" fontWeight="800" fill="#2e7d32" letterSpacing="2">
-              <textPath href="#textArc2" startOffset="8%">CLEAN STREETS</textPath>
-            </text>
-          </svg>
-          <span style={{ fontWeight: 700, fontSize: 18, color: "#1a1a2e" }}>CleanStreet</span>
-        </div>
-
-        <div style={{ display: "flex", gap: 32 }}>
-          {["Dashboard", "My Tasks", "Notifications"].map((item) => (
-            <span key={item} style={{
-              fontSize: 14, fontWeight: 500,
-              color: item === "Dashboard" ? "#1a56db" : "#64748b",
-              cursor: "pointer",
-              borderBottom: item === "Dashboard" ? "2px solid #1a56db" : "none",
-              paddingBottom: 4, position: "relative"
-            }}>
-              {item}
-              {/* New-task badge on Notifications */}
-              {item === "Notifications" && newBadge > 0 && (
-                <span onClick={clearBadge} style={{
-                  position: "absolute", top: -6, right: -10,
-                  background: "#e74c3c", color: "#fff",
-                  borderRadius: "50%", width: 16, height: 16,
-                  fontSize: 10, fontWeight: 700,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer"
-                }}>{newBadge}</span>
-              )}
-            </span>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Live refresh indicator */}
-          {lastUpdated && (
-            <span style={{ fontSize: 11, color: "#94a3b8" }}>
-              🟢 Live · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          )}
-          <button onClick={handleLogout} style={{
-            background: "#1a56db", border: "none", borderRadius: 8,
-            padding: "6px 14px", fontSize: 13, fontWeight: 500, color: "#fff", cursor: "pointer"
-          }}>Logout</button>
-          <div onClick={() => navigate("/profile")} title={userName} style={{
-            width: 36, height: 36, borderRadius: "50%", background: "#1a56db",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer"
-          }}>{userAvatar}</div>
-        </div>
-      </nav>
+      {/* ── Shared Navbar ── */}
+      <Navbar />
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
 
@@ -307,7 +176,14 @@ export default function VolunteerDashboard() {
         {/* ── Issues Panel ── */}
         <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", margin: 0 }}>Assigned Issues</h3>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", margin: 0 }}>Assigned Issues</h3>
+              {lastUpdated && (
+                <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                  🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <div style={{ display: "flex", gap: 4, background: "#f4f6fb", borderRadius: 10, padding: 4 }}>
                 {tabs.map((tab) => (
@@ -330,19 +206,13 @@ export default function VolunteerDashboard() {
                   fontSize: 13, outline: "none", color: "#1a1a2e", width: 200, background: "#f9fafb"
                 }}
               />
-              {/* Manual refresh button */}
-              <button
-                onClick={() => fetchIssues(false)}
-                title="Refresh tasks"
-                style={{
-                  background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8,
-                  padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b"
-                }}
-              >🔄</button>
+              <button onClick={() => fetchIssues(false)} title="Refresh tasks" style={{
+                background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8,
+                padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b"
+              }}>🔄</button>
             </div>
           </div>
 
-          {/* Loading / Error / Empty / List */}
           {loading ? (
             <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
@@ -365,9 +235,9 @@ export default function VolunteerDashboard() {
             </div>
           ) : (
             filtered.map((issue, idx) => {
-              const id  = issueId(issue);
-              const sc  = statusColor[issue.status]   || statusColor["Assigned"];
-              const pc  = priorityColor[issue.priority];
+              const id         = issueId(issue);
+              const sc         = statusColor[issue.status] || statusColor["Assigned"];
+              const pc         = priorityColor[issue.priority];
               const isSelected = issueId(selectedIssue || {}) === id;
               return (
                 <div key={id}
@@ -423,7 +293,6 @@ export default function VolunteerDashboard() {
             boxShadow: "0 20px 60px rgba(0,0,0,0.15)", overflow: "hidden"
           }} onClick={(e) => e.stopPropagation()}>
 
-            {/* Modal Header */}
             <div style={{ background: "linear-gradient(120deg, #1a56db, #3b82f6)", padding: "22px 26px", color: "#fff" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -441,7 +310,6 @@ export default function VolunteerDashboard() {
             </div>
 
             <div style={{ padding: "22px 26px" }}>
-              {/* Info Grid */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
                 {[
                   { label: "Location",      value: selectedIssue.location,                                     icon: "📍" },
@@ -456,7 +324,6 @@ export default function VolunteerDashboard() {
                 ))}
               </div>
 
-              {/* Description */}
               <div style={{ background: "#f8faff", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>📝 Description</div>
                 <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>
@@ -464,7 +331,6 @@ export default function VolunteerDashboard() {
                 </p>
               </div>
 
-              {/* Status Selector */}
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>Current Status</div>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -488,16 +354,12 @@ export default function VolunteerDashboard() {
                 </div>
               </div>
 
-              {/* Actions */}
               <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  disabled={updating}
-                  style={{
-                    flex: 1, padding: "11px 0", background: "#1a56db", color: "#fff",
-                    border: "none", borderRadius: 10, fontWeight: 600, fontSize: 14,
-                    cursor: updating ? "not-allowed" : "pointer", opacity: updating ? 0.7 : 1
-                  }}
-                >📤 Submit Update</button>
+                <button disabled={updating} style={{
+                  flex: 1, padding: "11px 0", background: "#1a56db", color: "#fff",
+                  border: "none", borderRadius: 10, fontWeight: 600, fontSize: 14,
+                  cursor: updating ? "not-allowed" : "pointer", opacity: updating ? 0.7 : 1
+                }}>📤 Submit Update</button>
                 <button style={{
                   padding: "11px 18px", background: "#fff", color: "#64748b",
                   border: "1px solid #e5e9f2", borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: "pointer"
