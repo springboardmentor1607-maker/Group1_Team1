@@ -9,71 +9,71 @@ function CleanStreetLogo({ size = 100 }) {
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
       <defs>
         <linearGradient id="skyG2" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#29b6f6"/><stop offset="100%" stopColor="#81d4fa"/>
+          <stop offset="0%" stopColor="#29b6f6" /><stop offset="100%" stopColor="#81d4fa" />
         </linearGradient>
         <linearGradient id="grassG2" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#388e3c"/>
+          <stop offset="0%" stopColor="#66bb6a" /><stop offset="100%" stopColor="#388e3c" />
         </linearGradient>
         <linearGradient id="roadG2" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#78909c"/><stop offset="100%" stopColor="#546e7a"/>
+          <stop offset="0%" stopColor="#78909c" /><stop offset="100%" stopColor="#546e7a" />
         </linearGradient>
-        <clipPath id="cc2"><circle cx="100" cy="100" r="86"/></clipPath>
+        <clipPath id="cc2"><circle cx="100" cy="100" r="86" /></clipPath>
       </defs>
-      <circle cx="100" cy="100" r="98" fill="white"/>
-      <circle cx="100" cy="100" r="98" fill="none" stroke="#4caf50" strokeWidth="4"/>
-      <circle cx="100" cy="100" r="90" fill="none" stroke="#4caf50" strokeWidth="2"/>
-      <circle cx="100" cy="100" r="87" fill="url(#skyG2)"/>
+      <circle cx="100" cy="100" r="98" fill="white" />
+      <circle cx="100" cy="100" r="98" fill="none" stroke="#4caf50" strokeWidth="4" />
+      <circle cx="100" cy="100" r="90" fill="none" stroke="#4caf50" strokeWidth="2" />
+      <circle cx="100" cy="100" r="87" fill="url(#skyG2)" />
       <g clipPath="url(#cc2)">
         <g fill="white">
-          <rect x="25" y="78" width="16" height="32"/>
-          <rect x="27" y="80" width="3" height="3" fill="#90caf9"/><rect x="32" y="80" width="3" height="3" fill="#90caf9"/>
-          <rect x="27" y="86" width="3" height="3" fill="#90caf9"/><rect x="32" y="86" width="3" height="3" fill="#90caf9"/>
-          <rect x="42" y="60" width="18" height="50"/>
-          <rect x="50" y="52" width="2" height="9"/>
-          <rect x="44" y="64" width="4" height="4" fill="#90caf9"/><rect x="51" y="64" width="4" height="4" fill="#90caf9"/>
-          <rect x="44" y="72" width="4" height="4" fill="#90caf9"/><rect x="51" y="72" width="4" height="4" fill="#90caf9"/>
-          <rect x="62" y="50" width="20" height="60"/>
-          <rect x="71" y="42" width="2" height="10"/>
-          <rect x="64" y="54" width="5" height="5" fill="#90caf9"/><rect x="72" y="54" width="5" height="5" fill="#90caf9"/>
-          <rect x="64" y="63" width="5" height="5" fill="#90caf9"/><rect x="72" y="63" width="5" height="5" fill="#90caf9"/>
-          <rect x="64" y="72" width="5" height="5" fill="#90caf9"/><rect x="72" y="72" width="5" height="5" fill="#90caf9"/>
-          <rect x="64" y="81" width="5" height="5" fill="#90caf9"/>
-          <rect x="84" y="58" width="18" height="52"/>
-          <rect x="86" y="62" width="4" height="4" fill="#90caf9"/><rect x="93" y="62" width="4" height="4" fill="#90caf9"/>
-          <rect x="86" y="70" width="4" height="4" fill="#90caf9"/><rect x="93" y="70" width="4" height="4" fill="#90caf9"/>
-          <rect x="104" y="65" width="16" height="45"/>
-          <rect x="106" y="68" width="4" height="4" fill="#90caf9"/><rect x="112" y="68" width="4" height="4" fill="#90caf9"/>
-          <rect x="106" y="76" width="4" height="4" fill="#90caf9"/>
-          <rect x="121" y="74" width="16" height="36"/>
-          <rect x="123" y="78" width="3" height="3" fill="#90caf9"/><rect x="129" y="78" width="3" height="3" fill="#90caf9"/>
-          <rect x="123" y="85" width="3" height="3" fill="#90caf9"/>
+          <rect x="25" y="78" width="16" height="32" />
+          <rect x="27" y="80" width="3" height="3" fill="#90caf9" /><rect x="32" y="80" width="3" height="3" fill="#90caf9" />
+          <rect x="27" y="86" width="3" height="3" fill="#90caf9" /><rect x="32" y="86" width="3" height="3" fill="#90caf9" />
+          <rect x="42" y="60" width="18" height="50" />
+          <rect x="50" y="52" width="2" height="9" />
+          <rect x="44" y="64" width="4" height="4" fill="#90caf9" /><rect x="51" y="64" width="4" height="4" fill="#90caf9" />
+          <rect x="44" y="72" width="4" height="4" fill="#90caf9" /><rect x="51" y="72" width="4" height="4" fill="#90caf9" />
+          <rect x="62" y="50" width="20" height="60" />
+          <rect x="71" y="42" width="2" height="10" />
+          <rect x="64" y="54" width="5" height="5" fill="#90caf9" /><rect x="72" y="54" width="5" height="5" fill="#90caf9" />
+          <rect x="64" y="63" width="5" height="5" fill="#90caf9" /><rect x="72" y="63" width="5" height="5" fill="#90caf9" />
+          <rect x="64" y="72" width="5" height="5" fill="#90caf9" /><rect x="72" y="72" width="5" height="5" fill="#90caf9" />
+          <rect x="64" y="81" width="5" height="5" fill="#90caf9" />
+          <rect x="84" y="58" width="18" height="52" />
+          <rect x="86" y="62" width="4" height="4" fill="#90caf9" /><rect x="93" y="62" width="4" height="4" fill="#90caf9" />
+          <rect x="86" y="70" width="4" height="4" fill="#90caf9" /><rect x="93" y="70" width="4" height="4" fill="#90caf9" />
+          <rect x="104" y="65" width="16" height="45" />
+          <rect x="106" y="68" width="4" height="4" fill="#90caf9" /><rect x="112" y="68" width="4" height="4" fill="#90caf9" />
+          <rect x="106" y="76" width="4" height="4" fill="#90caf9" />
+          <rect x="121" y="74" width="16" height="36" />
+          <rect x="123" y="78" width="3" height="3" fill="#90caf9" /><rect x="129" y="78" width="3" height="3" fill="#90caf9" />
+          <rect x="123" y="85" width="3" height="3" fill="#90caf9" />
         </g>
-        <ellipse cx="100" cy="132" rx="95" ry="44" fill="#81c784"/>
-        <path d="M13,148 Q50,110 100,120 Q150,110 187,148 L187,190 L13,190 Z" fill="url(#grassG2)"/>
-        <path d="M86,190 Q91,150 100,120 Q109,150 114,190 Z" fill="url(#roadG2)"/>
-        <line x1="100" y1="178" x2="100" y2="170" stroke="white" strokeWidth="1.5" strokeDasharray="3,3"/>
-        <line x1="100" y1="165" x2="100" y2="155" stroke="white" strokeWidth="1.5" strokeDasharray="3,3"/>
-        <circle cx="48" cy="130" r="10" fill="#2e7d32"/><circle cx="42" cy="136" r="9" fill="#43a047"/>
-        <circle cx="54" cy="136" r="9" fill="#43a047"/><rect x="47" y="142" width="3" height="7" fill="#5d4037"/>
-        <circle cx="152" cy="130" r="10" fill="#2e7d32"/><circle cx="146" cy="136" r="9" fill="#43a047"/>
-        <circle cx="158" cy="136" r="9" fill="#43a047"/><rect x="151" y="142" width="3" height="7" fill="#5d4037"/>
-        <path d="M132,44 Q134,41 136,44" stroke="#37474f" strokeWidth="1.2" fill="none"/>
-        <path d="M142,37 Q144,34 146,37" stroke="#37474f" strokeWidth="1.2" fill="none"/>
+        <ellipse cx="100" cy="132" rx="95" ry="44" fill="#81c784" />
+        <path d="M13,148 Q50,110 100,120 Q150,110 187,148 L187,190 L13,190 Z" fill="url(#grassG2)" />
+        <path d="M86,190 Q91,150 100,120 Q109,150 114,190 Z" fill="url(#roadG2)" />
+        <line x1="100" y1="178" x2="100" y2="170" stroke="white" strokeWidth="1.5" strokeDasharray="3,3" />
+        <line x1="100" y1="165" x2="100" y2="155" stroke="white" strokeWidth="1.5" strokeDasharray="3,3" />
+        <circle cx="48" cy="130" r="10" fill="#2e7d32" /><circle cx="42" cy="136" r="9" fill="#43a047" />
+        <circle cx="54" cy="136" r="9" fill="#43a047" /><rect x="47" y="142" width="3" height="7" fill="#5d4037" />
+        <circle cx="152" cy="130" r="10" fill="#2e7d32" /><circle cx="146" cy="136" r="9" fill="#43a047" />
+        <circle cx="158" cy="136" r="9" fill="#43a047" /><rect x="151" y="142" width="3" height="7" fill="#5d4037" />
+        <path d="M132,44 Q134,41 136,44" stroke="#37474f" strokeWidth="1.2" fill="none" />
+        <path d="M142,37 Q144,34 146,37" stroke="#37474f" strokeWidth="1.2" fill="none" />
       </g>
-      <circle cx="100" cy="100" r="87" fill="none" stroke="#4caf50" strokeWidth="3"/>
-      <path id="la2" d="M 26,100 A 74,74 0 0,1 174,100" fill="none"/>
+      <circle cx="100" cy="100" r="87" fill="none" stroke="#4caf50" strokeWidth="3" />
+      <path id="la2" d="M 26,100 A 74,74 0 0,1 174,100" fill="none" />
       <text fontFamily="'Arial Rounded MT Bold', Arial, sans-serif" fontSize="17" fontWeight="800" fill="#2e7d32" letterSpacing="2.5">
         <textPath href="#la2" startOffset="7%">CLEAN STREETS</textPath>
       </text>
       <g transform="translate(12,106) rotate(-15)">
-        <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)"/>
-        <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)"/>
-        <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)"/>
+        <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)" />
+        <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)" />
+        <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)" />
       </g>
       <g transform="translate(188,106) rotate(15) scale(-1,1)">
-        <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)"/>
-        <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)"/>
-        <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)"/>
+        <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)" />
+        <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)" />
+        <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)" />
       </g>
     </svg>
   );
@@ -156,9 +156,9 @@ export default function Signup() {
   };
 
   const roles = [
-    { key: "citizen",   icon: "🧑‍💼", label: "Citizen"   },
-    { key: "volunteer", icon: "🤝",   label: "Volunteer" },
-    { key: "admin",     icon: "🛡️",   label: "Admin"     },
+    { key: "citizen", icon: "🧑‍💼", label: "Citizen" },
+    { key: "volunteer", icon: "🤝", label: "Volunteer" },
+    { key: "admin", icon: "🛡️", label: "Admin" },
   ];
 
   return (
@@ -171,7 +171,7 @@ export default function Signup() {
             <CleanStreetLogo size={110} />
           </div>
           <h1 className="auth-panel__title">
-            Be the Change<br/>Your City <span>Needs</span>
+            Be the Change<br />Your City <span>Needs</span>
           </h1>
           <p className="auth-panel__desc">
             Create your free account and start making a difference. Report
@@ -260,7 +260,7 @@ export default function Signup() {
               <form className="auth-form" onSubmit={handleSubmit}>
 
                 {errors.general && (
-                  <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", display:"flex", alignItems:"center", gap:6 }}>
+                  <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
                     ⚠️ {errors.general}
                   </div>
                 )}
@@ -270,7 +270,7 @@ export default function Signup() {
                     <label className="auth-label">First Name</label>
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon">👤</span>
-                      <input className={`auth-input${errors.firstName ? " auth-input--error" : ""}`} type="text" name="firstName" placeholder="John" value={form.firstName} onChange={handleChange}/>
+                      <input className={`auth-input${errors.firstName ? " auth-input--error" : ""}`} type="text" name="firstName" placeholder="John" value={form.firstName} onChange={handleChange} />
                     </div>
                     {errors.firstName && <span className="auth-error-msg">⚠ {errors.firstName}</span>}
                   </div>
@@ -278,7 +278,7 @@ export default function Signup() {
                     <label className="auth-label">Last Name</label>
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon">👤</span>
-                      <input className={`auth-input${errors.lastName ? " auth-input--error" : ""}`} type="text" name="lastName" placeholder="Doe" value={form.lastName} onChange={handleChange}/>
+                      <input className={`auth-input${errors.lastName ? " auth-input--error" : ""}`} type="text" name="lastName" placeholder="Doe" value={form.lastName} onChange={handleChange} />
                     </div>
                     {errors.lastName && <span className="auth-error-msg">⚠ {errors.lastName}</span>}
                   </div>
@@ -288,7 +288,7 @@ export default function Signup() {
                   <label className="auth-label">Email address</label>
                   <div className="auth-input-wrap">
                     <span className="auth-input-icon">✉️</span>
-                    <input className={`auth-input${errors.email ? " auth-input--error" : ""}`} type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email"/>
+                    <input className={`auth-input${errors.email ? " auth-input--error" : ""}`} type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
                   </div>
                   {errors.email && <span className="auth-error-msg">⚠ {errors.email}</span>}
                 </div>
@@ -297,15 +297,15 @@ export default function Signup() {
                   <label className="auth-label">Password</label>
                   <div className="auth-input-wrap">
                     <span className="auth-input-icon">🔒</span>
-                    <input className={`auth-input${errors.password ? " auth-input--error" : ""}`} type={showPass ? "text" : "password"} name="password" placeholder="Min. 8 characters" value={form.password} onChange={handleChange} autoComplete="new-password"/>
+                    <input className={`auth-input${errors.password ? " auth-input--error" : ""}`} type={showPass ? "text" : "password"} name="password" placeholder="Min. 8 characters" value={form.password} onChange={handleChange} autoComplete="new-password" />
                     <button type="button" className="auth-input-toggle" onClick={() => setShowPass(s => !s)} tabIndex={-1}>{showPass ? "🙈" : "👁️"}</button>
                   </div>
                   {errors.password && <span className="auth-error-msg">⚠ {errors.password}</span>}
                   {form.password && (
                     <div className="auth-strength">
                       <div className="auth-strength__bars">
-                        {[1,2,3,4].map(i => (
-                          <div key={i} className={`auth-strength__bar${strength.score >= i ? ` auth-strength__bar--${strength.color}` : ""}`}/>
+                        {[1, 2, 3, 4].map(i => (
+                          <div key={i} className={`auth-strength__bar${strength.score >= i ? ` auth-strength__bar--${strength.color}` : ""}`} />
                         ))}
                       </div>
                       <span className="auth-strength__label">
@@ -317,7 +317,7 @@ export default function Signup() {
 
                 <div className="auth-group">
                   <label className="auth-label">I am a…</label>
-                  <div className="auth-roles" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+                  <div className="auth-roles" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                     {roles.map(r => (
                       <button
                         key={r.key}
@@ -334,7 +334,7 @@ export default function Signup() {
                 </div>
 
                 <button className="auth-btn auth-btn--green" type="submit" disabled={loading}>
-                  {loading ? (<><span className="auth-btn__spinner"/>Creating account…</>) : "Create Account 🌿"}
+                  {loading ? (<><span className="auth-btn__spinner" />Creating account…</>) : "Create Account 🌿"}
                 </button>
 
                 <p className="auth-terms">

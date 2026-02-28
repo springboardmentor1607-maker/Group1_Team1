@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import "../Profile.css";
 import API from "../api";
 
-// ─── CleanStreet Logo ─────────────────────────────────────────────────────────
+// ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 34 }) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
@@ -52,12 +52,10 @@ function CleanStreetLogo({ size = 34 }) {
                 <circle cx="54" cy="136" r="9" fill="#43a047" /><rect x="47" y="142" width="3" height="7" fill="#5d4037" />
                 <circle cx="152" cy="130" r="10" fill="#2e7d32" /><circle cx="146" cy="136" r="9" fill="#43a047" />
                 <circle cx="158" cy="136" r="9" fill="#43a047" /><rect x="151" y="142" width="3" height="7" fill="#5d4037" />
-                <path d="M132,44 Q134,41 136,44" stroke="#37474f" strokeWidth="1.2" fill="none" />
-                <path d="M142,37 Q144,34 146,37" stroke="#37474f" strokeWidth="1.2" fill="none" />
             </g>
             <circle cx="100" cy="100" r="87" fill="none" stroke="#4caf50" strokeWidth="3" />
             <path id="laP" d="M 26,100 A 74,74 0 0,1 174,100" fill="none" />
-            <text fontFamily="'Arial Rounded MT Bold', Arial, sans-serif" fontSize="17" fontWeight="800" fill="#2e7d32" letterSpacing="2.5">
+            <text fontFamily="Arial Rounded MT Bold, Arial, sans-serif" fontSize="17" fontWeight="800" fill="#2e7d32" letterSpacing="2.5">
                 <textPath href="#laP" startOffset="7%">CLEAN STREETS</textPath>
             </text>
             <g transform="translate(12,106) rotate(-15)">
@@ -164,6 +162,9 @@ function Profile() {
         else if (user?.role === "admin") navigate("/admin");
         else navigate("/dashboard");
     };
+
+    // Avatar initials from name
+    const avatarText = savedData.fullName ? savedData.fullName.substring(0, 2).toUpperCase() : "DU";
 
     return (
         <div className="pf-page">
@@ -290,8 +291,8 @@ function Profile() {
                                         <button className="pf-btn pf-btn--primary" onClick={handleEdit}>✏️ Edit Profile</button>
                                     ) : (
                                         <div className="pf-btn-group">
-                                            <button className="pf-btn pf-btn--ghost" onClick={handleCancel}>Cancel</button>
-                                            <button className="pf-btn pf-btn--green" onClick={handleSave}>💾 Save Changes</button>
+                                            <button className="pf-btn pf-btn--outline" onClick={handleCancel}>Cancel</button>
+                                            <button className="pf-btn pf-btn--primary" onClick={handleSave}>💾 Save Changes</button>
                                         </div>
                                     )}
                                 </div>
@@ -318,6 +319,17 @@ function Profile() {
                                             <span className="pf-input-icon">📍</span>
                                             <input className={`pf-input${editMode ? " pf-input--active" : ""}`} name="location" value={formData.location} disabled={!editMode} onChange={handleChange} />
                                         </div>
+                                    ))}
+
+                                    <div className="pf-form-group">
+                                        <label className="pf-label">📍 Location</label>
+                                        <input
+                                            className={`pf-input${editMode ? " pf-input--active" : ""}`}
+                                            name="location"
+                                            value={formData.location}
+                                            disabled={!editMode}
+                                            onChange={handleChange}
+                                        />
                                     </div>
                                     <div className="pf-form-group pf-form-group--full">
                                         <label className="pf-label">Bio</label>
