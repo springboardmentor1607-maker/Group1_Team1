@@ -334,12 +334,7 @@ export default function UserDashboard() {
   useEffect(() => {
     async function fetchComplaints() {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch("/api/complaints", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch("/api/complaints");
         const data = await res.json();
         setComplaints(data);
       } catch (err) {
