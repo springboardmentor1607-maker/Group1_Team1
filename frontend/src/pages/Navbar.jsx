@@ -2,7 +2,6 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
-// ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
@@ -73,31 +72,30 @@ function CleanStreetLogo({ size = 44 }) {
 // ─── Nav links per role ───────────────────────────────────────────────────────
 const NAV_LINKS = {
   citizen: [
-    { label: "Dashboard",        path: "/dashboard"         },
-    { label: "Report Issue",     path: "/submit-complaint"  },
-    { label: "View Complaints",  path: "/complaints"        },
-    { label: "Issue Map",        path: "/map"               },
+    { label: "Dashboard",       path: "/dashboard"        },
+    { label: "Report Issue",    path: "/submit-complaint" },
+    { label: "View Complaints", path: "/complaints"       },
+    { label: "Issue Map",       path: "/map"              },
   ],
   volunteer: [
-    { label: "Dashboard",        path: "/volunteer"         },
-    { label: "My Assignments",   path: "/volunteer"         },
-    { label: "Issue Map",        path: "/map"               },
-    { label: "View Complaints",  path: "/complaints"        },
+    { label: "Dashboard",       path: "/volunteer"             },
+    { label: "Issue Map",       path: "/map"                   },
+    { label: "View Complaints", path: "/complaints"            },
   ],
   admin: [
-    { label: "Admin Panel",      path: "/admin"             },
-    { label: "Issue Map",        path: "/map"               },
-    { label: "User Dashboard",   path: "/dashboard"         },
+    { label: "Admin Panel",     path: "/admin"      },
+    { label: "Issue Map",       path: "/map"        },
+    { label: "User Dashboard",  path: "/dashboard"  },
   ],
 };
 
 // ─── Shared Navbar ────────────────────────────────────────────────────────────
 export default function Navbar() {
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout, getInitials } = useAuth();
 
-  const role   = user?.role || "citizen";
+  const role   = user?.role?.toLowerCase() || "citizen";
   const links  = NAV_LINKS[role] || NAV_LINKS.citizen;
   const avatar = user?.name ? getInitials(user.name) : "U";
 
@@ -106,6 +104,7 @@ export default function Navbar() {
     navigate("/login");
   };
 
+  // ✅ Exact match only — prevents two links being active at once
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -133,7 +132,7 @@ export default function Navbar() {
         {links.map(item => (
           <span
             key={item.label}
-            className={`cs-navbar__link ${isActive(item.path) ? "cs-navbar__link--active" : ""}`}
+            className={`cs-navbar__link${isActive(item.path) ? " cs-navbar__link--active" : ""}`}
             onClick={() => navigate(item.path)}
             style={{ cursor: "pointer" }}
           >
