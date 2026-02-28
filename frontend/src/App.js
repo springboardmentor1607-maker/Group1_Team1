@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-
+import AdminDashboard from "./pages/AdminDashboard";
+import Mappage from "./pages/Mappage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -27,6 +28,9 @@ export default function App() {
 
       {/* fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/map" element={<Mappage />} />
+    
     </Routes>
   );
 }
