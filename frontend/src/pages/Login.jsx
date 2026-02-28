@@ -106,12 +106,18 @@ export default function Login() {
       });
       const data = res.data;
       localStorage.setItem('token', data.token);
-      login(data.user || data); // saves user into AuthContext + cs_user in localStorage
-      if (data.user?.role === "admin" || data.role === "admin") {
-        navigate("/admin");
+      login(data.user || data);
+
+      // ── Role-based redirect ──
+      const role = data.user?.role || data.role;
+      if (role === "admin") {
+        navigate('/admin');
+      } else if (role === "volunteer") {
+        navigate('/volunteer');
       } else {
-        navigate("/dashboard");
+        navigate('/dashboard');
       }
+
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');
     } finally {
