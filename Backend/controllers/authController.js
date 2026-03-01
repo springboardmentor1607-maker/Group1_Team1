@@ -2,17 +2,19 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcryptjs");
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
-  });
+// 🔐 Generate Token (NOW INCLUDES ROLE)
+const generateToken = (id, role) => {
+  return jwt.sign(
+    { id, role },
+    process.env.JWT_SECRET,
+    { expiresIn: '30d' }
+  );
 };
 
+// ================= REGISTER =================
 const register = async (req, res) => {
   try {
     const { name, email, password, phone, role } = req.body;
-
-    console.log("Register body:", req.body);
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Please fill all required fields" });
@@ -28,12 +30,10 @@ const register = async (req, res) => {
       email,
       password,
       phone: phone || "",
-      role: role || "user",
+      role: role || "user", // default role
     });
 
-    const token = generateToken(user._id);
-
-    console.log("User saved successfully:", user);
+    const token = generateToken(user._id, user.role);
 
     res.status(201).json({
       _id: user._id,
@@ -49,8 +49,7 @@ const register = async (req, res) => {
   }
 };
 
-module.exports = { register };
-
+// ================= LOGIN =================
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -73,7 +72,7 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.role);
 
     res.json({
       _id: user._id,
@@ -83,13 +82,14 @@ const login = async (req, res) => {
       profilePhoto: user.profilePhoto,
       token
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-
+// ================= GET CURRENT USER =================
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');

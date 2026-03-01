@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/user"));
-
+app.use("/api/complaints", require("./routes/complaint"));
 
 app.get("/", (req, res) => {
   res.json({ message: "Clean Street API running" });
