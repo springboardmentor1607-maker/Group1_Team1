@@ -331,3 +331,43 @@
     font-size: 20px;
   }
 }
+/* ── Locate button (Use My Location) ── */
+.sc-locate-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sc-locate-btn:hover {
+  background: #43a047;
+}
+
+.sc-locate-btn:disabled {
+  background: #a5d6a7;
+  cursor: not-allowed;
+}
+
+/* Spinner inside locate button */
+.sc-locate-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: sc-spin 0.7s linear infinite;
+}
+
+@keyframes sc-spin {
+  to { transform: rotate(360deg); }
+}

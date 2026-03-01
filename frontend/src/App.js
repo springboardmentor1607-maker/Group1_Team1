@@ -1,28 +1,34 @@
-import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-
-import Dashboard from "./pages/Dashboard";
-import SubmitComplaint from "./pages/SubmitComplaint";
+import AdminDashboard from "./pages/AdminDashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
-
-import "./App.css";
+import SubmitComplaint from "./pages/SubmitComplaint";
+import VolunteerDashboard from "./pages/volunteerDashboard";
 
 export default function App() {
   return (
     <Routes>
-      {/* Redirect root to login */}
+      {/* default */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Auth pages */}
-      <Route path="/login" element={<Login />} />
+      {/* auth */}
+      <Route path="/login"  element={<Login />}  />
       <Route path="/signup" element={<Signup />} />
 
-      {/* App pages */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/submit-complaint" element={<SubmitComplaint />} />
+      {/* citizen */}
+      <Route path="/dashboard"        element={<Dashboard />}        />
+      <Route path="/profile"          element={<Profile />}          />
+      <Route path="/submit-complaint" element={<SubmitComplaint />}  />
+
+      {/* volunteer */}
+      <Route path="/volunteer" element={<VolunteerDashboard />} />
+
+      {/* fallback */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+    
     </Routes>
   );
 }
