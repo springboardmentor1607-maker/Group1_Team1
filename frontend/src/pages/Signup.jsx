@@ -139,7 +139,7 @@ export default function Signup() {
       });
       const data = res.data;
       localStorage.setItem('token', data.token);
-      login(data.user || data);
+      login({ ...(data.user || data), role: form.role });
       setLoading(false);
       setSuccess(true);
     } catch (err) {
@@ -222,7 +222,7 @@ export default function Signup() {
                 Welcome to CleanStreet, {form.firstName}!<br />
                 Your account has been created. Let's start making your city cleaner.
               </p>
-              <button className="auth-btn" style={{ marginTop: 24 }} onClick={() => navigate(form.role === "admin" ? "/admin" : "/dashboard")}>
+              <button className="auth-btn" style={{ marginTop: 24 }} onClick={() => navigate(form.role === "admin" ? "/admin" : form.role === "volunteer" ? "/volunteer" : "/dashboard")}>
                 Go to Dashboard →
               </button>
             </div>

@@ -80,7 +80,6 @@ const NAV_LINKS = {
   ],
   volunteer: [
     { label: "Dashboard",        path: "/volunteer"         },
-    { label: "My Assignments",   path: "/volunteer"         },
     { label: "Issue Map",        path: "/map"               },
     { label: "View Complaints",  path: "/complaints"        },
   ],
