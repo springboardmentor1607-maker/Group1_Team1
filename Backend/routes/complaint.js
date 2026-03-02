@@ -2,30 +2,50 @@ const express = require("express");
 const router = express.Router();
 const Complaint = require("../models/Complaint");
 const { protect, authorize } = require("../middleware/auth");
+const upload = require("../config/multer");
 
-// ================= CREATE COMPLAINT =================
-// User can create complaint
-router.post("/", protect, authorize("user", "admin"), async (req, res) => {
+// ============================================================
+// ✅ CREATE COMPLAINT
+// ============================================================
+router.post("/", protect, upload.single("photo"), async (req, res) => {
   try {
     const {
       title,
       description,
+      type,
+      priority,
       latitude,
       longitude,
       address,
-      photo,
+      landmark,
     } = req.body;
+
+    // ✅ validations
+    if (!latitude || !longitude) {
+      return res
+        .status(400)
+        .json({ message: "Location coordinates are required" });
+    }
+
+    if (!title || !description || !address) {
+      return res
+        .status(400)
+        .json({ message: "Title, description and address are required" });
+    }
 
     const complaint = await Complaint.create({
       user_id: req.user._id,
       title,
       description,
-      photo,
+      type: type || "other",
+      priority: priority || "medium",
+      photo: req.file ? `/uploads/${req.file.filename}` : null,
       location_coords: {
         type: "Point",
-        coordinates: [longitude, latitude],
+        coordinates: [parseFloat(longitude), parseFloat(latitude)],
       },
       address,
+      landmark: landmark || "",
     });
 
     res.status(201).json({
@@ -33,102 +53,111 @@ router.post("/", protect, authorize("user", "admin"), async (req, res) => {
       complaint,
     });
   } catch (error) {
+    console.error("Create complaint error:", error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// ================= GET ALL COMPLAINTS =================
-// Admin + User can see all complaints
-router.get(
-  "/",
-  protect,
-  authorize("admin", "user"),
-  async (req, res) => {
-    try {
-      const complaints = await Complaint.find()
-        .populate("user_id", "name email")
-        .populate("assigned_to", "name email");
+// ============================================================
+// ✅ GET ALL COMPLAINTS (ROLE BASED)
+// ============================================================
+router.get("/", protect, async (req, res) => {
+  try {
+    const query =
+      req.user.role === "admin"
+        ? {}
+        : { user_id: req.user._id };
 
-      res.json(complaints);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
+    const complaints = await Complaint.find(query)
+      .populate("user_id", "name email")
+      .populate("assigned_to", "name email")
+      .sort({ created_at: -1 });
+
+    res.json(complaints);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-);
+});
 
-// ================= GET VOLUNTEER ASSIGNED COMPLAINTS =================
-// Volunteer sees only assigned complaints
-router.get(
-  "/my-assignments",
-  protect,
-  authorize("volunteer"),
-  async (req, res) => {
-    try {
-      const complaints = await Complaint.find({
-        assigned_to: req.user._id,
-      }).populate("user_id", "name email");
+// ============================================================
+// ✅ GET MY COMPLAINTS
+// ============================================================
+router.get("/my", protect, async (req, res) => {
+  try {
+    const complaints = await Complaint.find({
+      user_id: req.user._id,
+    })
+      .populate("assigned_to", "name email")
+      .sort({ created_at: -1 });
 
-      res.json(complaints);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
+    res.json(complaints);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-);
+});
 
-// ================= ADMIN ASSIGN COMPLAINT =================
-router.put(
-  "/assign/:id",
-  protect,
-  authorize("admin"),
-  async (req, res) => {
-    try {
-      const { volunteerId } = req.body;
+// ============================================================
+// ✅ ADMIN: ASSIGN VOLUNTEER
+// ============================================================
+router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
+  try {
+    const { volunteerId } = req.body;
 
-      const complaint = await Complaint.findById(req.params.id);
-
-      if (!complaint) {
-        return res.status(404).json({ message: "Complaint not found" });
-      }
-
-      complaint.assigned_to = volunteerId;
-      await complaint.save();
-
-      res.json({
-        message: "Complaint assigned successfully",
-        complaint,
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+    if (!volunteerId) {
+      return res
+        .status(400)
+        .json({ message: "Volunteer ID is required" });
     }
-  }
-);
 
-// ================= ADMIN UPDATE STATUS =================
-router.put(
-  "/status/:id",
-  protect,
-  authorize("admin"),
-  async (req, res) => {
-    try {
-      const { status } = req.body;
+    const complaint = await Complaint.findById(req.params.id);
 
-      const complaint = await Complaint.findById(req.params.id);
-
-      if (!complaint) {
-        return res.status(404).json({ message: "Complaint not found" });
-      }
-
-      complaint.status = status;
-      await complaint.save();
-
-      res.json({
-        message: "Status updated successfully",
-        complaint,
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
     }
+
+    complaint.assigned_to = volunteerId;
+    complaint.status = "in_review";
+
+    await complaint.save();
+
+    res.json({
+      message: "Complaint assigned successfully",
+      complaint,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-);
+});
+
+// ============================================================
+// ✅ ADMIN: UPDATE STATUS
+// ============================================================
+router.put("/status/:id", protect, authorize("admin"), async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const allowedStatus = ["received", "in_review", "resolved"];
+
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    complaint.status = status;
+    await complaint.save();
+
+    res.json({
+      message: "Status updated successfully",
+      complaint,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;

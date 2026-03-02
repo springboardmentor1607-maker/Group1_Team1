@@ -2,14 +2,15 @@ import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "../Dashboard.css";
+import API from "../api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_LABELS = { received: "Received", in_review: "In Review", resolved: "Resolved" };
 const STATUS_DOT_COLORS = { received: "#3b82f6", in_review: "#f59e0b", resolved: "#22c55e" };
 const PROGRESS_STEPS = ["received", "in_review", "resolved"];
 
-// ─── Utilities ────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
+  if (!dateStr) return "—";
   const diff = Date.now() - new Date(dateStr).getTime();
   const days = Math.floor(diff / 86400000);
   if (days === 0) return "Today";
@@ -17,6 +18,7 @@ function timeAgo(dateStr) {
   return `${days} days ago`;
 }
 function formatDate(dateStr) {
+  if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -112,16 +114,19 @@ function StatCard({ icon, count, label, trend }) {
 function ComplaintCard({ complaint, onView }) {
   return (
     <div className="cs-complaint-card" onClick={() => onView(complaint)}>
-      {complaint.image && (
+      {complaint.photo && (
         <div className="cs-complaint-card__img-wrap">
-          <img src={complaint.image} alt={complaint.type} className="cs-complaint-card__img" />
+          <img
+            src={`http://localhost:5000${complaint.photo}`}
+            alt={complaint.title}
+            className="cs-complaint-card__img"
+          />
           <div className="cs-complaint-card__img-overlay" />
         </div>
       )}
       <div className="cs-complaint-card__body">
         <div className="cs-complaint-card__header">
           <div className="cs-complaint-card__title-row">
-            <span style={{ fontSize: 18 }}>{complaint.typeIcon}</span>
             <span className="cs-complaint-card__title">{complaint.title}</span>
           </div>
           <StatusBadge status={complaint.status} />
@@ -129,14 +134,10 @@ function ComplaintCard({ complaint, onView }) {
         <p className="cs-complaint-card__desc">{complaint.description}</p>
         <div className="cs-complaint-card__location">
           <span>📍</span>
-          <span>{complaint.location}</span>
+          <span>{complaint.address}</span>
         </div>
         <div className="cs-complaint-card__footer">
-          <div className="cs-complaint-card__meta">
-            <span className="cs-complaint-card__meta-item">👍 {complaint.votes}</span>
-            <span className="cs-complaint-card__meta-item">💬 {complaint.comments}</span>
-          </div>
-          <span className="cs-complaint-card__time">🕐 {timeAgo(complaint.createdAt)}</span>
+          <span className="cs-complaint-card__time">🕐 {timeAgo(complaint.created_at)}</span>
         </div>
       </div>
     </div>
@@ -150,30 +151,27 @@ function ComplaintDetailModal({ complaint, onClose }) {
     <div className="cs-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="cs-modal">
         <button className="cs-modal__close" onClick={onClose}>×</button>
-        {complaint.image && (
+        {complaint.photo && (
           <div className="cs-modal__img-wrap">
-            <img src={complaint.image} alt={complaint.type} className="cs-modal__img" />
+            <img src={`http://localhost:5000${complaint.photo}`} alt={complaint.title} className="cs-modal__img" />
             <div className="cs-modal__img-overlay" />
-            <div className="cs-modal__img-badge">
-              <StatusBadge status={complaint.status} />
-            </div>
+            <div className="cs-modal__img-badge"><StatusBadge status={complaint.status} /></div>
           </div>
         )}
         <div className="cs-modal__header">
-          <span style={{ fontSize: 28 }}>{complaint.typeIcon}</span>
           <div>
             <div className="cs-modal__title">{complaint.title}</div>
-            <div className="cs-modal__subtitle">#{complaint.id} · {complaint.type}</div>
+            <div className="cs-modal__subtitle">Type: {complaint.type || "—"} · Priority: {complaint.priority || "—"}</div>
           </div>
         </div>
-        {!complaint.image && <div style={{ padding: "0 24px" }}><StatusBadge status={complaint.status} /></div>}
+        {!complaint.photo && <div style={{ padding: "0 24px" }}><StatusBadge status={complaint.status} /></div>}
 
         {/* Progress tracker */}
         <div style={{ padding: "16px 24px 0" }}>
           <div className="cs-progress">
             {PROGRESS_STEPS.map((step, i) => (
-              <>
-                <div key={step} className="cs-progress__step">
+              <div key={step} style={{ display: "flex", alignItems: "center" }}>
+                <div className="cs-progress__step">
                   <div className={`cs-progress__circle${i <= currentIdx ? " cs-progress__circle--active" : ""}`}
                     style={i <= currentIdx ? { background: i === 0 ? "#3b82f6" : i === 1 ? "#f59e0b" : "#22c55e" } : {}}>
                     {i <= currentIdx ? "✓" : i + 1}
@@ -183,9 +181,9 @@ function ComplaintDetailModal({ complaint, onClose }) {
                   </span>
                 </div>
                 {i < PROGRESS_STEPS.length - 1 && (
-                  <div key={`line-${i}`} className={`cs-progress__line${i < currentIdx ? " cs-progress__line--active" : ""}`} />
+                  <div className={`cs-progress__line${i < currentIdx ? " cs-progress__line--active" : ""}`} />
                 )}
-              </>
+              </div>
             ))}
           </div>
         </div>
@@ -198,19 +196,19 @@ function ComplaintDetailModal({ complaint, onClose }) {
           <div className="cs-modal__grid">
             <div>
               <div className="cs-modal__field-label">Location</div>
-              <div className="cs-modal__field-value">📍 {complaint.location}</div>
+              <div className="cs-modal__field-value">📍 {complaint.address}</div>
             </div>
             <div>
               <div className="cs-modal__field-label">Reported On</div>
-              <div className="cs-modal__field-value">🕐 {formatDate(complaint.createdAt)}</div>
+              <div className="cs-modal__field-value">🕐 {formatDate(complaint.created_at)}</div>
             </div>
             <div>
               <div className="cs-modal__field-label">Last Updated</div>
-              <div className="cs-modal__field-value">🔄 {formatDate(complaint.updatedAt)}</div>
+              <div className="cs-modal__field-value">🔄 {formatDate(complaint.updated_at)}</div>
             </div>
             <div>
-              <div className="cs-modal__field-label">Community</div>
-              <div className="cs-modal__field-value">👍 {complaint.votes} votes · 💬 {complaint.comments} comments</div>
+              <div className="cs-modal__field-label">Assigned To</div>
+              <div className="cs-modal__field-value">{complaint.assigned_to || "Not yet assigned"}</div>
             </div>
           </div>
         </div>
@@ -228,20 +226,18 @@ function Chatbot() {
   const [input, setInput] = useState("");
 
   const QUICK_REPLIES = ["Take a tour 🗺️", "How do I report an issue?", "Track my complaint"];
-
   const BOT_RESPONSES = {
-    "take a tour": "🗺️ Welcome to CleanStreet!\n\n1️⃣ Dashboard — See all your complaints & stats.\n\n2️⃣ Report Issue — File a complaint instantly.\n\n3️⃣ Track Progress — Received → In Review → Resolved.\n\n4️⃣ Community — Vote on issues and see what neighbors report.\n\n5️⃣ Profile — Manage your account and badges.",
-    "how do i report an issue": "Click '➕ Report New Issue' in the hero section or navbar to submit a new civic complaint!",
-    "track my complaint": "Go to 'View Complaints' in the navbar to see the status of all your reports.",
+    "take a tour": "🗺️ Welcome to CleanStreet!\n\n1️⃣ Dashboard — See all complaints & stats.\n2️⃣ Report Issue — File a complaint instantly.\n3️⃣ Track Progress — Received → In Review → Resolved.",
+    "how do i report an issue": "Click '➕ Report New Issue' in the navbar to submit a new civic complaint with photo and location!",
+    "track my complaint": "Click on any complaint card to see its progress tracker — from Received all the way to Resolved.",
   };
 
   const sendMessage = (text) => {
     if (!text.trim()) return;
-    const userMsg = { from: "user", text };
     const key = text.toLowerCase().replace(/[^a-z\s]/g, "").trim();
     const matched = Object.keys(BOT_RESPONSES).find(k => key.includes(k));
-    const botReply = matched ? BOT_RESPONSES[matched] : "I'm not sure about that. Try typing 'Take a tour' to learn about CleanStreet!";
-    setMessages(prev => [...prev, userMsg, { from: "bot", text: botReply }]);
+    const botReply = matched ? BOT_RESPONSES[matched] : "Try typing 'Take a tour' to learn about CleanStreet!";
+    setMessages(prev => [...prev, { from: "user", text }, { from: "bot", text: botReply }]);
     setInput("");
   };
 
@@ -254,7 +250,7 @@ function Chatbot() {
         border: "none", cursor: "pointer", fontSize: 24,
         boxShadow: "0 4px 20px rgba(37,99,235,0.45)",
         display: "flex", alignItems: "center", justifyContent: "center",
-      }} title="Chat with us">
+      }}>
         {open ? "✕" : "🤖"}
       </button>
 
@@ -273,7 +269,6 @@ function Chatbot() {
               <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 11 }}>● Online</div>
             </div>
           </div>
-
           <div style={{ padding: "12px 14px", overflowY: "auto", height: 260, display: "flex", flexDirection: "column", gap: 8 }}>
             {messages.map((m, i) => (
               <div key={i} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start" }}>
@@ -281,15 +276,12 @@ function Chatbot() {
                   maxWidth: "78%", padding: "8px 12px", borderRadius: 12, fontSize: 13, lineHeight: 1.5,
                   background: m.from === "user" ? "#2563eb" : "#f1f5f9",
                   color: m.from === "user" ? "#fff" : "#111827",
-                  borderBottomRightRadius: m.from === "user" ? 4 : 12,
-                  borderBottomLeftRadius: m.from === "bot" ? 4 : 12,
                 }}>
                   {m.text.split("\n").map((line, j) => <span key={j}>{line}<br /></span>)}
                 </div>
               </div>
             ))}
           </div>
-
           <div style={{ padding: "0 12px 10px", display: "flex", gap: 6, flexWrap: "wrap" }}>
             {QUICK_REPLIES.map((q, i) => (
               <button key={i} onClick={() => sendMessage(q)} style={{
@@ -299,7 +291,6 @@ function Chatbot() {
               }}>{q}</button>
             ))}
           </div>
-
           <div style={{ borderTop: "1px solid #e5e7eb", padding: "10px 12px", display: "flex", gap: 8 }}>
             <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage(input)}
               placeholder="Type a message..."
@@ -318,7 +309,6 @@ export default function UserDashboard() {
   const navigate = useNavigate();
   const { user, logout, getInitials } = useAuth();
 
-  // Dynamic user data from AuthContext — falls back to demo values
   const MOCK_USER = {
     name: user?.name || "Demo User",
     username: user?.username ? `@${user.username}` : "@demo_user",
@@ -330,38 +320,42 @@ export default function UserDashboard() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
+  // ── Fetch complaints from API with auth token ──────────────────────────────
   useEffect(() => {
     async function fetchComplaints() {
       try {
-        const res = await fetch("/api/complaints");
-        const data = await res.json();
-        setComplaints(data);
+        setLoading(true);
+        const res = await API.get("/api/complaints");
+        setComplaints(res.data);
       } catch (err) {
-        console.error("Failed to fetch complaints", err);
+        console.error("Failed to fetch complaints:", err);
+      } finally {
+        setLoading(false);
       }
     }
     fetchComplaints();
   }, []);
 
-  const total = complaints.length;
-  const pending = complaints.filter(c => c.status === "received").length;
-  const inProg = complaints.filter(c => c.status === "in_review").length;
+  const total    = complaints.length;
+  const pending  = complaints.filter(c => c.status === "received").length;
+  const inProg   = complaints.filter(c => c.status === "in_review").length;
   const resolved = complaints.filter(c => c.status === "resolved").length;
 
   const filtered = complaints.filter(c => {
     const matchStatus = activeFilter === "all" || c.status === activeFilter;
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.location?.toLowerCase().includes(searchQuery.toLowerCase());
+      c.address?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchStatus && matchSearch;
   });
 
   const filters = [
-    { key: "all", label: "All", count: total },
-    { key: "received", label: "Received", count: pending },
-    { key: "in_review", label: "In Review", count: inProg },
-    { key: "resolved", label: "Resolved", count: resolved },
+    { key: "all",       label: "All",       count: total    },
+    { key: "received",  label: "Received",  count: pending  },
+    { key: "in_review", label: "In Review", count: inProg   },
+    { key: "resolved",  label: "Resolved",  count: resolved },
   ];
 
   const handleLogout = () => {
@@ -369,31 +363,8 @@ export default function UserDashboard() {
     navigate("/login");
   };
 
-  const [recentActivity, setRecentActivity] = useState([]);
-
-  useEffect(() => {
-    /*
-      TODO (Backend): Fetch real recent activity from your API.
-      Suggested endpoint: GET /api/activity/recent?limit=5
-      Expected response array item shape:
-      {
-        icon: string,       // e.g. "✅", "➕", "🔄", "💬"
-        text: string,       // e.g. "Pothole on Main Street resolved"
-        time: string,       // e.g. "2 hours ago" or ISO timestamp
-        color: string       // hex color e.g. "#22c55e"
-      }
-      Once backend is ready, uncomment the fetch below and remove setRecentActivity([]).
-    */
-    // fetch("/api/activity/recent?limit=5")
-    //   .then(res => res.json())
-    //   .then(data => setRecentActivity(data))
-    //   .catch(err => console.error("Failed to fetch activity", err));
-    setRecentActivity([]); // remove this line once backend endpoint is ready
-  }, []);
-
   return (
     <div className="cs-page">
-
       {/* ── Navbar ── */}
       <nav className="cs-navbar">
         <div className="cs-navbar__brand">
@@ -402,12 +373,11 @@ export default function UserDashboard() {
         </div>
         <div className="cs-navbar__links">
           {[
-            { label: "Dashboard", path: "/dashboard" },
-            { label: "Report Issue", path: "/submit-complaint" },
-            { label: "View Complaints", path: "/complaints" },
+            { label: "Dashboard",        path: "/dashboard"         },
+            { label: "Report Issue",     path: "/submit-complaint"  },
+            { label: "View Complaints",  path: "/complaints"        },
           ].map(item => (
-            <span
-              key={item.label}
+            <span key={item.label}
               className={`cs-navbar__link ${item.label === "Dashboard" ? "cs-navbar__link--active" : ""}`}
               onClick={() => navigate(item.path)}
             >
@@ -416,15 +386,12 @@ export default function UserDashboard() {
           ))}
         </div>
         <div className="cs-navbar__actions">
-          {/* Show Logout when logged in, Login+Register when not */}
           {user ? (
             <button
               className="cs-btn cs-btn--outline cs-btn--sm"
               onClick={handleLogout}
-              style={{ background: '#2563eb', color: '#fff', borderColor: '#2563eb' }}
-            >
-              Logout
-            </button>
+              style={{ background: "#2563eb", color: "#fff", borderColor: "#2563eb" }}
+            >Logout</button>
           ) : (
             <>
               <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => navigate("/login")}>Login</button>
@@ -460,19 +427,14 @@ export default function UserDashboard() {
             />
             <div className="cs-hero__img-overlay" />
             <div className="cs-hero__img-stats">
-              {/* 
-                TODO (Backend): Replace these hardcoded values with real API data.
-                Suggested endpoint: GET /api/stats/summary
-                Expected response: { totalResolved: number, activeCitizens: number, satisfactionRate: number }
-              */}
               <div className="cs-hero__img-stat">
-                <span className="cs-hero__img-stat-num">248</span>
+                <span className="cs-hero__img-stat-num">{resolved}</span>
                 <span className="cs-hero__img-stat-label">Issues Resolved</span>
               </div>
               <div className="cs-hero__img-stat-divider" />
               <div className="cs-hero__img-stat">
-                <span className="cs-hero__img-stat-num">1.2k</span>
-                <span className="cs-hero__img-stat-label">Active Citizens</span>
+                <span className="cs-hero__img-stat-num">{total}</span>
+                <span className="cs-hero__img-stat-label">Total Reports</span>
               </div>
             </div>
           </div>
@@ -483,18 +445,11 @@ export default function UserDashboard() {
 
           {/* ── Left: Stats + Complaints ── */}
           <div>
-            {/* 
-              Stat cards — counts are derived from complaints fetched from /api/complaints.
-              TODO (Backend): If you want richer stats (e.g. weekly delta, trends),
-              add a separate endpoint: GET /api/stats/complaints
-              Expected response: { total, pending, inProgress, resolved, totalThisWeek, resolvedToday }
-              Then replace `total`, `pending`, `inProg`, `resolved` below with that API data.
-            */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-              <StatCard icon="⚠️" count={total} label="Total Issues" />
-              <StatCard icon="⏳" count={pending} label="Pending" />
-              <StatCard icon="🔄" count={inProg} label="In Progress" />
-              <StatCard icon="✅" count={resolved} label="Resolved" />
+              <StatCard icon="⚠️" count={total}    label="Total Issues" />
+              <StatCard icon="⏳" count={pending}  label="Pending"      />
+              <StatCard icon="🔄" count={inProg}   label="In Progress"  />
+              <StatCard icon="✅" count={resolved} label="Resolved"     />
             </div>
 
             {/* Filter bar */}
@@ -520,16 +475,30 @@ export default function UserDashboard() {
             </div>
 
             {/* Complaints grid */}
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="cs-empty">
+                <div className="cs-empty__icon">⏳</div>
+                <div className="cs-empty__title">Loading complaints...</div>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="cs-empty">
                 <div className="cs-empty__icon">📭</div>
                 <div className="cs-empty__title">No complaints found</div>
-                <div className="cs-empty__desc">Try adjusting your search or filter.</div>
+                <div className="cs-empty__desc">
+                  {total === 0
+                    ? "No reports submitted yet. Be the first to report an issue!"
+                    : "Try adjusting your search or filter."}
+                </div>
+                {total === 0 && (
+                  <button className="cs-btn cs-btn--primary" style={{ marginTop: 16 }} onClick={() => navigate("/submit-complaint")}>
+                    ➕ Report an Issue
+                  </button>
+                )}
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
                 {filtered.map(c => (
-                  <ComplaintCard key={c.id} complaint={c} onView={setSelectedComplaint} />
+                  <ComplaintCard key={c._id} complaint={c} onView={setSelectedComplaint} />
                 ))}
               </div>
             )}
@@ -551,11 +520,13 @@ export default function UserDashboard() {
             {/* City Health */}
             <div className="cs-health-card">
               <div className="cs-health-card__label">📊 City Health Score</div>
-              <div className="cs-health-card__score">74<span>/100</span></div>
-              <div className="cs-health-bar">
-                <div className="cs-health-bar__fill" style={{ width: "74%" }} />
+              <div className="cs-health-card__score">
+                {total === 0 ? "—" : Math.round((resolved / total) * 100)}<span>/100</span>
               </div>
-              <div className="cs-health-card__note">↑ 3 points from last month</div>
+              <div className="cs-health-bar">
+                <div className="cs-health-bar__fill" style={{ width: total === 0 ? "0%" : `${Math.round((resolved / total) * 100)}%` }} />
+              </div>
+              <div className="cs-health-card__note">{resolved} of {total} issues resolved</div>
             </div>
 
             {/* Quick Actions */}
@@ -568,31 +539,6 @@ export default function UserDashboard() {
                 <button className="cs-btn cs-btn--outline cs-btn--full" onClick={() => navigate("/complaints")}>
                   🗂️ View All Complaints
                 </button>
-                <button className="cs-btn cs-btn--outline cs-btn--full" onClick={() => navigate("/map")}>
-                  🗺️ Issue Map
-                </button>
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="cs-sidebar-card">
-              <div className="cs-sidebar-card__title">🕐 Recent Activity</div>
-              <div className="cs-activity-list" style={{ marginTop: 12 }}>
-                {recentActivity.length === 0 ? (
-                  <div style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "16px 0" }}>
-                    No recent activity yet.
-                  </div>
-                ) : (
-                  recentActivity.map((a, i) => (
-                    <div key={i} className="cs-activity-item">
-                      <div className="cs-activity-item__icon" style={{ background: a.color + "20" }}>{a.icon}</div>
-                      <div>
-                        <div className="cs-activity-item__text">{a.text}</div>
-                        <div className="cs-activity-item__time">{a.time}</div>
-                      </div>
-                    </div>
-                  ))
-                )}
               </div>
             </div>
 
