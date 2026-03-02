@@ -169,12 +169,24 @@ function AdminDashboard() {
 
   const fetchComplaints = async () => {
     try {
-      // TODO (Backend): GET /api/complaints — admin sees all complaints
       const res = await fetch("http://localhost:5000/api/complaints", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (res.ok) setComplaints(Array.isArray(data) ? data : data.complaints || []);
+      if (res.ok) {
+        const raw = Array.isArray(data) ? data : data.complaints || [];
+        // Normalize backend fields
+        const normalized = raw.map(c => ({
+          ...c,
+          id:       c._id || c.id,
+          address:  c.address || c.location || "No address",
+          type:     c.type || c.issueType || "General",
+          priority: c.priority || "low",
+          status:   c.status || "received",
+          createdAt: c.created_at || c.createdAt,
+        }));
+        setComplaints(normalized);
+      }
     } catch (err) {
       console.error("Failed to fetch complaints", err);
     }
@@ -201,9 +213,9 @@ function AdminDashboard() {
     const volunteerId = assignSelections[complaintId];
     if (!volunteerId) return;
     try {
-      // TODO (Backend): PATCH /api/complaints/:id/assign { volunteerId }
-      const res = await fetch(`http://localhost:5000/api/complaints/${complaintId}/assign`, {
-        method: "PATCH",
+      // Backend: PUT /api/complaints/assign/:id { volunteerId }
+      const res = await fetch(`http://localhost:5000/api/complaints/assign/${complaintId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ volunteerId }),
       });
@@ -215,9 +227,9 @@ function AdminDashboard() {
 
   const markResolved = async (complaintId) => {
     try {
-      // TODO (Backend): PATCH /api/complaints/:id { status: "resolved" }
-      const res = await fetch(`http://localhost:5000/api/complaints/${complaintId}`, {
-        method: "PATCH",
+      // Backend: PUT /api/complaints/status/:id { status }
+      const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: "resolved" }),
       });
