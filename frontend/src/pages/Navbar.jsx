@@ -72,7 +72,7 @@ function CleanStreetLogo({ size = 44 }) {
 
 // ─── Nav links per role ───────────────────────────────────────────────────────
 const NAV_LINKS = {
-  citizen: [
+  user: [
     { label: "Dashboard",        path: "/dashboard"         },
     { label: "Report Issue",     path: "/submit-complaint"  },
     { label: "View Complaints",  path: "/complaints"        },
@@ -96,8 +96,8 @@ export default function Navbar() {
   const location  = useLocation();
   const { user, logout, getInitials } = useAuth();
 
-  const role   = user?.role || "citizen";
-  const links  = NAV_LINKS[role] || NAV_LINKS.citizen;
+  const role   = user?.role || "user";
+  const links  = NAV_LINKS[role] || NAV_LINKS.user;
   const avatar = user?.name ? getInitials(user.name) : "U";
 
   const handleLogout = () => {

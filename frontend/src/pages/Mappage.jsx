@@ -101,10 +101,10 @@ export default function MapPage() {
 
   const token  = localStorage.getItem("token");
   const avatar = user?.name ? getInitials(user.name) : "U";
-  const role   = user?.role || "citizen";
+  const role   = user?.role || "user";
 
   const mapDescription = {
-    citizen:   "Complaints you've reported in your community.",
+    user:   "Complaints you've reported in your community.",
     volunteer: "Complaints assigned to you in your area.",
     admin:     "All reported civic issues across the platform.",
   };
@@ -114,7 +114,7 @@ export default function MapPage() {
     async function fetchComplaints() {
       try {
         let url = "http://localhost:5000/api/complaints";
-        if (role === "citizen")   url = "http://localhost:5000/api/complaints?mine=true";
+        if (role === "user")   url = "http://localhost:5000/api/complaints?mine=true";
         if (role === "volunteer") url = "http://localhost:5000/api/complaints/assigned-to-me";
         const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
