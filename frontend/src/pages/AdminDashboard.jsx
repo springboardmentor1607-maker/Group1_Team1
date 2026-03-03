@@ -76,11 +76,11 @@ function CleanStreetLogo({ size = 44 }) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    resolved:   { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved"   },
-    assigned:   { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"   },
-    pending:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"    },
-    in_review:  { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review"  },
-    received:   { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received"   },
+    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
+    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
+    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review" },
+    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received" },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
   const s = map[key] || map["pending"];
@@ -101,9 +101,9 @@ function StatusBadge({ status }) {
 function PriorityBadge({ priority }) {
   const map = {
     critical: { bg: "#fee2e2", color: "#991b1b" },
-    high:     { bg: "#ffedd5", color: "#9a3412" },
-    medium:   { bg: "#fef9c3", color: "#92400e" },
-    low:      { bg: "#dcfce7", color: "#166534" },
+    high: { bg: "#ffedd5", color: "#9a3412" },
+    medium: { bg: "#fef9c3", color: "#92400e" },
+    low: { bg: "#dcfce7", color: "#166534" },
   };
   const s = map[priority?.toLowerCase()] || map["low"];
   return (
@@ -151,9 +151,9 @@ function AdminDashboard() {
   const { user, logout, getInitials } = useAuth();
 
   const [activeTab, setActiveTab] = useState("overview");
-  const [complaints, setComplaints]   = useState([]);
-  const [users, setUsers]             = useState([]);
-  const [volunteers, setVolunteers]   = useState([]);
+  const [complaints, setComplaints] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [volunteers, setVolunteers] = useState([]);
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -179,11 +179,11 @@ function AdminDashboard() {
         // Normalize backend fields
         const normalized = raw.map(c => ({
           ...c,
-          id:       c._id || c.id,
-          address:  c.address || c.location || "No address",
-          type:     c.type || c.issueType || "General",
+          id: c._id || c.id,
+          address: c.address || c.location || "No address",
+          type: c.type || c.issueType || "General",
           priority: c.priority || "low",
-          status:   c.status || "received",
+          status: c.status || "received",
           createdAt: c.created_at || c.createdAt,
         }));
         setComplaints(normalized);
@@ -211,22 +211,22 @@ function AdminDashboard() {
   };
 
   const assignVolunteer = async (complaintId) => {
-  const volunteerId = assignSelections[complaintId];
-  if (!volunteerId?.trim()) return;
-  try {
-    await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId });
-    // ✅ Clear the selection first so UI resets to "show volunteer name" mode
-    setAssignSelections(prev => {
-      const updated = { ...prev };
-      delete updated[complaintId];
-      return updated;
-    });
-    // ✅ Then re-fetch to get updated data from backend
-    await fetchComplaints();
-  } catch (err) {
-    console.error('Assign failed', err);
-  }
-};
+    const volunteerId = assignSelections[complaintId];
+    if (!volunteerId?.trim()) return;
+    try {
+      await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId });
+      // ✅ Clear the selection first so UI resets to "show volunteer name" mode
+      setAssignSelections(prev => {
+        const updated = { ...prev };
+        delete updated[complaintId];
+        return updated;
+      });
+      // ✅ Then re-fetch to get updated data from backend
+      await fetchComplaints();
+    } catch (err) {
+      console.error('Assign failed', err);
+    }
+  };
 
   const markResolved = async (complaintId) => {
     try {
@@ -259,10 +259,10 @@ function AdminDashboard() {
   const handleLogout = () => { logout(); navigate("/login"); };
 
   // ── Stats ───────────────────────────────────────────────────────────────────
-  const total    = complaints.length;
-  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+  const total = complaints.length;
+  const pending = complaints.filter(c => c.status === "pending" || c.status === "received").length;
   const resolved = complaints.filter(c => c.status === "resolved").length;
-  const inProg   = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+  const inProg = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
@@ -274,10 +274,10 @@ function AdminDashboard() {
   });
 
   const sidebarItems = [
-    { key: "overview",   icon: "📊", label: "Overview"          },
-    { key: "complaints", icon: "📋", label: "Complaints"        },
-    { key: "users",      icon: "👥", label: "User Management"   },
-    { key: "volunteers", icon: "🤝", label: "Volunteers"        },
+    { key: "overview", icon: "📊", label: "Overview" },
+    { key: "complaints", icon: "📋", label: "Complaints" },
+    { key: "users", icon: "👥", label: "User Management" },
+    { key: "volunteers", icon: "🤝", label: "Volunteers" },
   ];
 
   return (
@@ -349,10 +349,10 @@ function AdminDashboard() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={total}     label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={pending}    label="Pending"          accent="#f59e0b" />
-                <StatCard icon="🔄" count={inProg}     label="In Progress"      accent="#8b5cf6" />
-                <StatCard icon="✅" count={resolved}   label="Resolved"         accent="#22c55e" />
+                <StatCard icon="⚠️" count={total} label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={pending} label="Pending" accent="#f59e0b" />
+                <StatCard icon="🔄" count={inProg} label="In Progress" accent="#8b5cf6" />
+                <StatCard icon="✅" count={resolved} label="Resolved" accent="#22c55e" />
               </div>
 
               <div className="cs-card">
@@ -411,10 +411,10 @@ function AdminDashboard() {
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
-                    { key: "all",       label: "All",        count: total    },
-                    { key: "received",  label: "Pending",    count: pending  },
-                    { key: "in_review", label: "In Progress",count: inProg   },
-                    { key: "resolved",  label: "Resolved",   count: resolved },
+                    { key: "all", label: "All", count: total },
+                    { key: "received", label: "Pending", count: pending },
+                    { key: "in_review", label: "In Progress", count: inProg },
+                    { key: "resolved", label: "Resolved", count: resolved },
                   ].map(f => (
                     <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -626,8 +626,15 @@ function AdminDashboard() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
                   {volunteers.map(v => {
-                    const assigned = complaints.filter(c => c.assignedTo?._id === v._id || c.assignedTo === v._id).length;
-                    const resolved = complaints.filter(c => (c.assignedTo?._id === v._id || c.assignedTo === v._id) && c.status === "resolved").length;
+                    const assigned = complaints.filter(c => {
+                      const id = c.assigned_to?._id || c.assigned_to;
+                      return String(id) === String(v._id);
+                    }).length;
+
+                    const resolved = complaints.filter(c => {
+                      const id = c.assigned_to?._id || c.assigned_to;
+                      return String(id) === String(v._id) && c.status === "resolved";
+                    }).length;
                     return (
                       <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
                         <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>
