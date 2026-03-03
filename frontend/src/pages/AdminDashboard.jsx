@@ -170,7 +170,7 @@ function AdminDashboard() {
 
   const fetchComplaints = async () => {
     try {
-      const res = await fetch("http://localhost:5001/api/complaints", {
+      const res = await fetch("http://localhost:5000/api/complaints", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -196,7 +196,7 @@ function AdminDashboard() {
   const fetchUsers = async () => {
     try {
       // TODO (Backend): GET /api/users — admin sees all users
-      const res = await fetch("http://localhost:5001/api/users", {
+      const res = await fetch("http://localhost:5000/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -231,7 +231,7 @@ function AdminDashboard() {
   const markResolved = async (complaintId) => {
     try {
       // Backend: PUT /api/complaints/status/:id { status }
-      const res = await fetch(`http://localhost:5001/api/complaints/status/${complaintId}`, {
+      const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: "resolved" }),
@@ -245,7 +245,7 @@ function AdminDashboard() {
   const changeUserRole = async (userId, newRole) => {
     try {
       // TODO (Backend): PATCH /api/users/:id/role { role }
-      const res = await fetch(`http://localhost:5001/api/users/${userId}/role`, {
+      const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ role: newRole }),
