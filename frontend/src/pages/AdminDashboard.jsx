@@ -169,63 +169,92 @@ function AdminDashboard() {
   }, []);
 
   const fetchComplaints = async () => {
-  try {
-    const res = await API.get('/api/complaints');
-    const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
-    const normalized = raw.map(c => ({
-      ...c,
-      id:        c._id || c.id,
-      address:   c.address || c.location || 'No address',
-      type:      c.type || c.issueType || 'General',
-      priority:  c.priority || 'low',
-      status:    c.status || 'received',
-      createdAt: c.created_at || c.createdAt,
-    }));
-    setComplaints(normalized);
-  } catch (err) {
-    console.error('Failed to fetch complaints', err);
-  }
-};
+    try {
+      const res = await fetch("http://localhost:5001/api/complaints", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const raw = Array.isArray(data) ? data : data.complaints || [];
+        // Normalize backend fields
+        const normalized = raw.map(c => ({
+          ...c,
+          id:       c._id || c.id,
+          address:  c.address || c.location || "No address",
+          type:     c.type || c.issueType || "General",
+          priority: c.priority || "low",
+          status:   c.status || "received",
+          createdAt: c.created_at || c.createdAt,
+        }));
+        setComplaints(normalized);
+      }
+    } catch (err) {
+      console.error("Failed to fetch complaints", err);
+    }
+  };
 
-const fetchUsers = async () => {
-  try {
-    const res = await API.get('/api/users');
-    const allUsers = Array.isArray(res.data) ? res.data : res.data.users || [];
-    setUsers(allUsers);
-    setVolunteers(allUsers.filter(u => u.role === 'volunteer'));
-  } catch (err) {
-    console.error('Failed to fetch users', err);
-  }
-};
+  const fetchUsers = async () => {
+    try {
+      // TODO (Backend): GET /api/users — admin sees all users
+      const res = await fetch("http://localhost:5001/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const allUsers = Array.isArray(data) ? data : data.users || [];
+        setUsers(allUsers);
+        setVolunteers(allUsers.filter(u => u.role === "volunteer"));
+      }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
+  };
 
-const assignVolunteer = async (complaintId) => {
+  const assignVolunteer = async (complaintId) => {
   const volunteerId = assignSelections[complaintId];
-  if (!volunteerId) return;
+  if (!volunteerId?.trim()) return;
   try {
     await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId });
-    fetchComplaints();
+    // ✅ Clear the selection first so UI resets to "show volunteer name" mode
+    setAssignSelections(prev => {
+      const updated = { ...prev };
+      delete updated[complaintId];
+      return updated;
+    });
+    // ✅ Then re-fetch to get updated data from backend
+    await fetchComplaints();
   } catch (err) {
     console.error('Assign failed', err);
   }
 };
 
-const markResolved = async (complaintId) => {
-  try {
-    await API.put(`/api/complaints/status/${complaintId}`, { status: 'resolved' });
-    fetchComplaints();
-  } catch (err) {
-    console.error('Resolve failed', err);
-  }
-};
+  const markResolved = async (complaintId) => {
+    try {
+      // Backend: PUT /api/complaints/status/:id { status }
+      const res = await fetch(`http://localhost:5001/api/complaints/status/${complaintId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: "resolved" }),
+      });
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Resolve failed", err);
+    }
+  };
 
-const changeUserRole = async (userId, newRole) => {
-  try {
-    await API.patch(`/api/users/${userId}/role`, { role: newRole });
-    fetchUsers();
-  } catch (err) {
-    console.error('Role change failed', err);
-  }
-};
+  const changeUserRole = async (userId, newRole) => {
+    try {
+      // TODO (Backend): PATCH /api/users/:id/role { role }
+      const res = await fetch(`http://localhost:5001/api/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (res.ok) fetchUsers();
+    } catch (err) {
+      console.error("Role change failed", err);
+    }
+  };
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
@@ -431,10 +460,25 @@ const changeUserRole = async (userId, newRole) => {
                           </TD>
                           <TD style={{ color: "#6b7280", textTransform: "capitalize" }}>{c.type || c.issueType || "—"}</TD>
                           <TD><PriorityBadge priority={c.priority} /></TD>
-                          <TD style={{ color: "#374151" }}>{c.reportedBy?.name || c.user?.name || "—"}</TD>
+                          <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
                           <TD><StatusBadge status={c.status} /></TD>
                           <TD>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            {c.status === "resolved" ? (
+                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                                ✅ {c.assigned_to?.name || "—"}
+                              </div>
+                            ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>
+                                  👤 {c.assigned_to?.name || c.assigned_to}
+                                </div>
+                                <button
+                                  className="cs-btn cs-btn--outline cs-btn--sm"
+                                  style={{ fontSize: 11 }}
+                                  onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}
+                                >🔄 Change</button>
+                              </div>
+                            ) : (
                               <select
                                 className="cs-input"
                                 style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
@@ -446,27 +490,28 @@ const changeUserRole = async (userId, newRole) => {
                                   <option key={v._id} value={v._id}>{v.name}</option>
                                 ))}
                               </select>
-                              {c.assignedTo && (
-                                <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                                  Current: {c.assignedTo?.name || c.assignedTo}
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </TD>
                           <TD>
                             <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
-                              <button
-                                className="cs-btn cs-btn--outline cs-btn--sm"
-                                style={{ fontSize: 11 }}
-                                onClick={() => assignVolunteer(c._id || c.id)}
-                                disabled={!assignSelections[c._id || c.id]}
-                              >Assign</button>
-                              {c.status !== "resolved" && (
-                                <button
-                                  className="cs-btn cs-btn--primary cs-btn--sm"
-                                  style={{ fontSize: 11 }}
-                                  onClick={() => markResolved(c._id || c.id)}
-                                >✓ Resolve</button>
+                              {c.status === "resolved" ? (
+                                <span style={{ fontSize: 12, color: "#9ca3af" }}>Completed</span>
+                              ) : (
+                                <>
+                                  {(!c.assigned_to || assignSelections[c._id || c.id]) && (
+                                    <button
+                                      className="cs-btn cs-btn--outline cs-btn--sm"
+                                      style={{ fontSize: 11 }}
+                                      onClick={() => assignVolunteer(c._id || c.id)}
+                                      disabled={!assignSelections[c._id || c.id]?.trim()}
+                                    >Assign</button>
+                                  )}
+                                  <button
+                                    className="cs-btn cs-btn--primary cs-btn--sm"
+                                    style={{ fontSize: 11 }}
+                                    onClick={() => markResolved(c._id || c.id)}
+                                  >✓ Resolve</button>
+                                </>
                               )}
                             </div>
                           </TD>
@@ -544,7 +589,7 @@ const changeUserRole = async (userId, newRole) => {
                                   onClick={() => changeUserRole(u._id, "volunteer")}
                                 >Make Volunteer</button>
                               )}
-                              {u.role !== "volunteer" && u.role !== "admin" && (
+                              {u.role !== "user" && u.role !== "user" && u.role !== "admin" && (
                                 <button
                                   className="cs-btn cs-btn--outline cs-btn--sm"
                                   style={{ fontSize: 11 }}
