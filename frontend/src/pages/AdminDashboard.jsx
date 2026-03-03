@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
+import API from "../api";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
@@ -557,7 +558,7 @@ function AdminDashboard() {
                               color: u.role === "admin" ? "#dc2626" : u.role === "volunteer" ? "#2563eb" : "#16a34a",
                               padding: "2px 10px", borderRadius: 9999,
                               fontSize: 12, fontWeight: 600, textTransform: "capitalize",
-                            }}>{u.role || "citizen"}</span>
+                            }}>{u.role === "user" ? "user" : u.role || "user"}</span>
                           </TD>
                           <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
                           <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
@@ -570,11 +571,11 @@ function AdminDashboard() {
                                   onClick={() => changeUserRole(u._id, "volunteer")}
                                 >Make Volunteer</button>
                               )}
-                              {u.role !== "citizen" && u.role !== "admin" && (
+                              {u.role !== "user" && u.role !== "user" && u.role !== "admin" && (
                                 <button
                                   className="cs-btn cs-btn--outline cs-btn--sm"
                                   style={{ fontSize: 11 }}
-                                  onClick={() => changeUserRole(u._id, "citizen")}
+                                  onClick={() => changeUserRole(u._id, "user")}
                                 >Make Citizen</button>
                               )}
                             </div>
@@ -630,7 +631,7 @@ function AdminDashboard() {
                         <button
                           className="cs-btn cs-btn--outline cs-btn--sm"
                           style={{ marginTop: 12, width: "100%", fontSize: 12 }}
-                          onClick={() => changeUserRole(v._id, "citizen")}
+                          onClick={() => changeUserRole(v._id, "user")}
                         >Remove Volunteer</button>
                       </div>
                     );

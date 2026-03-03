@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
+import API from "../api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_LABELS = { received: "Received", in_review: "In Review", resolved: "Resolved" };
@@ -323,7 +324,7 @@ export default function UserDashboard() {
   const MOCK_USER = {
     name: user?.name || "Demo User",
     username: user?.username ? `@${user.username}` : "@demo_user",
-    role: user?.role || "Citizen",
+    role: user?.role || "user",
     avatar: user?.name ? getInitials(user.name) : "DU",
   };
 
