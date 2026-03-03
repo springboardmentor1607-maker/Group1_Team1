@@ -1,16 +1,16 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import AdminDashboard from "./pages/AdminDashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import SubmitComplaint from "./pages/SubmitComplaint";
 import VolunteerDashboard from "./pages/volunteerDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import MapPage from "./pages/Mappage";
 
 export default function App() {
   return (
     <Routes>
-      {/* default */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* auth */}
@@ -26,11 +26,10 @@ export default function App() {
       {/* volunteer */}
       <Route path="/volunteer" element={<VolunteerDashboard />} />
 
-      {/* admin */}
-      <Route path="/admin" element={<AdminDashboard />} />  {/* ✅ Fixed: moved before fallback */}
-
-      {/* fallback — must be last */}
+      {/* fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+    
     </Routes>
   );
 }

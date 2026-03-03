@@ -1,7 +1,8 @@
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "../Profile.css";
+import Navbar from "./Navbar";
 import API from "../api";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
@@ -84,125 +85,55 @@ function StatMini({ icon, value, label, colorClass }) {
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function Profile() {
     const navigate = useNavigate();
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, logout } = useAuth();
 
+    // Dynamic data from AuthContext with fallbacks
     const initialData = {
         username: user?.username || "",
-        email:    user?.email    || "",
-        fullName: user?.name     || "",
-        phone:    user?.phone    || "",
+        email: user?.email || "",
+        fullName: user?.name || "",
+        phone: user?.phone || "",
         location: user?.location || "",
-        bio:      user?.bio      || "",
+        bio: user?.bio || "",
     };
 
-    const [formData, setFormData]   = useState(initialData);
+    const [formData, setFormData] = useState(initialData);
     const [savedData, setSavedData] = useState(initialData);
-    const [editMode, setEditMode]   = useState(false);
-    const [message, setMessage]     = useState("");
+    const [editMode, setEditMode] = useState(false);
+    const [message, setMessage] = useState("");
     const [activeTab, setActiveTab] = useState("info");
 
-    const [stats, setStats]                     = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
-    const [activity, setActivity]               = useState([]);
-    const [badges, setBadges]                   = useState([]);
-    const [loadingStats, setLoadingStats]       = useState(true);
-    const [loadingActivity, setLoadingActivity] = useState(true);
-    const [loadingBadges, setLoadingBadges]     = useState(true);
-
-    useEffect(() => {
-        API.get("/api/profile/stats")
-            .then((res) => setStats(res.data))
-            .catch(() => setStats({ reports: 0, resolved: 0, votes: 0, badges: 0 }))
-            .finally(() => setLoadingStats(false));
-    }, []);
-
-    useEffect(() => {
-        if (activeTab !== "activity") return;
-        setLoadingActivity(true);
-        API.get("/api/profile/activity")
-            .then((res) => setActivity(res.data || []))
-            .catch(() => setActivity([]))
-            .finally(() => setLoadingActivity(false));
-    }, [activeTab]);
-
-    useEffect(() => {
-        API.get("/api/profile/badges")
-            .then((res) => setBadges(res.data || []))
-            .catch(() => setBadges([]))
-            .finally(() => setLoadingBadges(false));
-    }, []);
-
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-    const handleEdit   = () => { setEditMode(true); setMessage(""); };
+    const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
+    const handleEdit = () => { setEditMode(true); setMessage(""); };
     const handleCancel = () => { setFormData(savedData); setEditMode(false); setMessage(""); };
-    const handleSave   = () => {
+    const handleSave = () => {
         setSavedData(formData);
-        updateUser({
-            name:     formData.fullName,
-            username: formData.username,
-            email:    formData.email,
-            phone:    formData.phone,
-            location: formData.location,
-            bio:      formData.bio,
-        });
+        updateUser({ name: formData.fullName, username: formData.username, email: formData.email, phone: formData.phone, location: formData.location, bio: formData.bio });
         setEditMode(false);
         setMessage("Profile updated successfully ✅");
     };
+    const handleLogout = () => {
+        logout();
+        navigate("/login");
+    };
 
     const fields = [
-        { name: "username", label: "Username",    icon: "👤", type: "text"  },
-        { name: "email",    label: "Email",        icon: "✉️", type: "email" },
-        { name: "fullName", label: "Full Name",    icon: "🪪", type: "text"  },
-        { name: "phone",    label: "Phone Number", icon: "📞", type: "tel"   },
+        { name: "username", label: "Username", icon: "👤", type: "text" },
+        { name: "email", label: "Email", icon: "✉️", type: "email" },
+        { name: "fullName", label: "Full Name", icon: "🪪", type: "text" },
+        { name: "phone", label: "Phone Number", icon: "📞", type: "tel" },
     ];
 
-    const tabs        = ["info", "activity", "security"];
-    const memberSince = user?.memberSince || "—";
-    const roleLabel   =
-        user?.role === "volunteer" ? "🤝 Volunteer" :
-        user?.role === "admin"     ? "🛡️ Admin"     :
-                                     "🧑‍💼 Citizen";
+    const tabs = ["info", "activity", "security"];
 
-    const goToDashboard = () => {
-        if (user?.role === "volunteer") navigate("/volunteer");
-        else if (user?.role === "admin") navigate("/admin");
-        else navigate("/dashboard");
-    };
+    // Avatar initials from name
+    const avatarText = savedData.fullName ? savedData.fullName.substring(0, 2).toUpperCase() : "DU";
 
     return (
         <div className="pf-page">
 
             {/* ── Navbar ── */}
-            <nav className="pf-navbar">
-                <div className="pf-navbar__brand">
-                    <CleanStreetLogo size={42} />
-                    <span className="pf-navbar__name">CleanStreet</span>
-                </div>
-                <div className="pf-navbar__links">
-                    <span className="pf-navbar__link" onClick={goToDashboard} style={{ cursor: "pointer" }}>
-                        Dashboard
-                    </span>
-                    {user?.role !== "volunteer" && user?.role !== "admin" && (
-                        <>
-                            <span className="pf-navbar__link" onClick={() => navigate("/submit-complaint")} style={{ cursor: "pointer" }}>
-                                Report Issue
-                            </span>
-                            <span className="pf-navbar__link" onClick={() => navigate("/complaints")} style={{ cursor: "pointer" }}>
-                                View Complaints
-                            </span>
-                        </>
-                    )}
-                </div>
-                <div className="pf-navbar__actions">
-                    <div
-                        className="pf-navbar__avatar"
-                        onClick={() => navigate("/profile")}
-                        title="My Profile"
-                        style={{ cursor: "pointer", outline: "2px solid #2563eb", outlineOffset: "2px" }}
-                    >
-                        {savedData.fullName?.substring(0, 2).toUpperCase() || "??"}
-                    </div>
-                </div>
-            </nav>
+            <Navbar />
 
             {/* ── Page body ── */}
             <div className="pf-body">
@@ -211,14 +142,19 @@ function Profile() {
                 <div className="pf-hero">
                     <div className="pf-hero__text">
                         <p className="pf-hero__eyebrow">👤 My Profile</p>
-                        <h1 className="pf-hero__title">{savedData.fullName || "—"}</h1>
-                        <p className="pf-hero__sub">@{savedData.username || "—"} · Member since {memberSince}</p>
+                        <h1 className="pf-hero__title">{savedData.fullName}</h1>
+                        <p className="pf-hero__sub">@{savedData.username} · Member since {user?.memberSince || "July 2025"}</p>
                     </div>
+                    {/*
+                      TODO (Backend): Replace these zeros with real user stats.
+                      Suggested endpoint: GET /api/users/me/stats
+                      Expected response: { totalReports, resolved, votes, badges }
+                    */}
                     <div className="pf-hero__stats">
-                        <StatMini icon="⚠️" value={loadingStats ? "…" : stats.reports}  label="Reports"  colorClass="pf-stat--blue"   />
-                        <StatMini icon="✅" value={loadingStats ? "…" : stats.resolved} label="Resolved" colorClass="pf-stat--green"  />
-                        <StatMini icon="👍" value={loadingStats ? "…" : stats.votes}    label="Votes"    colorClass="pf-stat--purple" />
-                        <StatMini icon="🏅" value={loadingStats ? "…" : stats.badges}   label="Badges"   colorClass="pf-stat--yellow" />
+                        <StatMini icon="⚠️" value="0" label="Reports" colorClass="pf-stat--blue" />
+                        <StatMini icon="✅" value="0" label="Resolved" colorClass="pf-stat--green" />
+                        <StatMini icon="👍" value="0" label="Votes" colorClass="pf-stat--purple" />
+                        <StatMini icon="🏅" value="0" label="Badges" colorClass="pf-stat--yellow" />
                     </div>
                 </div>
 
@@ -228,44 +164,50 @@ function Profile() {
                     {/* ─── LEFT SIDEBAR ─── */}
                     <aside className="pf-sidebar">
 
+                        {/* Avatar card */}
                         <div className="pf-avatar-card">
                             <div className="pf-avatar-card__ring">
-                                <div className="pf-avatar-card__circle">
-                                    {savedData.fullName?.substring(0, 2).toUpperCase() || "??"}
-                                </div>
+                                <div className="pf-avatar-card__circle">{avatarText}</div>
                             </div>
-                            <h2 className="pf-avatar-card__name">{savedData.fullName || "—"}</h2>
-                            <p className="pf-avatar-card__username">@{savedData.username || "—"}</p>
-                            <span className="pf-role-badge">{roleLabel}</span>
-                            <p className="pf-avatar-card__bio">{savedData.bio || "No bio added yet."}</p>
+                            <h2 className="pf-avatar-card__name">{savedData.fullName}</h2>
+                            <p className="pf-avatar-card__username">@{savedData.username}</p>
+                            <span className="pf-role-badge">🧑‍💼 {user?.role === "user" ? "Citizen" : user?.role || "user"}</span>
+                            <p className="pf-avatar-card__bio">{savedData.bio}</p>
                             <div className="pf-avatar-card__divider" />
                             <div className="pf-avatar-card__meta">
-                                {savedData.location && <span>📍 {savedData.location}</span>}
-                                {savedData.phone    && <span>📞 {savedData.phone}</span>}
-                                {savedData.email    && <span>✉️ {savedData.email}</span>}
+                                <span>📍 {savedData.location}</span>
+                                <span>📞 {savedData.phone}</span>
+                                <span>✉️ {savedData.email}</span>
                             </div>
-                            <p className="pf-avatar-card__since">Member since {memberSince}</p>
+                            <p className="pf-avatar-card__since">Member since {user?.memberSince || "July 3, 2025"}</p>
                         </div>
 
+                        {/* Badges card */}
                         <div className="pf-badges-card">
                             <div className="pf-badges-card__title">🏅 Civic Badges</div>
-                            {loadingBadges ? (
-                                <p style={{ fontSize: 13, color: "#94a3b8", padding: "8px 0" }}>Loading badges…</p>
-                            ) : badges.length === 0 ? (
-                                <p style={{ fontSize: 13, color: "#94a3b8", padding: "8px 0" }}>No badges earned yet. Keep contributing!</p>
-                            ) : (
-                                <div className="pf-badges-list">
-                                    {badges.map((badge, i) => (
-                                        <div key={i} className={`pf-badge-item${badge.locked ? " pf-badge-item--locked" : ""}`}>
-                                            <span className="pf-badge-item__icon">{badge.locked ? "🔒" : badge.icon}</span>
-                                            <div>
-                                                <div className="pf-badge-item__name">{badge.name}</div>
-                                                <div className="pf-badge-item__desc">{badge.description}</div>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <div className="pf-badges-list">
+                                <div className="pf-badge-item">
+                                    <span className="pf-badge-item__icon">🌟</span>
+                                    <div>
+                                        <div className="pf-badge-item__name">First Report</div>
+                                        <div className="pf-badge-item__desc">Submitted your first civic issue</div>
+                                    </div>
                                 </div>
-                            )}
+                                <div className="pf-badge-item">
+                                    <span className="pf-badge-item__icon">🤝</span>
+                                    <div>
+                                        <div className="pf-badge-item__name">Community Helper</div>
+                                        <div className="pf-badge-item__desc">Voted on 10+ community issues</div>
+                                    </div>
+                                </div>
+                                <div className="pf-badge-item pf-badge-item--locked">
+                                    <span className="pf-badge-item__icon">🔒</span>
+                                    <div>
+                                        <div className="pf-badge-item__name">Street Champion</div>
+                                        <div className="pf-badge-item__desc">Get 5 issues resolved</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                     </aside>
@@ -273,6 +215,7 @@ function Profile() {
                     {/* ─── RIGHT MAIN PANEL ─── */}
                     <div className="pf-main">
 
+                        {/* Tabs */}
                         <div className="pf-tabs">
                             {tabs.map(tab => (
                                 <button
@@ -280,7 +223,7 @@ function Profile() {
                                     className={`pf-tab${activeTab === tab ? " pf-tab--active" : ""}`}
                                     onClick={() => setActiveTab(tab)}
                                 >
-                                    {tab === "info"     && "📋 Account Info"}
+                                    {tab === "info" && "📋 Account Info"}
                                     {tab === "activity" && "🕐 Activity"}
                                     {tab === "security" && "🔒 Security"}
                                 </button>
@@ -296,9 +239,7 @@ function Profile() {
                                         <p className="pf-card__sub">Update your personal details below</p>
                                     </div>
                                     {!editMode ? (
-                                        <button className="pf-btn pf-btn--primary" onClick={handleEdit}>
-                                            ✏️ Edit Profile
-                                        </button>
+                                        <button className="pf-btn pf-btn--primary" onClick={handleEdit}>✏️ Edit Profile</button>
                                     ) : (
                                         <div className="pf-btn-group">
                                             <button className="pf-btn pf-btn--outline" onClick={handleCancel}>Cancel</button>
@@ -308,41 +249,31 @@ function Profile() {
                                 </div>
 
                                 <div className="pf-form-grid">
-
-                                    {/* Username, Email, Full Name, Phone */}
-                                    {fields.map(({ name, label, icon, type }) => (
-                                        <div className="pf-form-group" key={name}>
-                                            <label className="pf-label">{label}</label>
-                                            <div className="pf-input-wrap">
-                                                <span className="pf-input-icon">{icon}</span>
-                                                <input
-                                                    className={`pf-input${editMode ? " pf-input--active" : ""}`}
-                                                    type={type}
-                                                    name={name}
-                                                    value={formData[name]}
-                                                    disabled={!editMode}
-                                                    onChange={handleChange}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {/* ✅ Single location field — full width */}
-                                    <div className="pf-form-group pf-form-group--full">
-                                        <label className="pf-label">Location</label>
-                                        <div className="pf-input-wrap">
-                                            <span className="pf-input-icon">📍</span>
+                                    {fields.map(f => (
+                                        <div key={f.name} className="pf-form-group">
+                                            <label className="pf-label">{f.icon} {f.label}</label>
                                             <input
                                                 className={`pf-input${editMode ? " pf-input--active" : ""}`}
-                                                name="location"
-                                                value={formData.location}
+                                                type={f.type}
+                                                name={f.name}
+                                                value={formData[f.name]}
                                                 disabled={!editMode}
                                                 onChange={handleChange}
                                             />
                                         </div>
+                                    ))}
+
+                                    <div className="pf-form-group">
+                                        <label className="pf-label">📍 Location</label>
+                                        <input
+                                            className={`pf-input${editMode ? " pf-input--active" : ""}`}
+                                            name="location"
+                                            value={formData.location}
+                                            disabled={!editMode}
+                                            onChange={handleChange}
+                                        />
                                     </div>
 
-                                    {/* Bio */}
                                     <div className="pf-form-group pf-form-group--full">
                                         <label className="pf-label">Bio</label>
                                         <textarea
@@ -353,7 +284,6 @@ function Profile() {
                                             onChange={handleChange}
                                         />
                                     </div>
-
                                 </div>
 
                                 {message && <div className="pf-success">{message}</div>}
@@ -369,36 +299,23 @@ function Profile() {
                                         <p className="pf-card__sub">Your latest actions on CleanStreet</p>
                                     </div>
                                 </div>
-                                {loadingActivity ? (
-                                    <div style={{ padding: "32px 0", textAlign: "center", color: "#94a3b8" }}>
-                                        <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
-                                        <p>Loading activity…</p>
-                                    </div>
-                                ) : activity.length === 0 ? (
-                                    <div style={{ padding: "32px 0", textAlign: "center", color: "#94a3b8" }}>
-                                        <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
-                                        <p>No activity yet.</p>
-                                    </div>
-                                ) : (
-                                    <div className="pf-activity-list">
-                                        {activity.map((a, i) => (
-                                            <div key={i} className="pf-activity-item">
-                                                <div
-                                                    className="pf-activity-item__icon"
-                                                    style={{ background: (a.color || "#3b82f6") + "18" }}
-                                                >
-                                                    {a.icon || "📌"}
-                                                </div>
-                                                <div className="pf-activity-item__body">
-                                                    <p className="pf-activity-item__text">{a.text}</p>
-                                                    <p className="pf-activity-item__time">
-                                                        {a.time || new Date(a.createdAt).toLocaleString()}
-                                                    </p>
-                                                </div>
+                                <div className="pf-activity-list">
+                                    {[
+                                        { icon: "✅", text: "Pothole on Main Street resolved", time: "2 hours ago", color: "#22c55e" },
+                                        { icon: "➕", text: "Reported broken streetlight on Elm Ave", time: "4 hours ago", color: "#3b82f6" },
+                                        { icon: "🔄", text: "Garbage dump complaint updated", time: "6 hours ago", color: "#f59e0b" },
+                                        { icon: "💬", text: "New comment on water leak report", time: "1 day ago", color: "#8b5cf6" },
+                                        { icon: "👍", text: "Voted on 3 community issues", time: "2 days ago", color: "#06b6d4" },
+                                    ].map((a, i) => (
+                                        <div key={i} className="pf-activity-item">
+                                            <div className="pf-activity-item__icon" style={{ background: a.color + "18" }}>{a.icon}</div>
+                                            <div className="pf-activity-item__body">
+                                                <p className="pf-activity-item__text">{a.text}</p>
+                                                <p className="pf-activity-item__time">{a.time}</p>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
@@ -414,12 +331,12 @@ function Profile() {
                                     </div>
                                     <div className="pf-security-list">
                                         {[
-                                            { icon: "🔑", title: "Password",                  sub: "Change your account password",  btn: "Change Password" },
-                                            { icon: "📱", title: "Two-Factor Authentication", sub: "Add an extra layer of security", btn: "Enable 2FA"      },
-                                            { icon: "🛡️", title: "Privacy Settings",          sub: "Control who sees your activity", btn: "Manage"          },
-                                            { icon: "🔔", title: "Notifications",             sub: "Email and push preferences",     btn: "Configure"       },
-                                        ].map((item) => (
-                                            <div key={item.title} className="pf-security-item">
+                                            { icon: "🔑", title: "Password", sub: "Last changed 30 days ago", btn: "Change Password" },
+                                            { icon: "📱", title: "Two-Factor Authentication", sub: "Add an extra layer of security", btn: "Enable 2FA" },
+                                            { icon: "🛡️", title: "Privacy Settings", sub: "Control who sees your activity", btn: "Manage" },
+                                            { icon: "🔔", title: "Notifications", sub: "Email and push preferences", btn: "Configure" },
+                                        ].map((item, i) => (
+                                            <div key={i} className="pf-security-item">
                                                 <div className="pf-security-item__left">
                                                     <span className="pf-security-item__icon">{item.icon}</span>
                                                     <div>
