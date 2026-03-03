@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import '../SubmitComplaint.css';
+import Navbar from './Navbar';
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
@@ -414,7 +415,7 @@ export default function SubmitComplaint() {
     if (submitted) {
         return (
             <div className="cs-page">
-                <Navbar activePage="" />
+                <Navbar />
                 <div className="sc-success-screen">
                     <div className="sc-success-card">
                         <div className="sc-success-icon">✅</div>
@@ -454,7 +455,7 @@ export default function SubmitComplaint() {
     // ── Main Form ─────────────────────────────────────────────────────────────
     return (
         <div className="cs-page">
-            <Navbar activePage="Report Issue" />
+            <Navbar />
 
             {/* Hero */}
             <div className="sc-hero">

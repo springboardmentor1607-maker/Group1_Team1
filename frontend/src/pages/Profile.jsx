@@ -1,8 +1,8 @@
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "../Profile.css";
-import API from "../api";
+import Navbar from "./Navbar";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 34 }) {
@@ -84,21 +84,22 @@ function StatMini({ icon, value, label, colorClass }) {
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function Profile() {
     const navigate = useNavigate();
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, logout } = useAuth();
 
+    // Dynamic data from AuthContext with fallbacks
     const initialData = {
         username: user?.username || "",
-        email:    user?.email    || "",
-        fullName: user?.name     || "",
-        phone:    user?.phone    || "",
+        email: user?.email || "",
+        fullName: user?.name || "",
+        phone: user?.phone || "",
         location: user?.location || "",
-        bio:      user?.bio      || "",
+        bio: user?.bio || "",
     };
 
-    const [formData, setFormData]   = useState(initialData);
+    const [formData, setFormData] = useState(initialData);
     const [savedData, setSavedData] = useState(initialData);
-    const [editMode, setEditMode]   = useState(false);
-    const [message, setMessage]     = useState("");
+    const [editMode, setEditMode] = useState(false);
+    const [message, setMessage] = useState("");
     const [activeTab, setActiveTab] = useState("info");
 
     const [stats, setStats]                     = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
@@ -147,12 +148,16 @@ function Profile() {
         setEditMode(false);
         setMessage("Profile updated successfully ✅");
     };
+    const handleLogout = () => {
+        logout();
+        navigate("/login");
+    };
 
     const fields = [
-        { name: "username", label: "Username",    icon: "👤", type: "text"  },
-        { name: "email",    label: "Email",        icon: "✉️", type: "email" },
-        { name: "fullName", label: "Full Name",    icon: "🪪", type: "text"  },
-        { name: "phone",    label: "Phone Number", icon: "📞", type: "tel"   },
+        { name: "username", label: "Username", icon: "👤", type: "text" },
+        { name: "email", label: "Email", icon: "✉️", type: "email" },
+        { name: "fullName", label: "Full Name", icon: "🪪", type: "text" },
+        { name: "phone", label: "Phone Number", icon: "📞", type: "tel" },
     ];
 
     const tabs        = ["info", "activity", "security"];
@@ -211,14 +216,14 @@ function Profile() {
                 <div className="pf-hero">
                     <div className="pf-hero__text">
                         <p className="pf-hero__eyebrow">👤 My Profile</p>
-                        <h1 className="pf-hero__title">{savedData.fullName || "—"}</h1>
-                        <p className="pf-hero__sub">@{savedData.username || "—"} · Member since {memberSince}</p>
+                        <h1 className="pf-hero__title">{savedData.fullName}</h1>
+                        <p className="pf-hero__sub">@{savedData.username} · Member since {user?.memberSince || "July 2025"}</p>
                     </div>
                     <div className="pf-hero__stats">
-                        <StatMini icon="⚠️" value={loadingStats ? "…" : stats.reports}  label="Reports"  colorClass="pf-stat--blue"   />
-                        <StatMini icon="✅" value={loadingStats ? "…" : stats.resolved} label="Resolved" colorClass="pf-stat--green"  />
-                        <StatMini icon="👍" value={loadingStats ? "…" : stats.votes}    label="Votes"    colorClass="pf-stat--purple" />
-                        <StatMini icon="🏅" value={loadingStats ? "…" : stats.badges}   label="Badges"   colorClass="pf-stat--yellow" />
+                        <StatMini icon="⚠️" value="0" label="Reports" colorClass="pf-stat--blue" />
+                        <StatMini icon="✅" value="0" label="Resolved" colorClass="pf-stat--green" />
+                        <StatMini icon="👍" value="0" label="Votes" colorClass="pf-stat--purple" />
+                        <StatMini icon="🏅" value="0" label="Badges" colorClass="pf-stat--yellow" />
                     </div>
                 </div>
 
@@ -230,42 +235,46 @@ function Profile() {
 
                         <div className="pf-avatar-card">
                             <div className="pf-avatar-card__ring">
-                                <div className="pf-avatar-card__circle">
-                                    {savedData.fullName?.substring(0, 2).toUpperCase() || "??"}
-                                </div>
+                                <div className="pf-avatar-card__circle">{avatarText}</div>
                             </div>
-                            <h2 className="pf-avatar-card__name">{savedData.fullName || "—"}</h2>
-                            <p className="pf-avatar-card__username">@{savedData.username || "—"}</p>
-                            <span className="pf-role-badge">{roleLabel}</span>
-                            <p className="pf-avatar-card__bio">{savedData.bio || "No bio added yet."}</p>
+                            <h2 className="pf-avatar-card__name">{savedData.fullName}</h2>
+                            <p className="pf-avatar-card__username">@{savedData.username}</p>
+                            <span className="pf-role-badge">🧑‍💼 {user?.role || "Citizen"}</span>
+                            <p className="pf-avatar-card__bio">{savedData.bio}</p>
                             <div className="pf-avatar-card__divider" />
                             <div className="pf-avatar-card__meta">
-                                {savedData.location && <span>📍 {savedData.location}</span>}
-                                {savedData.phone    && <span>📞 {savedData.phone}</span>}
-                                {savedData.email    && <span>✉️ {savedData.email}</span>}
+                                <span>📍 {savedData.location}</span>
+                                <span>📞 {savedData.phone}</span>
+                                <span>✉️ {savedData.email}</span>
                             </div>
-                            <p className="pf-avatar-card__since">Member since {memberSince}</p>
+                            <p className="pf-avatar-card__since">Member since {user?.memberSince || "July 3, 2025"}</p>
                         </div>
 
                         <div className="pf-badges-card">
                             <div className="pf-badges-card__title">🏅 Civic Badges</div>
-                            {loadingBadges ? (
-                                <p style={{ fontSize: 13, color: "#94a3b8", padding: "8px 0" }}>Loading badges…</p>
-                            ) : badges.length === 0 ? (
-                                <p style={{ fontSize: 13, color: "#94a3b8", padding: "8px 0" }}>No badges earned yet. Keep contributing!</p>
-                            ) : (
-                                <div className="pf-badges-list">
-                                    {badges.map((badge, i) => (
-                                        <div key={i} className={`pf-badge-item${badge.locked ? " pf-badge-item--locked" : ""}`}>
-                                            <span className="pf-badge-item__icon">{badge.locked ? "🔒" : badge.icon}</span>
-                                            <div>
-                                                <div className="pf-badge-item__name">{badge.name}</div>
-                                                <div className="pf-badge-item__desc">{badge.description}</div>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <div className="pf-badges-list">
+                                <div className="pf-badge-item">
+                                    <span className="pf-badge-item__icon">🌟</span>
+                                    <div>
+                                        <div className="pf-badge-item__name">First Report</div>
+                                        <div className="pf-badge-item__desc">Submitted your first civic issue</div>
+                                    </div>
                                 </div>
-                            )}
+                                <div className="pf-badge-item">
+                                    <span className="pf-badge-item__icon">🤝</span>
+                                    <div>
+                                        <div className="pf-badge-item__name">Community Helper</div>
+                                        <div className="pf-badge-item__desc">Voted on 10+ community issues</div>
+                                    </div>
+                                </div>
+                                <div className="pf-badge-item pf-badge-item--locked">
+                                    <span className="pf-badge-item__icon">🔒</span>
+                                    <div>
+                                        <div className="pf-badge-item__name">Street Champion</div>
+                                        <div className="pf-badge-item__desc">Get 5 issues resolved</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                     </aside>
@@ -280,7 +289,7 @@ function Profile() {
                                     className={`pf-tab${activeTab === tab ? " pf-tab--active" : ""}`}
                                     onClick={() => setActiveTab(tab)}
                                 >
-                                    {tab === "info"     && "📋 Account Info"}
+                                    {tab === "info" && "📋 Account Info"}
                                     {tab === "activity" && "🕐 Activity"}
                                     {tab === "security" && "🔒 Security"}
                                 </button>
@@ -396,9 +405,9 @@ function Profile() {
                                                     </p>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 

@@ -111,6 +111,23 @@ function StatCard({ icon, count, label, accent }) {
   );
 }
 
+// ─── Table styles ─────────────────────────────────────────────────────────────
+const TH = ({ children, style }) => (
+  <th style={{
+    padding: "10px 14px", textAlign: "left", fontSize: 12,
+    fontWeight: 700, color: "#6b7280", textTransform: "uppercase",
+    letterSpacing: 0.5, borderBottom: "2px solid #f3f4f6",
+    background: "#f9fafb", ...style,
+  }}>{children}</th>
+);
+
+const TD = ({ children, style }) => (
+  <td style={{
+    padding: "12px 14px", fontSize: 13, color: "#374151",
+    borderBottom: "1px solid #f3f4f6", verticalAlign: "middle", ...style,
+  }}>{children}</td>
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -119,6 +136,9 @@ function AdminDashboard() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [complaints, setComplaints]   = useState([]);
+  const [users, setUsers]             = useState([]);
+  const [volunteers, setVolunteers]   = useState([]);
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -179,9 +199,20 @@ function AdminDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const assignVolunteer = async (complaintId) => {
+    const volunteerId = assignSelections[complaintId];
+    if (!volunteerId) return;
+    try {
+      // Backend: PUT /api/complaints/assign/:id { volunteerId }
+      const res = await fetch(`http://localhost:5000/api/complaints/assign/${complaintId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ volunteerId }),
+      });
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Assign failed", err);
+    }
   };
 
   // ── Stats derived from API data ────────────────────────────────────────────
@@ -190,7 +221,27 @@ function AdminDashboard() {
   const resolved = complaints.filter(c => c.status === "resolved").length;
   const pending  = complaints.filter(c => c.status === "received").length;
 
-  const avatar = user?.name ? getInitials(user.name) : "AD";
+  const changeUserRole = async (userId, newRole) => {
+    try {
+      // TODO (Backend): PATCH /api/users/:id/role { role }
+      const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (res.ok) fetchUsers();
+    } catch (err) {
+      console.error("Role change failed", err);
+    }
+  };
+
+  const handleLogout = () => { logout(); navigate("/login"); };
+
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  const total    = complaints.length;
+  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+  const resolved = complaints.filter(c => c.status === "resolved").length;
+  const inProg   = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
 
   const filteredComplaints = complaints.filter(c => {
     const displayStatus = mapStatus(c.status).toLowerCase();
@@ -201,7 +252,8 @@ function AdminDashboard() {
       (statusFilter === "resolved" && c.status === "resolved");
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.address?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchStatus && matchSearch;
   });
 
@@ -243,7 +295,6 @@ function AdminDashboard() {
         </div>
       </nav>
 
-      {/* ── Body: Sidebar + Content ── */}
       <div style={{ display: "flex", flex: 1 }}>
 
         {/* ── Sidebar ── */}
@@ -324,10 +375,10 @@ function AdminDashboard() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={total}    label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={pending}   label="Pending"          accent="#f59e0b" />
-                <StatCard icon="🔄" count={assigned}  label="Assigned"         accent="#8b5cf6" />
-                <StatCard icon="✅" count={resolved}  label="Resolved"         accent="#22c55e" />
+                <StatCard icon="⚠️" count={total}     label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={pending}    label="Pending"          accent="#f59e0b" />
+                <StatCard icon="🔄" count={inProg}     label="In Progress"      accent="#8b5cf6" />
+                <StatCard icon="✅" count={resolved}   label="Resolved"         accent="#22c55e" />
               </div>
 
               <div className="cs-card">
@@ -336,9 +387,7 @@ function AdminDashboard() {
                     <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>Recent Complaints</div>
                     <div style={{ fontSize: 13, color: "#6b7280" }}>Latest submissions from citizens</div>
                   </div>
-                  <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>
-                    View All →
-                  </button>
+                  <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>View All →</button>
                 </div>
 
                 {loading ? (
@@ -375,38 +424,33 @@ function AdminDashboard() {
             </div>
           )}
 
-          {/* ── Manage Complaints Tab ── */}
+          {/* ══ COMPLAINTS TAB ══ */}
           {activeTab === "complaints" && (
             <div>
-              <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 20 }}>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Manage Complaints</h1>
-                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Assign volunteers and resolve civic issues.</p>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Assign volunteers and update complaint status.</p>
               </div>
 
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
-                    { key: "all",      label: "All",      count: total    },
-                    { key: "pending",  label: "Pending",  count: pending  },
-                    { key: "assigned", label: "Assigned", count: assigned },
-                    { key: "resolved", label: "Resolved", count: resolved },
+                    { key: "all",       label: "All",        count: total    },
+                    { key: "received",  label: "Pending",    count: pending  },
+                    { key: "in_review", label: "In Progress",count: inProg   },
+                    { key: "resolved",  label: "Resolved",   count: resolved },
                   ].map(f => (
-                    <button
-                      key={f.key}
+                    <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
-                      onClick={() => setStatusFilter(f.key)}
-                    >
-                      {f.label}
-                      <span className="cs-filter-tab__count">{f.count}</span>
+                      onClick={() => setStatusFilter(f.key)}>
+                      {f.label}<span className="cs-filter-tab__count">{f.count}</span>
                     </button>
                   ))}
                 </div>
-                <input
-                  className="cs-input cs-search-input"
+                <input className="cs-input cs-search-input"
                   placeholder="🔍 Search complaints..."
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
+                  onChange={e => setSearchQuery(e.target.value)} />
               </div>
 
               {loading ? (
@@ -482,12 +526,14 @@ function AdminDashboard() {
             </div>
           )}
 
-          {/* ── Volunteers Tab ── */}
+          {/* ══ VOLUNTEERS TAB ══ */}
           {activeTab === "volunteers" && (
             <div>
-              <div style={{ marginBottom: 24 }}>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteers</h1>
-                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Manage your volunteer team.</p>
+              <div style={{ marginBottom: 20 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
+                  {volunteers.length} active volunteers.
+                </p>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
@@ -506,10 +552,24 @@ function AdminDashboard() {
                           <div style={{ fontWeight: 700, fontSize: 18, color: "#2563eb" }}>{assignedCount}</div>
                           <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
                         </div>
-                        <div style={{ textAlign: "center" }}>
-                          <div style={{ fontWeight: 700, fontSize: 18, color: "#22c55e" }}>{resolvedCount}</div>
-                          <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
+                        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{assigned}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{resolved}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
+                          </div>
                         </div>
+                        <button
+                          className="cs-btn cs-btn--outline cs-btn--sm"
+                          style={{ marginTop: 12, width: "100%", fontSize: 12 }}
+                          onClick={() => changeUserRole(v._id, "citizen")}
+                        >Remove Volunteer</button>
                       </div>
                     </div>
                   );

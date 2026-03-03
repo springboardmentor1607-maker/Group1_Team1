@@ -88,29 +88,22 @@ function getStrength(password) {
   if (/[^A-Za-z0-9]/.test(password)) score++;
   const map = [
     { label: "", color: "" },
-    { label: "Weak",   color: "weak"   },
-    { label: "Fair",   color: "fair"   },
-    { label: "Good",   color: "good"   },
+    { label: "Weak", color: "weak" },
+    { label: "Fair", color: "fair" },
+    { label: "Good", color: "good" },
     { label: "Strong", color: "strong" },
   ];
   return { score, ...map[score] };
-}
-
-// ── Helper: pick the right route based on role ──
-function roleRoute(role) {
-  if (role === "admin")     return "/admin";
-  if (role === "volunteer") return "/volunteer";
-  return "/dashboard";
 }
 
 export default function Signup() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "citizen" });
-  const [showPass, setShowPass]   = useState(false);
-  const [loading, setLoading]     = useState(false);
-  const [success, setSuccess]     = useState(false);
-  const [errors, setErrors]       = useState({});
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const strength = getStrength(form.password);
 
@@ -123,11 +116,11 @@ export default function Signup() {
   const validate = () => {
     const e = {};
     if (!form.firstName.trim()) e.firstName = "First name is required";
-    if (!form.lastName.trim())  e.lastName  = "Last name is required";
-    if (!form.email.trim())     e.email     = "Email is required";
+    if (!form.lastName.trim()) e.lastName = "Last name is required";
+    if (!form.email.trim()) e.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email address";
-    if (!form.password)                   e.password = "Password is required";
-    else if (form.password.length < 8)    e.password = "Password must be at least 8 characters";
+    if (!form.password) e.password = "Password is required";
+    else if (form.password.length < 8) e.password = "Password must be at least 8 characters";
     return e;
   };
 
@@ -139,14 +132,14 @@ export default function Signup() {
     try {
       setLoading(true);
       const res = await API.post("/api/auth/register", {
-        name:     form.firstName + " " + form.lastName,
-        email:    form.email,
+        name: form.firstName + " " + form.lastName,
+        email: form.email,
         password: form.password,
-        role:     form.role,
+        role: form.role
       });
       const data = res.data;
       localStorage.setItem('token', data.token);
-      login(data.user || data);
+      login({ ...(data.user || data), role: form.role });
       setLoading(false);
       setSuccess(true);
     } catch (err) {
@@ -222,25 +215,15 @@ export default function Signup() {
         <div className="auth-card">
 
           {success ? (
-            // ── Success Screen ──
             <div className="auth-success">
               <span className="auth-success__icon">🎉</span>
               <h2 className="auth-success__title">You're all set!</h2>
               <p className="auth-success__msg">
-                Welcome to CleanStreet, {form.firstName}!<br/>
-                Your account has been created. Let's get started.
+                Welcome to CleanStreet, {form.firstName}!<br />
+                Your account has been created. Let's start making your city cleaner.
               </p>
-              {/* ✅ Redirects to the correct dashboard based on selected role */}
-              <button
-                className="auth-btn"
-                style={{ marginTop: 24 }}
-                onClick={() => navigate(roleRoute(form.role))}
-              >
-                {form.role === "volunteer"
-                  ? "Go to Volunteer Dashboard →"
-                  : form.role === "admin"
-                  ? "Go to Admin Dashboard →"
-                  : "Go to Dashboard →"}
+              <button className="auth-btn" style={{ marginTop: 24 }} onClick={() => navigate(form.role === "admin" ? "/admin" : form.role === "volunteer" ? "/volunteer" : "/dashboard")}>
+                Go to Dashboard →
               </button>
             </div>
           ) : (
@@ -250,10 +233,7 @@ export default function Signup() {
                 <h2 className="auth-card__title">Create your account 🌿</h2>
                 <p className="auth-card__subtitle">
                   Already have an account?{" "}
-                  <button
-                    onClick={() => navigate("/login")}
-                    style={{ background:"none", border:"none", color:"var(--auth-primary)", fontWeight:600, cursor:"pointer", padding:0, font:"inherit" }}
-                  >Sign in</button>
+                  <button onClick={() => navigate("/login")} style={{ background: "none", border: "none", color: "var(--auth-primary)", fontWeight: 600, cursor: "pointer", padding: 0, font: "inherit" }}>Sign in</button>
                 </p>
               </div>
 
