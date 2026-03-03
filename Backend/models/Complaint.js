@@ -19,8 +19,20 @@ const complaintSchema = new mongoose.Schema(
       required: true,
     },
 
+    type: {
+      type: String,
+      default: "other",
+    },
+
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high", "urgent"],
+      default: "medium",
+    },
+
     photo: {
       type: String,
+      default: null,
     },
 
     location_coords: {
@@ -40,8 +52,15 @@ const complaintSchema = new mongoose.Schema(
       required: true,
     },
 
-    assigned_to: {
+    landmark: {
       type: String,
+      default: "",
+    },
+
+    // ✅ FIXED (ObjectId instead of String)
+    assigned_to: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       default: null,
     },
 
@@ -59,6 +78,7 @@ const complaintSchema = new mongoose.Schema(
   }
 );
 
+// ✅ Required for geo queries
 complaintSchema.index({ location_coords: "2dsphere" });
 
 module.exports = mongoose.model("Complaint", complaintSchema);

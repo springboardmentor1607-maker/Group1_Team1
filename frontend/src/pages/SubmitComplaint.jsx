@@ -146,7 +146,7 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
         };
     }, []);
 
-    // Fly to coords when set from outside (e.g. future forward geocoding)
+    // Fly to coords when set from outside
     useEffect(() => {
         if (!selectedCoords || !mapInstanceRef.current) return;
         const { lat, lng } = selectedCoords;
@@ -207,7 +207,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
 
     return (
         <div>
-            {/* Use My Location button */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                 <button
                     type="button"
@@ -231,7 +230,6 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
                 <div style={{ fontSize: 12, color: '#e53935', marginBottom: 8 }}>⚠ {locError}</div>
             )}
 
-            {/* Map container */}
             <div
                 ref={mapRef}
                 style={{
@@ -256,10 +254,14 @@ export default function SubmitComplaint() {
     const navigate = useNavigate();
     const { user, logout, getInitials } = useAuth();
 
+    const displayName = user?.name || 'User';
     const avatar = user?.name ? getInitials(user.name) : 'U';
 
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
     const [selectedCoords, setSelectedCoords] = useState(null);
+    const [submitError, setSubmitError] = useState('');
+
     const [form, setForm] = useState({
         title: '',
         type: '',
@@ -276,14 +278,23 @@ export default function SubmitComplaint() {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm(f => ({ ...f, [name]: value }));
+        setSubmitError('');
     };
 
     const handlePhoto = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            setSubmitError('Photo size must be less than 5MB');
+            return;
+        }
+        
         const reader = new FileReader();
         reader.onload = (ev) => setForm(f => ({ ...f, photo: file, photoPreview: ev.target.result }));
         reader.readAsDataURL(file);
+        setSubmitError('');
     };
 
     const removePhoto = () => setForm(f => ({ ...f, photo: null, photoPreview: null }));
@@ -296,35 +307,63 @@ export default function SubmitComplaint() {
             lng: lng.toFixed(6),
             address: address || f.address,
         }));
+        setSubmitError('');
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        try {
-            const token = localStorage.getItem('token');
-            const formData = new FormData();
-            formData.append('title', form.title);
-            formData.append('description', form.description);
-            formData.append('type', form.type);
-            formData.append('priority', form.priority);
-            formData.append('address', form.address);
-            formData.append('landmark', form.landmark);
-            formData.append('latitude', form.lat);
-            formData.append('longitude', form.lng);
-            if (form.photo) formData.append('photo', form.photo);
+        
+        // Basic validation
+        if (!form.title || !form.type || !form.priority || !form.lat || !form.lng || !form.description) {
+            setSubmitError('Please fill all required fields (*)');
+            return;
+        }
 
-            const res = await fetch('http://localhost:5000/api/complaints', {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
+        setSubmitting(true);
+        setSubmitError('');
+
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const formData = new FormData();
+            formData.append("title", form.title);
+            formData.append("type", form.type);
+            formData.append("priority", form.priority);
+            formData.append("description", form.description);
+            formData.append("latitude", form.lat);
+            formData.append("longitude", form.lng);
+            formData.append("address", form.address);
+            formData.append("landmark", form.landmark);
+            
+            if (form.photo) {
+                formData.append("photo", form.photo);
+            }
+
+            const res = await fetch("http://localhost:5000/api/complaints", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
                 body: formData,
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Failed to submit');
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed to submit complaint");
+            }
+
+            console.log("SUCCESS:", data);
             setSubmitted(true);
+
         } catch (err) {
-            console.error('Submit error:', err);
-            alert('Failed to submit complaint: ' + err.message);
+            console.error("Submit error:", err);
+            setSubmitError(err.message || "Failed to submit complaint. Please try again.");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -338,6 +377,40 @@ export default function SubmitComplaint() {
         { label: 'Report Issue', path: '/submit-complaint' },
         { label: 'View Complaints', path: '/complaints' },
     ];
+
+    // ── Navbar ────────────────────────────────────────────────────────────────
+    const Navbar = ({ activePage }) => (
+        <nav className="cs-navbar">
+            <div className="cs-navbar__brand">
+                <CleanStreetLogo size={42} />
+                <span className="cs-navbar__name">CleanStreet</span>
+            </div>
+            <div className="cs-navbar__links">
+                {navLinks.map(item => (
+                    <span
+                        key={item.label}
+                        className={`cs-navbar__link ${item.label === activePage ? 'cs-navbar__link--active' : ''}`}
+                        onClick={() => navigate(item.path)}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        {item.label}
+                    </span>
+                ))}
+            </div>
+            <div className="cs-navbar__actions">
+                <button 
+                    className="cs-btn cs-btn--outline cs-btn--sm" 
+                    onClick={handleLogout} 
+                    style={{ background: "#2563eb", color: "#fff", borderColor: "#2563eb" }}
+                >
+                    Logout
+                </button>
+                <div className="cs-avatar" onClick={() => navigate('/profile')} title="My Profile" style={{ cursor: 'pointer' }}>
+                    {avatar}
+                </div>
+            </div>
+        </nav>
+    );
 
     // ── Success Screen ────────────────────────────────────────────────────────
     if (submitted) {
@@ -359,11 +432,18 @@ export default function SubmitComplaint() {
                             <button className="cs-btn cs-btn--primary" onClick={() => navigate('/dashboard')}>
                                 Go to Dashboard
                             </button>
-                            <button className="cs-btn cs-btn--secondary" onClick={() => {
-                                setSubmitted(false);
-                                setSelectedCoords(null);
-                                setForm({ title: '', type: '', priority: '', address: '', landmark: '', description: '', photo: null, photoPreview: null, lat: '', lng: '' });
-                            }}>
+                            <button 
+                                className="cs-btn cs-btn--secondary" 
+                                onClick={() => {
+                                    setSubmitted(false);
+                                    setSelectedCoords(null);
+                                    setForm({ 
+                                        title: '', type: '', priority: '', address: '', landmark: '', 
+                                        description: '', photo: null, photoPreview: null, lat: '', lng: '' 
+                                    });
+                                    setSubmitError('');
+                                }}
+                            >
                                 Submit Another
                             </button>
                         </div>
@@ -389,206 +469,196 @@ export default function SubmitComplaint() {
                 </div>
             </div>
 
-            {/* Form */}
-            <div className="sc-main-content">
-                <form onSubmit={handleSubmit}>
+            {/* Main Form Container */}
+            <div className="sc-form-container">
+                <form onSubmit={handleSubmit} encType="multipart/form-data">
+                    {/* Error Display */}
+                    {submitError && (
+                        <div style={{ 
+                            background: '#ffebee', 
+                            color: '#c62828', 
+                            padding: '12px', 
+                            borderRadius: 8, 
+                            marginBottom: 20,
+                            borderLeft: '4px solid #f44336'
+                        }}>
+                            ⚠️ {submitError}
+                        </div>
+                    )}
+
                     <div className="sc-form-grid">
-
-                        {/* ── Left: Form Fields ── */}
-                        <div className="sc-form-col">
-
-                            {/* Issue Details card */}
+                        {/* Left Column - Basic Info */}
+                        <div className="sc-form-column">
                             <div className="cs-sidebar-card sc-section">
-                                <div className="cs-sidebar-card__title">📝 Issue Details</div>
-
-                                {/* Row 1: Title + Type */}
-                                <div className="sc-row">
-                                    <div className="cs-form-group">
-                                        <label className="cs-label">Issue Title <span className="sc-required">*</span></label>
-                                        <input
-                                            className="cs-input"
-                                            name="title"
-                                            value={form.title}
-                                            onChange={handleChange}
-                                            placeholder="Brief description of the issue"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="cs-form-group">
-                                        <label className="cs-label">Issue Type <span className="sc-required">*</span></label>
-                                        <div className="sc-select-wrap">
-                                            <select className="cs-input cs-select" name="type" value={form.type} onChange={handleChange} required>
-                                                <option value="">Select issue type</option>
-                                                <option value="pothole">🕳️ Pothole</option>
-                                                <option value="streetlight">💡 Streetlight</option>
-                                                <option value="garbage">🗑️ Garbage / Dump</option>
-                                                <option value="water">💧 Water Leak</option>
-                                                <option value="road">🚧 Road Damage</option>
-                                                <option value="noise">🔊 Noise Complaint</option>
-                                                <option value="other">📌 Other</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Row 2: Priority + Address */}
-                                <div className="sc-row">
-                                    <div className="cs-form-group">
-                                        <label className="cs-label">Priority Level <span className="sc-required">*</span></label>
-                                        <div className="sc-select-wrap">
-                                            <select className="cs-input cs-select" name="priority" value={form.priority} onChange={handleChange} required>
-                                                <option value="">Select priority</option>
-                                                <option value="low">🟢 Low</option>
-                                                <option value="medium">🟡 Medium</option>
-                                                <option value="high">🔴 High</option>
-                                                <option value="critical">🚨 Critical</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="cs-form-group">
-                                        <label className="cs-label">
-                                            Address <span className="sc-required">*</span>
-                                            {form.lat && (
-                                                <span style={{ fontSize: 11, color: '#4caf50', marginLeft: 6 }}>
-                                                    📍 Auto-filled from map
-                                                </span>
-                                            )}
-                                        </label>
-                                        <input
-                                            className="cs-input"
-                                            name="address"
-                                            value={form.address}
-                                            onChange={handleChange}
-                                            placeholder="Pin on map or type address"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Hidden lat/lng fields for form submission */}
-                                <input type="hidden" name="lat" value={form.lat} />
-                                <input type="hidden" name="lng" value={form.lng} />
-
-                                {/* Coordinate pill shown when location is pinned */}
-                                {form.lat && form.lng && (
-                                    <div style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                                        background: '#e8f5e9', border: '1px solid #a5d6a7',
-                                        borderRadius: 20, padding: '4px 12px',
-                                        fontSize: 12, color: '#2e7d32', marginBottom: 12,
-                                    }}>
-                                        📍 {parseFloat(form.lat).toFixed(4)}, {parseFloat(form.lng).toFixed(4)}
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setForm(f => ({ ...f, lat: '', lng: '' }));
-                                                setSelectedCoords(null);
-                                            }}
-                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 13, padding: 0, lineHeight: 1 }}
-                                        >✕</button>
-                                    </div>
-                                )}
-
-                                {/* Landmark */}
+                                <h3>📝 Issue Details</h3>
+                                
+                                {/* Title */}
                                 <div className="cs-form-group">
-                                    <label className="cs-label">Nearby Landmark <span className="sc-optional">(Optional)</span></label>
+                                    <label className="cs-label">Title <span className="sc-required">*</span></label>
                                     <input
                                         className="cs-input"
-                                        name="landmark"
-                                        value={form.landmark}
+                                        name="title"
+                                        value={form.title}
                                         onChange={handleChange}
-                                        placeholder="e.g., Near City Hall"
-                                    />
-                                </div>
-
-                                {/* Description */}
-                                <div className="cs-form-group" style={{ marginBottom: 0 }}>
-                                    <label className="cs-label">Description <span className="sc-required">*</span></label>
-                                    <textarea
-                                        className="cs-input cs-textarea"
-                                        name="description"
-                                        value={form.description}
-                                        onChange={handleChange}
-                                        placeholder="Describe the issue in detail..."
+                                        placeholder="e.g., Broken streetlight at main road"
                                         required
                                     />
                                 </div>
-                            </div>
 
-                            {/* Photo Upload card */}
-                            <div className="cs-sidebar-card sc-section">
-                                <div className="cs-sidebar-card__title">📷 Photo Evidence <span className="sc-optional">(Optional)</span></div>
-                                {!form.photoPreview ? (
-                                    <label className="sc-dropzone">
-                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
-                                        <div className="sc-dropzone-inner">
-                                            <span className="sc-dropzone-icon">📁</span>
-                                            <p className="sc-dropzone-text"><strong>Click to upload</strong> or drag and drop</p>
-                                            <p className="sc-dropzone-hint">PNG, JPG, WEBP up to 10MB</p>
-                                        </div>
-                                    </label>
-                                ) : (
-                                    <div className="sc-photo-preview">
-                                        <img src={form.photoPreview} alt="Preview" className="sc-photo-img" />
-                                        <button type="button" className="sc-photo-remove" onClick={removePhoto}>✕ Remove Photo</button>
-                                    </div>
-                                )}
-                            </div>
+                                {/* Type */}
+                                <div className="cs-form-group">
+                                    <label className="cs-label">Issue Type <span className="sc-required">*</span></label>
+                                    <select
+                                        className="cs-input"
+                                        name="type"
+                                        value={form.type}
+                                        onChange={handleChange}
+                                        required
+                                    >
+                                        <option value="">Select issue type...</option>
+                                        <option value="road">Road Damage</option>
+                                        <option value="streetlight">Streetlight</option>
+                                        <option value="drainage">Drainage</option>
+                                        <option value="garbage">Garbage</option>
+                                        <option value="water">Water Supply</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
 
-                            {/* Action buttons */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                                <button type="button" className="cs-btn cs-btn--secondary" onClick={() => navigate('/dashboard')}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="cs-btn cs-btn--primary">
-                                    ➤ Submit Report
-                                </button>
+                                {/* Priority */}
+                                <div className="cs-form-group">
+                                    <label className="cs-label">Priority <span className="sc-required">*</span></label>
+                                    <select
+                                        className="cs-input"
+                                        name="priority"
+                                        value={form.priority}
+                                        onChange={handleChange}
+                                        required
+                                    >
+                                        <option value="">Select priority...</option>
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="urgent">Urgent</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
-                        {/* ── Right: Map + Info ── */}
-                        <div className="sc-side-col">
-
-                            {/* Map card */}
+                        {/* Right Column - Location & Photo */}
+                        <div className="sc-form-column">
+                            {/* Location Map */}
                             <div className="cs-sidebar-card sc-section">
-                                <div className="cs-sidebar-card__title">📍 Pin Location on Map</div>
-                                <LocationMap
+                                <h3>📍 Location</h3>
+                                <LocationMap 
                                     onLocationSelect={handleLocationSelect}
                                     selectedCoords={selectedCoords}
                                 />
                             </div>
 
-                            {/* Tips card */}
-                            <div className="cs-health-card sc-tips-card">
-                                <div className="cs-health-card__label">💡 Tips for a Good Report</div>
-                                <div className="sc-tips-list">
-                                    <div className="sc-tip">✓ Pin the exact location on the map</div>
-                                    <div className="sc-tip">✓ Add a clear photo if possible</div>
-                                    <div className="sc-tip">✓ Describe the issue thoroughly</div>
-                                    <div className="sc-tip">✓ Set the correct priority level</div>
-                                </div>
-                            </div>
-
-                            {/* What happens next card */}
+                            {/* Photo Upload */}
                             <div className="cs-sidebar-card sc-section">
-                                <div className="cs-sidebar-card__title">🔄 What Happens Next?</div>
-                                <div className="sc-steps">
-                                    <div className="sc-step">
-                                        <div className="sc-step__num" style={{ background: '#dbeafe', color: '#1d4ed8' }}>1</div>
-                                        <div className="sc-step__text">Your report is received and logged</div>
-                                    </div>
-                                    <div className="sc-step">
-                                        <div className="sc-step__num" style={{ background: '#fef9c3', color: '#92400e' }}>2</div>
-                                        <div className="sc-step__text">Authorities review and assign the issue</div>
-                                    </div>
-                                    <div className="sc-step">
-                                        <div className="sc-step__num" style={{ background: '#dcfce7', color: '#166534' }}>3</div>
-                                        <div className="sc-step__text">Issue is resolved and you're notified</div>
-                                    </div>
+                                <h3>📸 Photo (Optional)</h3>
+                                <div className="cs-form-group">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handlePhoto}
+                                        className="cs-input"
+                                    />
+                                    {form.photoPreview && (
+                                        <div style={{ marginTop: 12 }}>
+                                            <img 
+                                                src={form.photoPreview} 
+                                                alt="Preview" 
+                                                style={{ 
+                                                    maxWidth: '100%', 
+                                                    maxHeight: 200, 
+                                                    borderRadius: 8,
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                                                }} 
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={removePhoto}
+                                                style={{
+                                                    marginTop: 8,
+                                                    padding: '4px 12px',
+                                                    background: '#ef5350',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: 6,
+                                                    cursor: 'pointer',
+                                                    fontSize: 12
+                                                }}
+                                            >
+                                                Remove Photo
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-
                         </div>
+                    </div>
+
+                    {/* Address & Description */}
+                    <div className="cs-sidebar-card sc-section">
+                        <div className="cs-form-group">
+                            <label className="cs-label">Address <span className="sc-required">*</span></label>
+                            <input
+                                className="cs-input"
+                                name="address"
+                                value={form.address}
+                                onChange={handleChange}
+                                placeholder="Full address (auto-filled from map)"
+                                required
+                            />
+                        </div>
+
+                        <div className="cs-form-group">
+                            <label className="cs-label">Landmark (Optional)</label>
+                            <input
+                                className="cs-input"
+                                name="landmark"
+                                value={form.landmark}
+                                onChange={handleChange}
+                                placeholder="Nearby landmark, shop name, etc."
+                            />
+                        </div>
+
+                        <div className="cs-form-group">
+                            <label className="cs-label">Description <span className="sc-required">*</span></label>
+                            <textarea
+                                className="cs-input"
+                                name="description"
+                                value={form.description}
+                                onChange={handleChange}
+                                rows="4"
+                                placeholder="Describe the issue in detail..."
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="cs-sidebar-card sc-section" style={{ textAlign: 'center', paddingTop: 20 }}>
+                        <button 
+                            type="submit" 
+                            className="cs-btn cs-btn--primary" 
+                            disabled={submitting}
+                            style={{ 
+                                width: '100%',
+                                padding: '12px 24px',
+                                fontSize: 16,
+                                fontWeight: 600
+                            }}
+                        >
+                            {submitting ? (
+                                <>⏳ Submitting...</>
+                            ) : (
+                                <>🚀 Submit Complaint</>
+                            )}
+                        </button>
                     </div>
                 </form>
             </div>
