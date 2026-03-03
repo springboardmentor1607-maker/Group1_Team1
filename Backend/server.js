@@ -1,7 +1,6 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const path = require("path");
 const connectDB = require("./config/db");
 const dns = require("dns");
 
@@ -17,23 +16,22 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true,
+  origin: 'http://localhost:3000',
+  credentials: true
 }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded images statically
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Serve uploaded images
+app.use("/uploads", express.static("uploads"));
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/user"));
-app.use("/api/complaints", require("./routes/complaint")); // singular file name
+app.use("/api/complaints", require("./routes/complaint"));
 
 app.get("/", (req, res) => {
-  res.json({ message: "Clean Street API running ✅" });
+  res.json({ message: "Clean Street API running" });
 });
 
 const PORT = process.env.PORT || 5000;

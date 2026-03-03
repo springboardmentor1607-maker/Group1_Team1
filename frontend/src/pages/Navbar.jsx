@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import API from "../api";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {

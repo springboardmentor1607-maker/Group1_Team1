@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
+import API from "../api";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
