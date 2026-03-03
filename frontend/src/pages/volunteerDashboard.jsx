@@ -44,7 +44,7 @@ export default function VolunteerDashboard() {
   const fetchIssues = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await API.get("/api/issues/assigned");
+      const res = await API.get("/api/complaints/my-assignments");
       setIssues(res.data || []);
       setLastUpdated(new Date());
       setError("");
@@ -64,18 +64,22 @@ export default function VolunteerDashboard() {
 
   const counts = {
     total:      issues.length,
-    assigned:   issues.filter((i) => i.status === "Assigned").length,
-    inProgress: issues.filter((i) => i.status === "In Progress").length,
-    resolved:   issues.filter((i) => i.status === "Resolved").length,
+    assigned:   issues.filter(i => i.status === 'in_review').length,
+  inProgress: issues.filter(i => i.status === 'in_review').length,
+  resolved:   issues.filter(i => i.status === 'resolved').length,
   };
 
-  const filtered = issues.filter((i) => {
-    const matchTab    = activeTab === "All" || i.status === activeTab;
-    const matchSearch =
-      i.title?.toLowerCase().includes(search.toLowerCase()) ||
-      i.location?.toLowerCase().includes(search.toLowerCase());
-    return matchTab && matchSearch;
-  });
+  const filtered = issues.filter(i => {
+  const matchTab =
+    activeTab === 'All'         ? true :
+    activeTab === 'Assigned'    ? i.status === 'in_review' :
+    activeTab === 'In Progress' ? i.status === 'in_review' :
+    activeTab === 'Resolved'    ? i.status === 'resolved'  : true;
+  const matchSearch =
+    i.title?.toLowerCase().includes(search.toLowerCase()) ||
+    i.address?.toLowerCase().includes(search.toLowerCase());
+  return matchTab && matchSearch;
+});
 
   const tabCount = (tab) =>
     tab === "All"         ? counts.total      :
@@ -86,7 +90,7 @@ export default function VolunteerDashboard() {
   const updateStatus = async (id, newStatus) => {
     try {
       setUpdating(true);
-      await API.patch(`/api/issues/${id}/status`, { status: newStatus });
+      await API.put(`/api/complaints/status/${id}`, { status: newStatus.toLowerCase().replace(' ', '_') });
       setIssues((prev) =>
         prev.map((i) => String(i._id || i.id) === String(id) ? { ...i, status: newStatus } : i)
       );
@@ -261,7 +265,7 @@ export default function VolunteerDashboard() {
                       <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>{issueRef(issue)}</span>
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b" }}>
-                      📍 {issue.location} &nbsp;·&nbsp; Reported by {issue.reportedBy?.name || issue.reportedBy} &nbsp;·&nbsp; {issueDate(issue)}
+                      📍 {issue.address || issue.location || 'No location'} &nbsp;·&nbsp; Reported by {issue.reportedBy?.name || issue.reportedBy} &nbsp;·&nbsp; {issueDate(issue)}
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>

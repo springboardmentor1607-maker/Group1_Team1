@@ -169,90 +169,63 @@ function AdminDashboard() {
   }, []);
 
   const fetchComplaints = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/complaints", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const raw = Array.isArray(data) ? data : data.complaints || [];
-        // Normalize backend fields
-        const normalized = raw.map(c => ({
-          ...c,
-          id:       c._id || c.id,
-          address:  c.address || c.location || "No address",
-          type:     c.type || c.issueType || "General",
-          priority: c.priority || "low",
-          status:   c.status || "received",
-          createdAt: c.created_at || c.createdAt,
-        }));
-        setComplaints(normalized);
-      }
-    } catch (err) {
-      console.error("Failed to fetch complaints", err);
-    }
-  };
+  try {
+    const res = await API.get('/api/complaints');
+    const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
+    const normalized = raw.map(c => ({
+      ...c,
+      id:        c._id || c.id,
+      address:   c.address || c.location || 'No address',
+      type:      c.type || c.issueType || 'General',
+      priority:  c.priority || 'low',
+      status:    c.status || 'received',
+      createdAt: c.created_at || c.createdAt,
+    }));
+    setComplaints(normalized);
+  } catch (err) {
+    console.error('Failed to fetch complaints', err);
+  }
+};
 
-  const fetchUsers = async () => {
-    try {
-      // TODO (Backend): GET /api/users — admin sees all users
-      const res = await fetch("http://localhost:5000/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const allUsers = Array.isArray(data) ? data : data.users || [];
-        setUsers(allUsers);
-        setVolunteers(allUsers.filter(u => u.role === "volunteer"));
-      }
-    } catch (err) {
-      console.error("Failed to fetch users", err);
-    }
-  };
+const fetchUsers = async () => {
+  try {
+    const res = await API.get('/api/users');
+    const allUsers = Array.isArray(res.data) ? res.data : res.data.users || [];
+    setUsers(allUsers);
+    setVolunteers(allUsers.filter(u => u.role === 'volunteer'));
+  } catch (err) {
+    console.error('Failed to fetch users', err);
+  }
+};
 
-  const assignVolunteer = async (complaintId) => {
-    const volunteerId = assignSelections[complaintId];
-    if (!volunteerId) return;
-    try {
-      // Backend: PUT /api/complaints/assign/:id { volunteerId }
-      const res = await fetch(`http://localhost:5000/api/complaints/assign/${complaintId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ volunteerId }),
-      });
-      if (res.ok) fetchComplaints();
-    } catch (err) {
-      console.error("Assign failed", err);
-    }
-  };
+const assignVolunteer = async (complaintId) => {
+  const volunteerId = assignSelections[complaintId];
+  if (!volunteerId) return;
+  try {
+    await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId });
+    fetchComplaints();
+  } catch (err) {
+    console.error('Assign failed', err);
+  }
+};
 
-  const markResolved = async (complaintId) => {
-    try {
-      // Backend: PUT /api/complaints/status/:id { status }
-      const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: "resolved" }),
-      });
-      if (res.ok) fetchComplaints();
-    } catch (err) {
-      console.error("Resolve failed", err);
-    }
-  };
+const markResolved = async (complaintId) => {
+  try {
+    await API.put(`/api/complaints/status/${complaintId}`, { status: 'resolved' });
+    fetchComplaints();
+  } catch (err) {
+    console.error('Resolve failed', err);
+  }
+};
 
-  const changeUserRole = async (userId, newRole) => {
-    try {
-      // TODO (Backend): PATCH /api/users/:id/role { role }
-      const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ role: newRole }),
-      });
-      if (res.ok) fetchUsers();
-    } catch (err) {
-      console.error("Role change failed", err);
-    }
-  };
+const changeUserRole = async (userId, newRole) => {
+  try {
+    await API.patch(`/api/users/${userId}/role`, { role: newRole });
+    fetchUsers();
+  } catch (err) {
+    console.error('Role change failed', err);
+  }
+};
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
@@ -571,7 +544,7 @@ function AdminDashboard() {
                                   onClick={() => changeUserRole(u._id, "volunteer")}
                                 >Make Volunteer</button>
                               )}
-                              {u.role !== "user" && u.role !== "user" && u.role !== "admin" && (
+                              {u.role !== "volunteer" && u.role !== "admin" && (
                                 <button
                                   className="cs-btn cs-btn--outline cs-btn--sm"
                                   style={{ fontSize: 11 }}

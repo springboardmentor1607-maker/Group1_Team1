@@ -24,9 +24,13 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("cs_user");
-      window.location.href = "/login";
+      // ✅ Don't redirect if already on login or signup page
+      if (!window.location.pathname.includes("/login") && 
+          !window.location.pathname.includes("/signup")) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("cs_user");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

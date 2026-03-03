@@ -97,6 +97,20 @@ router.get("/my", protect, async (req, res) => {
 });
 
 // ============================================================
+// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS
+// ============================================================
+router.get("/my-assignments", protect, authorize("volunteer"), async (req, res) => {
+  try {
+    const complaints = await Complaint.find({ assigned_to: req.user._id })
+      .populate("user_id", "name email")
+      .sort({ created_at: -1 });
+    res.json(complaints);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ============================================================
 // ✅ ADMIN: ASSIGN VOLUNTEER
 // ============================================================
 router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
