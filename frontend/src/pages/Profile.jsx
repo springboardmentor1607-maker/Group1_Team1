@@ -171,7 +171,7 @@ function Profile() {
                             </div>
                             <h2 className="pf-avatar-card__name">{savedData.fullName}</h2>
                             <p className="pf-avatar-card__username">@{savedData.username}</p>
-                            <span className="pf-role-badge">🧑‍💼 {user?.role === "user" ? "Citizen" : user?.role || "Citizen"}</span>
+                            <span className="pf-role-badge">🧑‍💼 {user?.role === "user" ? "Citizen" : user?.role || "user"}</span>
                             <p className="pf-avatar-card__bio">{savedData.bio}</p>
                             <div className="pf-avatar-card__divider" />
                             <div className="pf-avatar-card__meta">
