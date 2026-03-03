@@ -334,34 +334,29 @@ export default function UserDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    async function fetchComplaints() {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5000/api/complaints", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const raw = Array.isArray(data) ? data : data.complaints || [];
-        // Normalize backend fields to match frontend card expectations
-        const normalized = raw.map(c => ({
-          ...c,
-          id:       c._id || c.id,
-          location: c.address || c.location || "No location",
-          image:    c.photo ? `http://localhost:5000${c.photo}` : null,
-          type:     c.type || c.issueType || "General",
-          typeIcon: c.typeIcon || "📌",
-          votes:    c.votes || 0,
-          comments: c.comments || 0,
-          createdAt: c.created_at || c.createdAt || new Date().toISOString(),
-        }));
-        setComplaints(normalized);
-      } catch (err) {
-        console.error("Failed to fetch complaints", err);
-      }
+  async function fetchComplaints() {
+    try {
+      const res = await API.get("/api/complaints");
+      const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
+      const normalized = raw.map(c => ({
+        ...c,
+        id:        c._id || c.id,
+        location:  c.address || c.location || "No location",
+        image:     c.photo ? `http://localhost:5000${c.photo}` : null,
+        type:      c.type || c.issueType || "General",
+        typeIcon:  c.typeIcon || "📌",
+        votes:     c.votes || 0,
+        comments:  c.comments || 0,
+        createdAt: c.created_at || c.createdAt || new Date().toISOString(),
+        updatedAt: c.updated_at || c.updatedAt || new Date().toISOString(),
+      }));
+      setComplaints(normalized);
+    } catch (err) {
+      console.error("Failed to fetch complaints", err);
     }
-    fetchComplaints();
-  }, []);
+  }
+  fetchComplaints();
+}, []);
 
   const total = complaints.length;
   const pending = complaints.filter(c => c.status === "received").length;
