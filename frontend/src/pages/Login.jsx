@@ -107,7 +107,7 @@ export default function Login() {
       const data = res.data;
       localStorage.setItem('token', data.token);
       login(data.user || data); // saves user into AuthContext + cs_user in localStorage
-      const role = (data.user?.role || data.role || "citizen").toLowerCase();
+      const role = (data.user?.role || data.role || "user").toLowerCase();
       if (role === "admin") {
         navigate("/admin");
       } else if (role === "volunteer") {

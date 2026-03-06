@@ -99,7 +99,7 @@ function getStrength(password) {
 export default function Signup() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "citizen" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "user" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -149,7 +149,7 @@ export default function Signup() {
   };
 
   const roles = [
-    { key: "citizen", icon: "🧑‍💼", label: "Citizen" },
+    { key: "user", icon: "🧑‍💼", label: "Citizen" },
     { key: "volunteer", icon: "🤝", label: "Volunteer" },
     { key: "admin", icon: "🛡️", label: "Admin" },
   ];

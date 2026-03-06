@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
+import API from "../api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_LABELS = { received: "Received", in_review: "In Review", resolved: "Resolved" };
@@ -323,7 +324,7 @@ export default function UserDashboard() {
   const MOCK_USER = {
     name: user?.name || "Demo User",
     username: user?.username ? `@${user.username}` : "@demo_user",
-    role: user?.role || "Citizen",
+    role: user?.role || "user",
     avatar: user?.name ? getInitials(user.name) : "DU",
   };
 
@@ -333,17 +334,29 @@ export default function UserDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    async function fetchComplaints() {
-      try {
-        const res = await fetch("/api/complaints");
-        const data = await res.json();
-        setComplaints(data);
-      } catch (err) {
-        console.error("Failed to fetch complaints", err);
-      }
+  async function fetchComplaints() {
+    try {
+      const res = await API.get("/api/complaints");
+      const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
+      const normalized = raw.map(c => ({
+        ...c,
+        id:        c._id || c.id,
+        location:  c.address || c.location || "No location",
+        image:     c.photo ? `http://localhost:5000${c.photo}` : null,
+        type:      c.type || c.issueType || "General",
+        typeIcon:  c.typeIcon || "📌",
+        votes:     c.votes || 0,
+        comments:  c.comments || 0,
+        createdAt: c.created_at || c.createdAt || new Date().toISOString(),
+        updatedAt: c.updated_at || c.updatedAt || new Date().toISOString(),
+      }));
+      setComplaints(normalized);
+    } catch (err) {
+      console.error("Failed to fetch complaints", err);
     }
-    fetchComplaints();
-  }, []);
+  }
+  fetchComplaints();
+}, []);
 
   const total = complaints.length;
   const pending = complaints.filter(c => c.status === "received").length;
@@ -389,7 +402,9 @@ export default function UserDashboard() {
     //   .then(res => res.json())
     //   .then(data => setRecentActivity(data))
     //   .catch(err => console.error("Failed to fetch activity", err));
-    setRecentActivity([]); // remove this line once backend endpoint is ready
+    // Use complaints as recent activity feed until dedicated endpoint is ready
+    // TODO (Backend): Replace with GET /api/activity/recent?limit=5
+    setRecentActivity([]); // will be populated once backend activity endpoint is ready
   }, []);
 
   return (
@@ -490,7 +505,7 @@ export default function UserDashboard() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
                 {filtered.map(c => (
-                  <ComplaintCard key={c.id} complaint={c} onView={setSelectedComplaint} />
+                  <ComplaintCard key={c._id || c.id} complaint={c} onView={setSelectedComplaint} />
                 ))}
               </div>
             )}
@@ -512,11 +527,15 @@ export default function UserDashboard() {
             {/* City Health */}
             <div className="cs-health-card">
               <div className="cs-health-card__label">📊 City Health Score</div>
-              <div className="cs-health-card__score">74<span>/100</span></div>
-              <div className="cs-health-bar">
-                <div className="cs-health-bar__fill" style={{ width: "74%" }} />
+              <div className="cs-health-card__score">
+                {total > 0 ? Math.round((resolved / total) * 100) : 0}<span>/100</span>
               </div>
-              <div className="cs-health-card__note">↑ 3 points from last month</div>
+              <div className="cs-health-bar">
+                <div className="cs-health-bar__fill" style={{ width: total > 0 ? `${Math.round((resolved / total) * 100)}%` : "0%" }} />
+              </div>
+              <div className="cs-health-card__note">
+                {total > 0 ? `${resolved} of ${total} issues resolved` : "No issues reported yet"}
+              </div>
             </div>
 
             {/* Quick Actions */}

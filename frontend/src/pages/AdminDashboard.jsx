@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
+import API from "../api";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
@@ -75,11 +76,11 @@ function CleanStreetLogo({ size = 44 }) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    resolved:   { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved"   },
-    assigned:   { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"   },
-    pending:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"    },
-    in_review:  { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review"  },
-    received:   { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received"   },
+    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
+    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
+    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review" },
+    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received" },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
   const s = map[key] || map["pending"];
@@ -100,9 +101,9 @@ function StatusBadge({ status }) {
 function PriorityBadge({ priority }) {
   const map = {
     critical: { bg: "#fee2e2", color: "#991b1b" },
-    high:     { bg: "#ffedd5", color: "#9a3412" },
-    medium:   { bg: "#fef9c3", color: "#92400e" },
-    low:      { bg: "#dcfce7", color: "#166534" },
+    high: { bg: "#ffedd5", color: "#9a3412" },
+    medium: { bg: "#fef9c3", color: "#92400e" },
+    low: { bg: "#dcfce7", color: "#166534" },
   };
   const s = map[priority?.toLowerCase()] || map["low"];
   return (
@@ -150,9 +151,9 @@ function AdminDashboard() {
   const { user, logout, getInitials } = useAuth();
 
   const [activeTab, setActiveTab] = useState("overview");
-  const [complaints, setComplaints]   = useState([]);
-  const [users, setUsers]             = useState([]);
-  const [volunteers, setVolunteers]   = useState([]);
+  const [complaints, setComplaints] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [volunteers, setVolunteers] = useState([]);
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -169,12 +170,24 @@ function AdminDashboard() {
 
   const fetchComplaints = async () => {
     try {
-      // TODO (Backend): GET /api/complaints — admin sees all complaints
       const res = await fetch("http://localhost:5000/api/complaints", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (res.ok) setComplaints(Array.isArray(data) ? data : data.complaints || []);
+      if (res.ok) {
+        const raw = Array.isArray(data) ? data : data.complaints || [];
+        // Normalize backend fields
+        const normalized = raw.map(c => ({
+          ...c,
+          id: c._id || c.id,
+          address: c.address || c.location || "No address",
+          type: c.type || c.issueType || "General",
+          priority: c.priority || "low",
+          status: c.status || "received",
+          createdAt: c.created_at || c.createdAt,
+        }));
+        setComplaints(normalized);
+      }
     } catch (err) {
       console.error("Failed to fetch complaints", err);
     }
@@ -199,25 +212,27 @@ function AdminDashboard() {
 
   const assignVolunteer = async (complaintId) => {
     const volunteerId = assignSelections[complaintId];
-    if (!volunteerId) return;
+    if (!volunteerId?.trim()) return;
     try {
-      // TODO (Backend): PATCH /api/complaints/:id/assign { volunteerId }
-      const res = await fetch(`http://localhost:5000/api/complaints/${complaintId}/assign`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ volunteerId }),
+      await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId });
+      // ✅ Clear the selection first so UI resets to "show volunteer name" mode
+      setAssignSelections(prev => {
+        const updated = { ...prev };
+        delete updated[complaintId];
+        return updated;
       });
-      if (res.ok) fetchComplaints();
+      // ✅ Then re-fetch to get updated data from backend
+      await fetchComplaints();
     } catch (err) {
-      console.error("Assign failed", err);
+      console.error('Assign failed', err);
     }
   };
 
   const markResolved = async (complaintId) => {
     try {
-      // TODO (Backend): PATCH /api/complaints/:id { status: "resolved" }
-      const res = await fetch(`http://localhost:5000/api/complaints/${complaintId}`, {
-        method: "PATCH",
+      // Backend: PUT /api/complaints/status/:id { status }
+      const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: "resolved" }),
       });
@@ -244,10 +259,10 @@ function AdminDashboard() {
   const handleLogout = () => { logout(); navigate("/login"); };
 
   // ── Stats ───────────────────────────────────────────────────────────────────
-  const total    = complaints.length;
-  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+  const total = complaints.length;
+  const pending = complaints.filter(c => c.status === "pending" || c.status === "received").length;
   const resolved = complaints.filter(c => c.status === "resolved").length;
-  const inProg   = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+  const inProg = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
@@ -259,10 +274,10 @@ function AdminDashboard() {
   });
 
   const sidebarItems = [
-    { key: "overview",   icon: "📊", label: "Overview"          },
-    { key: "complaints", icon: "📋", label: "Complaints"        },
-    { key: "users",      icon: "👥", label: "User Management"   },
-    { key: "volunteers", icon: "🤝", label: "Volunteers"        },
+    { key: "overview", icon: "📊", label: "Overview" },
+    { key: "complaints", icon: "📋", label: "Complaints" },
+    { key: "users", icon: "👥", label: "User Management" },
+    { key: "volunteers", icon: "🤝", label: "Volunteers" },
   ];
 
   return (
@@ -334,10 +349,10 @@ function AdminDashboard() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={total}     label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={pending}    label="Pending"          accent="#f59e0b" />
-                <StatCard icon="🔄" count={inProg}     label="In Progress"      accent="#8b5cf6" />
-                <StatCard icon="✅" count={resolved}   label="Resolved"         accent="#22c55e" />
+                <StatCard icon="⚠️" count={total} label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={pending} label="Pending" accent="#f59e0b" />
+                <StatCard icon="🔄" count={inProg} label="In Progress" accent="#8b5cf6" />
+                <StatCard icon="✅" count={resolved} label="Resolved" accent="#22c55e" />
               </div>
 
               <div className="cs-card">
@@ -396,10 +411,10 @@ function AdminDashboard() {
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
-                    { key: "all",       label: "All",        count: total    },
-                    { key: "received",  label: "Pending",    count: pending  },
-                    { key: "in_review", label: "In Progress",count: inProg   },
-                    { key: "resolved",  label: "Resolved",   count: resolved },
+                    { key: "all", label: "All", count: total },
+                    { key: "received", label: "Pending", count: pending },
+                    { key: "in_review", label: "In Progress", count: inProg },
+                    { key: "resolved", label: "Resolved", count: resolved },
                   ].map(f => (
                     <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -445,10 +460,25 @@ function AdminDashboard() {
                           </TD>
                           <TD style={{ color: "#6b7280", textTransform: "capitalize" }}>{c.type || c.issueType || "—"}</TD>
                           <TD><PriorityBadge priority={c.priority} /></TD>
-                          <TD style={{ color: "#374151" }}>{c.reportedBy?.name || c.user?.name || "—"}</TD>
+                          <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
                           <TD><StatusBadge status={c.status} /></TD>
                           <TD>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            {c.status === "resolved" ? (
+                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                                ✅ {c.assigned_to?.name || "—"}
+                              </div>
+                            ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>
+                                  👤 {c.assigned_to?.name || c.assigned_to}
+                                </div>
+                                <button
+                                  className="cs-btn cs-btn--outline cs-btn--sm"
+                                  style={{ fontSize: 11 }}
+                                  onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}
+                                >🔄 Change</button>
+                              </div>
+                            ) : (
                               <select
                                 className="cs-input"
                                 style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
@@ -460,27 +490,28 @@ function AdminDashboard() {
                                   <option key={v._id} value={v._id}>{v.name}</option>
                                 ))}
                               </select>
-                              {c.assignedTo && (
-                                <div style={{ fontSize: 11, color: "#9ca3af" }}>
-                                  Current: {c.assignedTo?.name || c.assignedTo}
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </TD>
                           <TD>
                             <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
-                              <button
-                                className="cs-btn cs-btn--outline cs-btn--sm"
-                                style={{ fontSize: 11 }}
-                                onClick={() => assignVolunteer(c._id || c.id)}
-                                disabled={!assignSelections[c._id || c.id]}
-                              >Assign</button>
-                              {c.status !== "resolved" && (
-                                <button
-                                  className="cs-btn cs-btn--primary cs-btn--sm"
-                                  style={{ fontSize: 11 }}
-                                  onClick={() => markResolved(c._id || c.id)}
-                                >✓ Resolve</button>
+                              {c.status === "resolved" ? (
+                                <span style={{ fontSize: 12, color: "#9ca3af" }}>Completed</span>
+                              ) : (
+                                <>
+                                  {(!c.assigned_to || assignSelections[c._id || c.id]) && (
+                                    <button
+                                      className="cs-btn cs-btn--outline cs-btn--sm"
+                                      style={{ fontSize: 11 }}
+                                      onClick={() => assignVolunteer(c._id || c.id)}
+                                      disabled={!assignSelections[c._id || c.id]?.trim()}
+                                    >Assign</button>
+                                  )}
+                                  <button
+                                    className="cs-btn cs-btn--primary cs-btn--sm"
+                                    style={{ fontSize: 11 }}
+                                    onClick={() => markResolved(c._id || c.id)}
+                                  >✓ Resolve</button>
+                                </>
                               )}
                             </div>
                           </TD>
@@ -545,7 +576,7 @@ function AdminDashboard() {
                               color: u.role === "admin" ? "#dc2626" : u.role === "volunteer" ? "#2563eb" : "#16a34a",
                               padding: "2px 10px", borderRadius: 9999,
                               fontSize: 12, fontWeight: 600, textTransform: "capitalize",
-                            }}>{u.role || "citizen"}</span>
+                            }}>{u.role === "user" ? "user" : u.role || "user"}</span>
                           </TD>
                           <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
                           <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
@@ -558,11 +589,11 @@ function AdminDashboard() {
                                   onClick={() => changeUserRole(u._id, "volunteer")}
                                 >Make Volunteer</button>
                               )}
-                              {u.role !== "citizen" && u.role !== "admin" && (
+                              {u.role !== "user" && u.role !== "user" && u.role !== "admin" && (
                                 <button
                                   className="cs-btn cs-btn--outline cs-btn--sm"
                                   style={{ fontSize: 11 }}
-                                  onClick={() => changeUserRole(u._id, "citizen")}
+                                  onClick={() => changeUserRole(u._id, "user")}
                                 >Make Citizen</button>
                               )}
                             </div>
@@ -595,8 +626,15 @@ function AdminDashboard() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
                   {volunteers.map(v => {
-                    const assigned = complaints.filter(c => c.assignedTo?._id === v._id || c.assignedTo === v._id).length;
-                    const resolved = complaints.filter(c => (c.assignedTo?._id === v._id || c.assignedTo === v._id) && c.status === "resolved").length;
+                    const assigned = complaints.filter(c => {
+                      const id = c.assigned_to?._id || c.assigned_to;
+                      return String(id) === String(v._id);
+                    }).length;
+
+                    const resolved = complaints.filter(c => {
+                      const id = c.assigned_to?._id || c.assigned_to;
+                      return String(id) === String(v._id) && c.status === "resolved";
+                    }).length;
                     return (
                       <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
                         <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>
@@ -618,7 +656,7 @@ function AdminDashboard() {
                         <button
                           className="cs-btn cs-btn--outline cs-btn--sm"
                           style={{ marginTop: 12, width: "100%", fontSize: 12 }}
-                          onClick={() => changeUserRole(v._id, "citizen")}
+                          onClick={() => changeUserRole(v._id, "user")}
                         >Remove Volunteer</button>
                       </div>
                     );
