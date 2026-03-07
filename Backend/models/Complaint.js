@@ -63,11 +63,11 @@ const complaintSchema = new mongoose.Schema(
       default: null,
     },
 
-     status: {
+    status: {
       type: String,
-      enum: ["received", "in_review", "resolved", "completed"],
+      enum: ["received", "in_review", "resolved"],
       default: "received",
-     }, 
+    },
 
     // ─── Voting ──────────────────────────────────────────────
     upvotes: {
