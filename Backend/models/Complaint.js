@@ -57,7 +57,6 @@ const complaintSchema = new mongoose.Schema(
       default: "",
     },
 
-    // ✅ FIXED (ObjectId instead of String)
     assigned_to: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -66,9 +65,41 @@ const complaintSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["received", "assigned", "in_review", "accepted", "denied", "in_progress", "resolved", "completed"],
+      enum: ["received", "in_review", "resolved", "assigned", "completed", "pending"],
       default: "received",
     },
+
+    // ─── Voting ──────────────────────────────────────────────
+    upvotes: {
+      type: Number,
+      default: 0,
+    },
+
+    downvotes: {
+      type: Number,
+      default: 0,
+    },
+
+    voters: [
+      {
+        user:     { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        voteType: { type: String, enum: ["upvote", "downvote"] },
+      },
+    ],
+
+    // ─── Comments ─────────────────────────────────────────────
+    comments: {
+      type: Number,
+      default: 0,
+    },
+
+    commentsList: [
+      {
+        user_id:   { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        content:   { type: String, required: true },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: {
