@@ -219,10 +219,9 @@ router.post("/:id/vote", protect, async (req, res) => {
     const userVote = complaint.voters.find(v => String(v.user) === userId)?.voteType || null;
     res.json({ upvotes: complaint.upvotes, downvotes: complaint.downvotes, userVote });
   } catch (error) {
-    console.error("Vote error FULL:", error.stack);
-    res.status(500).json({ message: error.message, stack: error.stack });
-}
-
+    console.error("Vote error:", error);
+    res.status(500).json({ message: error.message });
+  }
 });
 
 // ============================================================
