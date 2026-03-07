@@ -27,6 +27,7 @@ function formatDate(dateStr) {
 }
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 function CleanStreetLogo({ size = 44 }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
@@ -317,7 +318,7 @@ function Chatbot() {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function UserDashboard() {
   const navigate = useNavigate();
-  const { user, logout, getInitials } = useAuth();
+  const { user, getInitials } = useAuth();
 
   const MOCK_USER = {
     name:     user?.name     || "Demo User",
