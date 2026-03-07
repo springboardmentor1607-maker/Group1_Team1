@@ -1,14 +1,23 @@
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
 import API from "../api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const STATUS_LABELS = { received: "Received", in_review: "In Review", resolved: "Resolved" };
-const STATUS_DOT_COLORS = { received: "#3b82f6", in_review: "#f59e0b", resolved: "#22c55e" };
-const PROGRESS_STEPS = ["received", "in_review", "resolved"];
+const STATUS_LABELS = { received: "Received", assigned: "Assigned", accepted: "Accepted", denied: "Denied", in_progress: "In Progress", resolved: "Pending Approval", completed: "Resolved", in_review: "In Review" };
+const STATUS_COLORS = {
+  received:    { bg: "#dbeafe", text: "#1e40af", dot: "#3b82f6" },
+  assigned:    { bg: "#e0f2fe", text: "#0369a1", dot: "#0ea5e9" },
+  accepted:    { bg: "#dcfce7", text: "#15803d", dot: "#22c55e" },
+  denied:      { bg: "#fee2e2", text: "#dc2626", dot: "#ef4444" },
+  in_progress: { bg: "#fff7ed", text: "#c2410c", dot: "#f97316" },
+  in_review:   { bg: "#fef9c3", text: "#854d0e", dot: "#f59e0b" },
+  resolved:    { bg: "#ede9fe", text: "#7c3aed", dot: "#8b5cf6" },
+  completed:   { bg: "#dcfce7", text: "#15803d", dot: "#22c55e" },
+};
+const PROGRESS_STEPS = ["received", "assigned", "accepted", "in_progress", "completed"];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -92,9 +101,15 @@ function CleanStreetLogo({ size = 44 }) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
+  const s = STATUS_COLORS[status] || STATUS_COLORS["received"];
   return (
-    <span className={`cs-badge cs-badge--${status}`}>
-      <span className="cs-badge__dot" style={{ background: STATUS_DOT_COLORS[status] }} />
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: s.bg, color: s.text,
+      padding: "3px 10px", borderRadius: 9999,
+      fontSize: 12, fontWeight: 600,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
       {STATUS_LABELS[status] || status}
     </span>
   );
@@ -133,6 +148,11 @@ function ComplaintCard({ complaint, onView }) {
           <span>📍</span>
           <span>{complaint.location}</span>
         </div>
+        {complaint.assigned_to && (
+          <div style={{ padding: "4px 0 8px", fontSize: 12, color: "#6b7280" }}>
+            👷 Assigned to: <strong style={{ color: "#1a56db" }}>{complaint.assigned_to?.name || complaint.assigned_to}</strong>
+          </div>
+        )}
         <div className="cs-complaint-card__footer">
           <div className="cs-complaint-card__meta">
             <span className="cs-complaint-card__meta-item">👍 {complaint.votes}</span>
@@ -147,7 +167,15 @@ function ComplaintCard({ complaint, onView }) {
 
 function ComplaintDetailModal({ complaint, onClose }) {
   if (!complaint) return null;
-  const currentIdx = PROGRESS_STEPS.indexOf(complaint.status);
+  const statusToStep = {
+    received: 0, in_review: 1,
+    assigned: 1, denied: 1,
+    accepted: 2,
+    in_progress: 3,
+    resolved: 3,   // stays at step 3 until admin approves
+    completed: 4,  // only completed reaches final Resolved step
+  };
+  const currentIdx = statusToStep[complaint.status] ?? 0;
   return (
     <div className="cs-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="cs-modal">
@@ -324,47 +352,64 @@ export default function UserDashboard() {
   const MOCK_USER = {
     name: user?.name || "Demo User",
     username: user?.username ? `@${user.username}` : "@demo_user",
-    role: user?.role || "user",
+    role: user?.role || "Citizen",
     avatar: user?.name ? getInitials(user.name) : "DU",
   };
 
   const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-  async function fetchComplaints() {
+  const fetchComplaints = async () => {
     try {
-      const res = await API.get("/api/complaints");
-      const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/complaints", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const raw = Array.isArray(data) ? data : data.complaints || [];
       const normalized = raw.map(c => ({
         ...c,
-        id:        c._id || c.id,
-        location:  c.address || c.location || "No location",
-        image:     c.photo ? `http://localhost:5000${c.photo}` : null,
-        type:      c.type || c.issueType || "General",
-        typeIcon:  c.typeIcon || "📌",
-        votes:     c.votes || 0,
-        comments:  c.comments || 0,
+        id:       c._id || c.id,
+        location: c.address || c.location || "No location",
+        image:    c.photo ? `http://localhost:5000${c.photo}` : null,
+        type:     c.type || c.issueType || "General",
+        typeIcon: c.typeIcon || "📌",
+        votes:    c.votes || 0,
+        comments: c.comments || 0,
         createdAt: c.created_at || c.createdAt || new Date().toISOString(),
-        updatedAt: c.updated_at || c.updatedAt || new Date().toISOString(),
+        updatedAt: c.updated_at || c.updatedAt || c.created_at || c.createdAt || new Date().toISOString(),
       }));
+      setLoading(false);
+      setLastUpdated(new Date());
       setComplaints(normalized);
+      const activity = normalized.slice(-5).reverse().map(comp => ({
+        icon: comp.status === "resolved" ? "✅" : comp.status === "in_review" ? "🔄" : "📌",
+        color: comp.status === "resolved" ? "#22c55e" : comp.status === "in_review" ? "#f59e0b" : "#3b82f6",
+        text: comp.title || "New complaint submitted",
+        time: timeAgo(comp.createdAt),
+      }));
+      setRecentActivity(activity);
     } catch (err) {
       console.error("Failed to fetch complaints", err);
+      setLoading(false);
     }
-  }
-  fetchComplaints();
-}, []);
+  };
+
+  useEffect(() => { fetchComplaints(); }, []);
 
   const total = complaints.length;
   const pending = complaints.filter(c => c.status === "received").length;
   const inProg = complaints.filter(c => c.status === "in_review").length;
-  const resolved = complaints.filter(c => c.status === "resolved").length;
+  const resolved = complaints.filter(c => c.status === "completed").length;
 
   const filtered = complaints.filter(c => {
-    const matchStatus = activeFilter === "all" || c.status === activeFilter;
+    const matchStatus = activeFilter === "all" || (activeFilter === "resolved" ? c.status === "completed" : c.status === activeFilter);
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.location?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -404,7 +449,7 @@ export default function UserDashboard() {
     //   .catch(err => console.error("Failed to fetch activity", err));
     // Use complaints as recent activity feed until dedicated endpoint is ready
     // TODO (Backend): Replace with GET /api/activity/recent?limit=5
-    setRecentActivity([]); // will be populated once backend activity endpoint is ready
+    // Recent activity is populated inside fetchComplaints above
   }, []);
 
   return (
@@ -475,7 +520,12 @@ export default function UserDashboard() {
 
             {/* Filter bar */}
             <div className="cs-filter-bar">
-              <div className="cs-filter-tabs">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            {lastUpdated && (
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            )}
+          </div>
+          <div className="cs-filter-tabs">
                 {filters.map(f => (
                   <button
                     key={f.key}
@@ -487,16 +537,27 @@ export default function UserDashboard() {
                   </button>
                 ))}
               </div>
-              <input
-                className="cs-input cs-search-input"
-                placeholder="🔍 Search complaints..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  className="cs-input cs-search-input"
+                  placeholder="🔍 Search complaints..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+                <button onClick={fetchComplaints} title="Refresh" style={{
+                  background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8,
+                  padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b", flexShrink: 0
+                }}>🔄</button>
+              </div>
             </div>
 
             {/* Complaints grid */}
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                <div style={{ fontSize: 15 }}>Loading your complaints…</div>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="cs-empty">
                 <div className="cs-empty__icon">📭</div>
                 <div className="cs-empty__title">No complaints found</div>

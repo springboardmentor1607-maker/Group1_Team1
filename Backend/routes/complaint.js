@@ -99,7 +99,7 @@ router.get("/my", protect, async (req, res) => {
 // ============================================================
 // ✅ GET VOLUNTEER ASSIGNED COMPLAINTS
 // ============================================================
-router.get("/my-assignments", protect, authorize("volunteer"), async (req, res) => {
+router.get("/assigned-to-me", protect, authorize("volunteer"), async (req, res) => {
   try {
     const complaints = await Complaint.find({ assigned_to: req.user._id })
       .populate("user_id", "name email")
@@ -130,7 +130,7 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
     }
 
     complaint.assigned_to = volunteerId;
-    complaint.status = "in_review";
+    complaint.status = "assigned";
 
     await complaint.save();
 
@@ -146,11 +146,11 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
 // ============================================================
 // ✅ ADMIN: UPDATE STATUS
 // ============================================================
-router.put("/status/:id", protect, authorize("admin"), async (req, res) => {
+router.put("/status/:id", protect, authorize("admin", "volunteer"), async (req, res) => {
   try {
     const { status } = req.body;
 
-    const allowedStatus = ["received", "in_review", "resolved"];
+    const allowedStatus = ["received", "assigned", "accepted", "denied", "in_progress", "resolved", "completed"];
 
     if (!allowedStatus.includes(status)) {
       return res.status(400).json({ message: "Invalid status value" });
@@ -169,6 +169,38 @@ router.put("/status/:id", protect, authorize("admin"), async (req, res) => {
       message: "Status updated successfully",
       complaint,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+// ============================================================
+// ✅ VOLUNTEER: ACCEPT COMPLAINT
+// ============================================================
+router.put("/:id/accept", protect, authorize("volunteer"), async (req, res) => {
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: "Complaint not found" });
+    complaint.status = "accepted";
+    await complaint.save();
+    res.json({ message: "Complaint accepted", complaint });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ============================================================
+// ✅ VOLUNTEER: DENY COMPLAINT
+// ============================================================
+router.put("/:id/deny", protect, authorize("volunteer"), async (req, res) => {
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: "Complaint not found" });
+    complaint.status = "denied";
+    // keep assigned_to so admin can see who denied it
+    await complaint.save();
+    res.json({ message: "Complaint denied", complaint });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

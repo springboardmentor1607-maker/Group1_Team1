@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
-import API from "../api";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
@@ -183,11 +182,11 @@ export default function MapPage() {
       const lng = c.longitude || c.location?.lng;
       if (!lat || !lng) return;
 
-      const type   = c.type || c.issueType || "other";
+      const type   = (c.type || c.issueType || "other").toLowerCase().trim();
       const color  = TYPE_COLORS[type] || TYPE_COLORS.other;
       const sColor = STATUS_COLORS[c.status] || STATUS_COLORS.received;
 
-      if (!activeFilters[type]) return;
+      if (activeFilters[type] === false) return; // only skip if explicitly unchecked
 
       const icon = L.divIcon({
         html: `<div style="
