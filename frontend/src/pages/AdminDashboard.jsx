@@ -145,6 +145,311 @@ const TD = ({ children, style }) => (
   }}>{children}</td>
 );
 
+// ─── Reports Tab ─────────────────────────────────────────────────────────────
+function ReportsTab({ complaints, users, volunteers }) {
+  const total      = complaints.length;
+  const received   = complaints.filter(c => c.status === "received").length;
+  const inReview   = complaints.filter(c => c.status === "in_review").length;
+  const resolved   = complaints.filter(c => c.status === "resolved").length;
+  const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+
+  // Complaints by type
+  const byType = complaints.reduce((acc, c) => {
+    const t = c.type || "other";
+    acc[t] = (acc[t] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Complaints by priority
+  const byPriority = complaints.reduce((acc, c) => {
+    const p = c.priority || "medium";
+    acc[p] = (acc[p] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Top volunteers by resolved complaints
+  const volStats = volunteers.map(v => ({
+    name: v.name,
+    resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length,
+    assigned: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length,
+  })).sort((a, b) => b.resolved - a.resolved);
+
+  // ── Download CSV ────────────────────────────────────────────────────────────
+  const downloadCSV = () => {
+    const headers = ["ID", "Title", "Type", "Priority", "Status", "Address", "Reported By", "Assigned To", "Created At", "Updated At"];
+    const rows = complaints.map(c => [
+      String(c._id).slice(-6).toUpperCase(),
+      `"${(c.title || "").replace(/"/g, "'")}"`,
+      c.type || "other",
+      c.priority || "medium",
+      c.status || "received",
+      `"${(c.address || "").replace(/"/g, "'")}"`,
+      `"${c.user_id?.name || "—"}"`,
+      `"${c.assigned_to?.name || "Not assigned"}"`,
+      new Date(c.created_at || c.createdAt).toLocaleDateString(),
+      new Date(c.updated_at || c.updatedAt).toLocaleDateString(),
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `cleanstreet_complaints_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Download Summary TXT ────────────────────────────────────────────────────
+  const downloadSummary = () => {
+    const lines = [
+      "========================================",
+      "   CLEANSTREET - COMPLAINT SUMMARY REPORT",
+      `   Generated: ${new Date().toLocaleString()}`,
+      "========================================",
+      "",
+      "── OVERVIEW ──────────────────────────────",
+      `Total Complaints  : ${total}`,
+      `Received          : ${received}`,
+      `In Review         : ${inReview}`,
+      `Resolved          : ${resolved}`,
+      `Resolution Rate   : ${resolveRate}%`,
+      `Total Users       : ${users.length}`,
+      `Total Volunteers  : ${volunteers.length}`,
+      "",
+      "── COMPLAINTS BY TYPE ────────────────────",
+      ...Object.entries(byType).map(([k, v]) => `${k.padEnd(20)}: ${v}`),
+      "",
+      "── COMPLAINTS BY PRIORITY ────────────────",
+      ...Object.entries(byPriority).map(([k, v]) => `${k.padEnd(20)}: ${v}`),
+      "",
+      "── TOP VOLUNTEERS ────────────────────────",
+      ...volStats.slice(0, 5).map(v => `${v.name.padEnd(20)}: ${v.resolved} resolved / ${v.assigned} assigned`),
+      "",
+      "========================================",
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `cleanstreet_summary_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const barMax = Math.max(...Object.values(byType), 1);
+  const TYPE_COLORS = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
+  const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", urgent: "#ef4444", critical: "#dc2626" };
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Reports & Analytics</h1>
+          <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Generate and download complaint reports.</p>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={downloadCSV} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "#2563eb", color: "#fff", border: "none",
+            borderRadius: 8, padding: "9px 16px", fontSize: 13,
+            fontWeight: 600, cursor: "pointer",
+          }}>📥 Download CSV</button>
+          <button onClick={downloadSummary} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "#fff", color: "#374151",
+            border: "1.5px solid #e5e7eb",
+            borderRadius: 8, padding: "9px 16px", fontSize: 13,
+            fontWeight: 600, cursor: "pointer",
+          }}>📄 Download Summary</button>
+        </div>
+      </div>
+
+      {/* Stats Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+        {[
+          { label: "Total Complaints", value: total,        icon: "📋", color: "#3b82f6" },
+          { label: "Received",         value: received,     icon: "📥", color: "#f59e0b" },
+          { label: "In Review",        value: inReview,     icon: "🔄", color: "#8b5cf6" },
+          { label: "Resolved",         value: resolved,     icon: "✅", color: "#22c55e" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: "#fff", borderRadius: 12, padding: "18px 20px",
+            border: "1px solid #e5e7eb", borderTop: `3px solid ${s.color}`,
+          }}>
+            <div style={{ fontSize: 24, marginBottom: 6 }}>{s.icon}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#111827", lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+
+        {/* Complaints by Type */}
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>📊 Complaints by Type</div>
+          {Object.entries(byType).length === 0 ? (
+            <div style={{ color: "#9ca3af", fontSize: 13 }}>No data yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
+                <div key={type}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 500, color: "#374151", textTransform: "capitalize" }}>{type}</span>
+                    <span style={{ fontWeight: 700, color: "#111827" }}>{count}</span>
+                  </div>
+                  <div style={{ height: 8, background: "#f3f4f6", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 99,
+                      background: TYPE_COLORS[type] || "#6b7280",
+                      width: `${Math.round((count / barMax) * 100)}%`,
+                      transition: "width 0.5s",
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Resolution Rate */}
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🎯 Resolution Rate</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: "10px 0" }}>
+            <div style={{
+              width: 120, height: 120, borderRadius: "50%",
+              background: `conic-gradient(#22c55e ${resolveRate * 3.6}deg, #f3f4f6 0deg)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              position: "relative",
+            }}>
+              <div style={{
+                width: 88, height: 88, borderRadius: "50%",
+                background: "#fff", display: "flex", alignItems: "center",
+                justifyContent: "center", flexDirection: "column",
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{resolveRate}%</div>
+                <div style={{ fontSize: 10, color: "#9ca3af" }}>Resolved</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 20, marginTop: 16 }}>
+              {[
+                { label: "Received",  count: received,  color: "#f59e0b" },
+                { label: "In Review", count: inReview,  color: "#8b5cf6" },
+                { label: "Resolved",  count: resolved,  color: "#22c55e" },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign: "center" }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: s.color, margin: "0 auto 4px" }} />
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>{s.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{s.count}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* By Priority */}
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🚨 Complaints by Priority</div>
+          {Object.entries(byPriority).length === 0 ? (
+            <div style={{ color: "#9ca3af", fontSize: 13 }}>No data yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {Object.entries(byPriority).sort((a, b) => b[1] - a[1]).map(([p, count]) => (
+                <div key={p} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{
+                    minWidth: 70, fontSize: 11, fontWeight: 700,
+                    textTransform: "capitalize", color: PRIORITY_COLORS[p] || "#6b7280",
+                  }}>{p}</span>
+                  <div style={{ flex: 1, height: 20, background: "#f3f4f6", borderRadius: 6, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 6,
+                      background: PRIORITY_COLORS[p] || "#6b7280",
+                      width: `${Math.round((count / total) * 100)}%`,
+                      display: "flex", alignItems: "center", paddingLeft: 8,
+                    }}>
+                      <span style={{ fontSize: 10, color: "#fff", fontWeight: 700 }}>{count}</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#374151", minWidth: 20 }}>{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Top Volunteers */}
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🏆 Top Volunteers</div>
+          {volStats.length === 0 ? (
+            <div style={{ color: "#9ca3af", fontSize: 13 }}>No volunteers yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {volStats.slice(0, 5).map((v, i) => (
+                <div key={v.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                    background: i === 0 ? "#fbbf24" : i === 1 ? "#9ca3af" : i === 2 ? "#d97706" : "#e5e7eb",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 12, fontWeight: 800, color: i < 3 ? "#fff" : "#6b7280",
+                  }}>#{i + 1}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{v.name}</div>
+                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{v.assigned} assigned · {v.resolved} resolved</div>
+                  </div>
+                  <div style={{
+                    background: "#dcfce7", color: "#166534",
+                    padding: "2px 8px", borderRadius: 9999,
+                    fontSize: 11, fontWeight: 700,
+                  }}>{v.resolved} ✓</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Complaints Table */}
+      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 14 }}>📋 All Complaints Preview</div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#f9fafb" }}>
+                {["ID", "Title", "Type", "Priority", "Status", "Reported By", "Date"].map(h => (
+                  <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", borderBottom: "2px solid #f3f4f6" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {complaints.slice(0, 10).map(c => (
+                <tr key={c._id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                  <td style={{ padding: "10px 12px", color: "#9ca3af", fontFamily: "monospace" }}>#{String(c._id).slice(-6).toUpperCase()}</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 500, color: "#111827", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</td>
+                  <td style={{ padding: "10px 12px", color: "#374151", textTransform: "capitalize" }}>{c.type || "other"}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <span style={{ background: PRIORITY_COLORS[c.priority] + "20", color: PRIORITY_COLORS[c.priority] || "#6b7280", padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 700, textTransform: "capitalize" }}>{c.priority || "medium"}</span>
+                  </td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <span style={{ background: c.status === "resolved" ? "#dcfce7" : c.status === "in_review" ? "#ede9fe" : "#dbeafe", color: c.status === "resolved" ? "#166534" : c.status === "in_review" ? "#5b21b6" : "#1d4ed8", padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 600, textTransform: "capitalize" }}>{c.status?.replace("_", " ")}</span>
+                  </td>
+                  <td style={{ padding: "10px 12px", color: "#6b7280" }}>{c.user_id?.name || "—"}</td>
+                  <td style={{ padding: "10px 12px", color: "#9ca3af" }}>{new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {complaints.length > 10 && (
+            <div style={{ textAlign: "center", padding: "12px 0", fontSize: 13, color: "#6b7280" }}>
+              Showing 10 of {complaints.length} complaints. Download CSV for full data.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -274,10 +579,11 @@ function AdminDashboard() {
   });
 
   const sidebarItems = [
-    { key: "overview", icon: "📊", label: "Overview" },
+    { key: "overview",   icon: "📊", label: "Overview" },
     { key: "complaints", icon: "📋", label: "Complaints" },
-    { key: "users", icon: "👥", label: "User Management" },
+    { key: "users",      icon: "👥", label: "User Management" },
     { key: "volunteers", icon: "🤝", label: "Volunteers" },
+    { key: "reports",    icon: "📈", label: "Reports" },
   ];
 
   return (
@@ -664,6 +970,11 @@ function AdminDashboard() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* ══ REPORTS TAB ══ */}
+          {activeTab === "reports" && (
+            <ReportsTab complaints={complaints} users={users} volunteers={volunteers} />
           )}
 
         </div>

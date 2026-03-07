@@ -336,7 +336,7 @@ export default function UserDashboard() {
   useEffect(() => {
   async function fetchComplaints() {
     try {
-      const res = await API.get("/api/complaints");
+      const res = await API.get("/api/complaints/my");
       const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
       const normalized = raw.map(c => ({
         ...c,
