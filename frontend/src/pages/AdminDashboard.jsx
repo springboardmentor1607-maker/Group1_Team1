@@ -199,43 +199,162 @@ function ReportsTab({ complaints, users, volunteers }) {
     URL.revokeObjectURL(url);
   };
 
-  // ── Download Summary TXT ────────────────────────────────────────────────────
+  // ── Download Summary PDF ────────────────────────────────────────────────────
   const downloadSummary = () => {
-    const lines = [
-      "========================================",
-      "   CLEANSTREET - COMPLAINT SUMMARY REPORT",
-      `   Generated: ${new Date().toLocaleString()}`,
-      "========================================",
-      "",
-      "── OVERVIEW ──────────────────────────────",
-      `Total Complaints  : ${total}`,
-      `Received          : ${received}`,
-      `In Review         : ${inReview}`,
-      `Resolved          : ${resolved}`,
-      `Resolution Rate   : ${resolveRate}%`,
-      `Total Users       : ${users.length}`,
-      `Total Volunteers  : ${volunteers.length}`,
-      "",
-      "── COMPLAINTS BY TYPE ────────────────────",
-      ...Object.entries(byType).map(([k, v]) => `${k.padEnd(20)}: ${v}`),
-      "",
-      "── COMPLAINTS BY PRIORITY ────────────────",
-      ...Object.entries(byPriority).map(([k, v]) => `${k.padEnd(20)}: ${v}`),
-      "",
-      "── TOP VOLUNTEERS ────────────────────────",
-      ...volStats.slice(0, 5).map(v => `${v.name.padEnd(20)}: ${v.resolved} resolved / ${v.assigned} assigned`),
-      "",
-      "========================================",
-    ];
-    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = `cleanstreet_summary_${new Date().toISOString().slice(0, 10)}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const html = `
+      <html><head><title>CleanStreet Summary Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 40px; color: #111827; }
+        h1 { color: #1d4ed8; font-size: 24px; margin-bottom: 4px; }
+        .subtitle { color: #6b7280; font-size: 13px; margin-bottom: 28px; }
+        .section { margin-bottom: 24px; }
+        .section-title { font-size: 14px; font-weight: 700; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+        .stat-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 28px; font-weight: 800; color: #1d4ed8; }
+        .stat-label { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+        .resolved { background: #dcfce7; color: #166534; }
+        .in_review { background: #ede9fe; color: #5b21b6; }
+        .received { background: #dbeafe; color: #1d4ed8; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>
+      <h1>🌿 CleanStreet — Summary Report</h1>
+      <div class="subtitle">Generated: ${new Date().toLocaleString()}</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-label">Total Complaints</div></div>
+        <div class="stat-box"><div class="stat-num">${received}</div><div class="stat-label">Received</div></div>
+        <div class="stat-box"><div class="stat-num">${inReview}</div><div class="stat-label">In Review</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#22c55e">${resolved}</div><div class="stat-label">Resolved</div></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num">${resolveRate}%</div><div class="stat-label">Resolution Rate</div></div>
+        <div class="stat-box"><div class="stat-num">${users.length}</div><div class="stat-label">Total Users</div></div>
+        <div class="stat-box"><div class="stat-num">${volunteers.length}</div><div class="stat-label">Volunteers</div></div>
+        <div class="stat-box"><div class="stat-num">${total - resolved}</div><div class="stat-label">Pending</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Complaints by Type</div>
+        <table><tr>${Object.entries(byType).map(([k,v]) => `<th>${k}</th>`).join("")}</tr>
+        <tr>${Object.entries(byType).map(([k,v]) => `<td>${v}</td>`).join("")}</tr></table>
+      </div>
+      <div class="section">
+        <div class="section-title">Complaints by Priority</div>
+        <table><tr>${Object.entries(byPriority).map(([k,v]) => `<th>${k}</th>`).join("")}</tr>
+        <tr>${Object.entries(byPriority).map(([k,v]) => `<td>${v}</td>`).join("")}</tr></table>
+      </div>
+      <div class="section">
+        <div class="section-title">Top Volunteers</div>
+        <table><tr><th>#</th><th>Name</th><th>Assigned</th><th>Resolved</th></tr>
+        ${volStats.map((v,i) => `<tr><td>${i+1}</td><td>${v.name}</td><td>${v.assigned}</td><td>${v.resolved}</td></tr>`).join("")}
+        </table>
+      </div>
+      <div class="section">
+        <div class="section-title">All Complaints</div>
+        <table>
+          <tr><th>ID</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Reported By</th><th>Date</th></tr>
+          ${complaints.map(c => `<tr>
+            <td style="font-family:monospace;color:#9ca3af">#${String(c._id).slice(-6).toUpperCase()}</td>
+            <td>${c.title || "—"}</td>
+            <td style="text-transform:capitalize">${c.type || "other"}</td>
+            <td style="text-transform:capitalize">${c.priority || "medium"}</td>
+            <td><span class="badge ${c.status}">${(c.status||"received").replace("_"," ")}</span></td>
+            <td>${c.user_id?.name || "—"}</td>
+            <td>${new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
+          </tr>`).join("")}
+        </table>
+      </div>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 500);
   };
 
+  // ── Download Single Complaint PDF ───────────────────────────────────────────
+  const downloadSingleReport = (c) => {
+    const id = String(c._id).slice(-6).toUpperCase();
+    const statusColor = c.status === "resolved" ? "#166534" : c.status === "in_review" ? "#5b21b6" : "#1d4ed8";
+    const statusBg    = c.status === "resolved" ? "#dcfce7" : c.status === "in_review" ? "#ede9fe" : "#dbeafe";
+    const html = `
+      <html><head><title>Complaint #${id}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 40px; color: #111827; max-width: 700px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg,#1e3a8a,#2563eb); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; }
+        .header h1 { margin: 0 0 4px; font-size: 22px; }
+        .header .meta { font-size: 12px; opacity: 0.7; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; background: ${statusBg}; color: ${statusColor}; }
+        .section { background: #f8fafc; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; }
+        .section-title { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .field-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+        .field-value { font-size: 13px; color: #111827; font-weight: 500; }
+        .stat-row { display: flex; gap: 24px; }
+        .stat { text-align: center; }
+        .stat-num { font-size: 22px; font-weight: 800; }
+        .stat-label { font-size: 11px; color: #9ca3af; }
+        .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 28px; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>
+      <div class="header">
+        <div class="meta">CleanStreet Complaint Report · Generated ${new Date().toLocaleString()}</div>
+        <h1>${c.title || "Untitled Complaint"}</h1>
+        <div class="meta">#${id} · ${c.type || "General"}</div>
+        <div style="margin-top:10px"><span class="badge">${(c.status || "received").replace("_"," ").toUpperCase()}</span></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Description</div>
+        <div style="font-size:13px;color:#374151;line-height:1.6">${c.description || "No description provided."}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Details</div>
+        <div class="grid">
+          <div><div class="field-label">Type</div><div class="field-value" style="text-transform:capitalize">${c.type || "other"}</div></div>
+          <div><div class="field-label">Priority</div><div class="field-value" style="text-transform:capitalize">${c.priority || "medium"}</div></div>
+          <div><div class="field-label">Address</div><div class="field-value">${c.address || "—"}</div></div>
+          <div><div class="field-label">Landmark</div><div class="field-value">${c.landmark || "—"}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">People</div>
+        <div class="grid">
+          <div><div class="field-label">Reported By</div><div class="field-value">${c.user_id?.name || "—"}</div><div style="font-size:11px;color:#6b7280">${c.user_id?.email || ""}</div></div>
+          <div><div class="field-label">Assigned To</div><div class="field-value">${c.assigned_to?.name || "Not assigned"}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Dates</div>
+        <div class="grid">
+          <div><div class="field-label">Reported On</div><div class="field-value">${new Date(c.created_at || c.createdAt).toLocaleString()}</div></div>
+          <div><div class="field-label">Last Updated</div><div class="field-value">${new Date(c.updated_at || c.updatedAt).toLocaleString()}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Community Engagement</div>
+        <div class="stat-row">
+          <div class="stat"><div class="stat-num" style="color:#22c55e">${c.upvotes || 0}</div><div class="stat-label">Upvotes</div></div>
+          <div class="stat"><div class="stat-num" style="color:#ef4444">${c.downvotes || 0}</div><div class="stat-label">Downvotes</div></div>
+          <div class="stat"><div class="stat-num" style="color:#3b82f6">${c.comments || 0}</div><div class="stat-label">Comments</div></div>
+        </div>
+      </div>
+
+      <div class="footer">CleanStreet · Civic Issue Reporting & Tracking · Report ID: ${id}</div>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 500);
+  };
   const barMax = Math.max(...Object.values(byType), 1);
   const TYPE_COLORS = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
   const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", urgent: "#ef4444", critical: "#dc2626" };
@@ -261,7 +380,7 @@ function ReportsTab({ complaints, users, volunteers }) {
             border: "1.5px solid #e5e7eb",
             borderRadius: 8, padding: "9px 16px", fontSize: 13,
             fontWeight: 600, cursor: "pointer",
-          }}>📄 Download Summary</button>
+          }}>📄 Summary PDF</button>
         </div>
       </div>
 
@@ -384,27 +503,34 @@ function ReportsTab({ complaints, users, volunteers }) {
           {volStats.length === 0 ? (
             <div style={{ color: "#9ca3af", fontSize: 13 }}>No volunteers yet.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {volStats.slice(0, 5).map((v, i) => (
-                <div key={v.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                    background: i === 0 ? "#fbbf24" : i === 1 ? "#9ca3af" : i === 2 ? "#d97706" : "#e5e7eb",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 12, fontWeight: 800, color: i < 3 ? "#fff" : "#6b7280",
-                  }}>#{i + 1}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{v.name}</div>
-                    <div style={{ fontSize: 11, color: "#9ca3af" }}>{v.assigned} assigned · {v.resolved} resolved</div>
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {volStats.slice(0, 5).map((v, i) => (
+                  <div key={v.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                      background: i === 0 ? "#fbbf24" : i === 1 ? "#9ca3af" : i === 2 ? "#d97706" : "#e5e7eb",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12, fontWeight: 800, color: i < 3 ? "#fff" : "#6b7280",
+                    }}>#{i + 1}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{v.name}</div>
+                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{v.assigned} assigned · {v.resolved} resolved</div>
+                    </div>
+                    <div style={{
+                      background: "#dcfce7", color: "#166534",
+                      padding: "2px 8px", borderRadius: 9999,
+                      fontSize: 11, fontWeight: 700,
+                    }}>{v.resolved} ✓</div>
                   </div>
-                  <div style={{
-                    background: "#dcfce7", color: "#166534",
-                    padding: "2px 8px", borderRadius: 9999,
-                    fontSize: 11, fontWeight: 700,
-                  }}>{v.resolved} ✓</div>
+                ))}
+              </div>
+              {volStats.length > 5 && (
+                <div style={{ marginTop: 12, textAlign: "center", fontSize: 12, color: "#9ca3af", borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
+                  +{volStats.length - 5} more volunteers · Download Summary PDF for full rankings
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -416,7 +542,7 @@ function ReportsTab({ complaints, users, volunteers }) {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "#f9fafb" }}>
-                {["ID", "Title", "Type", "Priority", "Status", "Reported By", "Date"].map(h => (
+                {["ID", "Title", "Type", "Priority", "Status", "Reported By", "Date", "Report"].map(h => (
                   <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", borderBottom: "2px solid #f3f4f6" }}>{h}</th>
                 ))}
               </tr>
@@ -435,6 +561,17 @@ function ReportsTab({ complaints, users, volunteers }) {
                   </td>
                   <td style={{ padding: "10px 12px", color: "#6b7280" }}>{c.user_id?.name || "—"}</td>
                   <td style={{ padding: "10px 12px", color: "#9ca3af" }}>{new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <button
+                      onClick={() => downloadSingleReport(c)}
+                      style={{
+                        background: "#f0fdf4", color: "#166534",
+                        border: "1px solid #bbf7d0", borderRadius: 6,
+                        padding: "4px 10px", fontSize: 11, fontWeight: 600,
+                        cursor: "pointer", whiteSpace: "nowrap",
+                      }}
+                    >📄 Report</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
