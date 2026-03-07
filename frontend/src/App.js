@@ -7,6 +7,7 @@ import SubmitComplaint from "./pages/SubmitComplaint";
 import VolunteerDashboard from "./pages/volunteerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import MapPage from "./pages/Mappage";
+import ViewComplaints from "./pages/ViewComplaints";
 
 export default function App() {
   return (
