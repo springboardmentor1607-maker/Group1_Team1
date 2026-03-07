@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
-import { useComplaints } from "../hooks/useComplaints";
+import API from "../api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_LABELS    = { received: "Received", in_review: "In Review", resolved: "Resolved" };
@@ -326,7 +326,35 @@ export default function UserDashboard() {
     avatar:   user?.name     ? getInitials(user.name) : "DU",
   };
 
-  const { complaints, loading } = useComplaints();
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading]       = useState(true);
+
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      try {
+        setLoading(true);
+        const res = await API.get("/api/complaints/my");
+        const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
+        setComplaints(raw.map(c => ({
+          ...c,
+          id:           c._id || c.id,
+          location:     c.address || c.location || "No location",
+          type:         c.type || c.issueType || "General",
+          upvotes:      c.upvotes   || 0,
+          downvotes:    c.downvotes || 0,
+          commentsList: c.commentsList || [],
+          comments:     c.comments  || 0,
+          createdAt:    c.created_at || c.createdAt || new Date().toISOString(),
+          updatedAt:    c.updated_at || c.updatedAt || new Date().toISOString(),
+        })));
+      } catch (err) {
+        console.error("Failed to fetch complaints", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchComplaints();
+  }, []);
   const [activeFilter, setActiveFilter]       = useState("all");
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [searchQuery, setSearchQuery]         = useState("");
