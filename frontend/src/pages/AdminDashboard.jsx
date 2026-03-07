@@ -6,6 +6,7 @@ import Navbar from "./Navbar";
 import API from "../api";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 function CleanStreetLogo({ size = 44 }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
@@ -268,14 +269,17 @@ function ReportsTab({ complaints, users, volunteers }) {
         </table>
       </div>
       </body></html>`;
-    const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 500);
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 500);
   };
-
-  // ── Download Single Complaint PDF ───────────────────────────────────────────
   const downloadSingleReport = (c) => {
     const id = String(c._id).slice(-6).toUpperCase();
     const statusColor = c.status === "resolved" ? "#166534" : c.status === "in_review" ? "#5b21b6" : "#1d4ed8";
@@ -306,12 +310,10 @@ function ReportsTab({ complaints, users, volunteers }) {
         <div class="meta">#${id} · ${c.type || "General"}</div>
         <div style="margin-top:10px"><span class="badge">${(c.status || "received").replace("_"," ").toUpperCase()}</span></div>
       </div>
-
       <div class="section">
         <div class="section-title">Description</div>
         <div style="font-size:13px;color:#374151;line-height:1.6">${c.description || "No description provided."}</div>
       </div>
-
       <div class="section">
         <div class="section-title">Details</div>
         <div class="grid">
@@ -321,7 +323,6 @@ function ReportsTab({ complaints, users, volunteers }) {
           <div><div class="field-label">Landmark</div><div class="field-value">${c.landmark || "—"}</div></div>
         </div>
       </div>
-
       <div class="section">
         <div class="section-title">People</div>
         <div class="grid">
@@ -329,7 +330,6 @@ function ReportsTab({ complaints, users, volunteers }) {
           <div><div class="field-label">Assigned To</div><div class="field-value">${c.assigned_to?.name || "Not assigned"}</div></div>
         </div>
       </div>
-
       <div class="section">
         <div class="section-title">Dates</div>
         <div class="grid">
@@ -337,7 +337,6 @@ function ReportsTab({ complaints, users, volunteers }) {
           <div><div class="field-label">Last Updated</div><div class="field-value">${new Date(c.updated_at || c.updatedAt).toLocaleString()}</div></div>
         </div>
       </div>
-
       <div class="section">
         <div class="section-title">Community Engagement</div>
         <div class="stat-row">
@@ -346,14 +345,18 @@ function ReportsTab({ complaints, users, volunteers }) {
           <div class="stat"><div class="stat-num" style="color:#3b82f6">${c.comments || 0}</div><div class="stat-label">Comments</div></div>
         </div>
       </div>
-
       <div class="footer">CleanStreet · Civic Issue Reporting & Tracking · Report ID: ${id}</div>
       </body></html>`;
-    const w = window.open("", "_blank");
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 500);
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 500);
   };
   const barMax = Math.max(...Object.values(byType), 1);
   const TYPE_COLORS = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
@@ -590,7 +593,7 @@ function ReportsTab({ complaints, users, volunteers }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, logout, getInitials } = useAuth();
+  const { user, getInitials } = useAuth();
 
   const [activeTab, setActiveTab] = useState("overview");
   const [complaints, setComplaints] = useState([]);
@@ -599,12 +602,12 @@ function AdminDashboard() {
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [loading, setLoading] = useState(false);
 
   const token = localStorage.getItem("token");
   const avatar = user?.name ? getInitials(user.name) : "AD";
 
   // ── Fetch all data ──────────────────────────────────────────────────────────
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchComplaints();
     fetchUsers();
@@ -697,8 +700,6 @@ function AdminDashboard() {
       console.error("Role change failed", err);
     }
   };
-
-  const handleLogout = () => { logout(); navigate("/login"); };
 
   // ── Stats ───────────────────────────────────────────────────────────────────
   const total = complaints.length;

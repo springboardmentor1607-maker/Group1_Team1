@@ -126,7 +126,7 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
     if (!complaint) return res.status(404).json({ message: "Complaint not found" });
 
     complaint.assigned_to = volunteerId;
-    complaint.status      = "in_review";
+    complaint.updated_at  = new Date();
     await complaint.save();
 
     const updated = await Complaint.findById(req.params.id)
@@ -219,10 +219,9 @@ router.post("/:id/vote", protect, async (req, res) => {
     const userVote = complaint.voters.find(v => String(v.user) === userId)?.voteType || null;
     res.json({ upvotes: complaint.upvotes, downvotes: complaint.downvotes, userVote });
   } catch (error) {
-    console.error("Vote error FULL:", error.stack);
-    res.status(500).json({ message: error.message, stack: error.stack });
-}
-
+    console.error("Vote error:", error);
+    res.status(500).json({ message: error.message });
+  }
 });
 
 // ============================================================

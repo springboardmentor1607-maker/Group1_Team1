@@ -19,18 +19,22 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
 
       {/* citizen */}
-      <Route path="/dashboard"        element={<Dashboard />}       />
-      <Route path="/complaints"       element={<Dashboard />}       />  {/* ✅ Fixed: was missing */}
-      <Route path="/profile"          element={<Profile />}         />
-      <Route path="/submit-complaint" element={<SubmitComplaint />} />
+      <Route path="/dashboard"        element={<Dashboard />}        />
+      <Route path="/profile"          element={<Profile />}          />
+      <Route path="/submit-complaint" element={<SubmitComplaint />}  />
 
       {/* volunteer */}
       <Route path="/volunteer" element={<VolunteerDashboard />} />
 
-      {/* fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* admin */}
       <Route path="/admin" element={<AdminDashboard />} />
-    
+
+      {/* shared */}
+      <Route path="/map"        element={<MapPage />}        />
+      <Route path="/complaints" element={<ViewComplaints />} />
+
+      {/* fallback — must be last */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
