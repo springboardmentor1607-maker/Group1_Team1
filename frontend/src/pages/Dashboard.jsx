@@ -1,28 +1,33 @@
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
 import API from "../api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const STATUS_LABELS = { received: "Received", in_review: "In Review", resolved: "Resolved" };
+const STATUS_LABELS    = { received: "Received", in_review: "In Review", resolved: "Resolved" };
 const STATUS_DOT_COLORS = { received: "#3b82f6", in_review: "#f59e0b", resolved: "#22c55e" };
-const PROGRESS_STEPS = ["received", "in_review", "resolved"];
+const PROGRESS_STEPS   = ["received", "in_review", "resolved"];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Today";
+  const diff  = Date.now() - new Date(dateStr).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 1)   return "Just now";
+  if (mins < 60)  return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
   if (days === 1) return "Yesterday";
-  return `${days} days ago`;
+  return `${days}d ago`;
 }
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
 function CleanStreetLogo({ size = 44 }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
@@ -92,9 +97,15 @@ function CleanStreetLogo({ size = 44 }) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
+  const s = STATUS_COLORS[status] || STATUS_COLORS["received"];
   return (
-    <span className={`cs-badge cs-badge--${status}`}>
-      <span className="cs-badge__dot" style={{ background: STATUS_DOT_COLORS[status] }} />
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: s.bg, color: s.text,
+      padding: "3px 10px", borderRadius: 9999,
+      fontSize: 12, fontWeight: 600,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
       {STATUS_LABELS[status] || status}
     </span>
   );
@@ -133,10 +144,15 @@ function ComplaintCard({ complaint, onView }) {
           <span>📍</span>
           <span>{complaint.location}</span>
         </div>
+        {complaint.assigned_to && (
+          <div style={{ padding: "4px 0 8px", fontSize: 12, color: "#6b7280" }}>
+            👷 Assigned to: <strong style={{ color: "#1a56db" }}>{complaint.assigned_to?.name || complaint.assigned_to}</strong>
+          </div>
+        )}
         <div className="cs-complaint-card__footer">
           <div className="cs-complaint-card__meta">
-            <span className="cs-complaint-card__meta-item">👍 {complaint.votes}</span>
-            <span className="cs-complaint-card__meta-item">💬 {complaint.comments}</span>
+            <span className="cs-complaint-card__meta-item">👍 {complaint.upvotes || complaint.votes || 0}</span>
+            <span className="cs-complaint-card__meta-item">💬 {complaint.comments || 0}</span>
           </div>
           <span className="cs-complaint-card__time">🕐 {timeAgo(complaint.createdAt)}</span>
         </div>
@@ -147,7 +163,15 @@ function ComplaintCard({ complaint, onView }) {
 
 function ComplaintDetailModal({ complaint, onClose }) {
   if (!complaint) return null;
-  const currentIdx = PROGRESS_STEPS.indexOf(complaint.status);
+  const statusToStep = {
+    received: 0, in_review: 1,
+    assigned: 1, denied: 1,
+    accepted: 2,
+    in_progress: 3,
+    resolved: 3,   // stays at step 3 until admin approves
+    completed: 4,  // only completed reaches final Resolved step
+  };
+  const currentIdx = statusToStep[complaint.status] ?? 0;
   return (
     <div className="cs-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="cs-modal">
@@ -174,10 +198,12 @@ function ComplaintDetailModal({ complaint, onClose }) {
         <div style={{ padding: "16px 24px 0" }}>
           <div className="cs-progress">
             {PROGRESS_STEPS.map((step, i) => (
-              <>
-                <div key={step} className="cs-progress__step">
-                  <div className={`cs-progress__circle${i <= currentIdx ? " cs-progress__circle--active" : ""}`}
-                    style={i <= currentIdx ? { background: i === 0 ? "#3b82f6" : i === 1 ? "#f59e0b" : "#22c55e" } : {}}>
+              <div key={step} style={{ display: "contents" }}>
+                <div className="cs-progress__step">
+                  <div
+                    className={`cs-progress__circle${i <= currentIdx ? " cs-progress__circle--active" : ""}`}
+                    style={i <= currentIdx ? { background: i === 0 ? "#3b82f6" : i === 1 ? "#f59e0b" : "#22c55e" } : {}}
+                  >
                     {i <= currentIdx ? "✓" : i + 1}
                   </div>
                   <span className={`cs-progress__label${i <= currentIdx ? " cs-progress__label--active" : ""}`}>
@@ -185,9 +211,9 @@ function ComplaintDetailModal({ complaint, onClose }) {
                   </span>
                 </div>
                 {i < PROGRESS_STEPS.length - 1 && (
-                  <div key={`line-${i}`} className={`cs-progress__line${i < currentIdx ? " cs-progress__line--active" : ""}`} />
+                  <div className={`cs-progress__line${i < currentIdx ? " cs-progress__line--active" : ""}`} />
                 )}
-              </>
+              </div>
             ))}
           </div>
         </div>
@@ -212,7 +238,9 @@ function ComplaintDetailModal({ complaint, onClose }) {
             </div>
             <div>
               <div className="cs-modal__field-label">Community</div>
-              <div className="cs-modal__field-value">👍 {complaint.votes} votes · 💬 {complaint.comments} comments</div>
+              <div className="cs-modal__field-value">
+                👍 {complaint.upvotes || 0} votes · 💬 {complaint.comments || 0} comments
+              </div>
             </div>
           </div>
         </div>
@@ -228,25 +256,20 @@ function Chatbot() {
     { from: "bot", text: "Hi! 👋 I'm the CleanStreet assistant. How can I help you today?" }
   ]);
   const [input, setInput] = useState("");
-
   const QUICK_REPLIES = ["Take a tour 🗺️", "How do I report an issue?", "Track my complaint"];
-
   const BOT_RESPONSES = {
     "take a tour": "🗺️ Welcome to CleanStreet!\n\n1️⃣ Dashboard — See all your complaints & stats.\n\n2️⃣ Report Issue — File a complaint instantly.\n\n3️⃣ Track Progress — Received → In Review → Resolved.\n\n4️⃣ Community — Vote on issues and see what neighbors report.\n\n5️⃣ Profile — Manage your account and badges.",
     "how do i report an issue": "Click '➕ Report New Issue' in the hero section or navbar to submit a new civic complaint!",
     "track my complaint": "Go to 'View Complaints' in the navbar to see the status of all your reports.",
   };
-
   const sendMessage = (text) => {
     if (!text.trim()) return;
-    const userMsg = { from: "user", text };
     const key = text.toLowerCase().replace(/[^a-z\s]/g, "").trim();
     const matched = Object.keys(BOT_RESPONSES).find(k => key.includes(k));
     const botReply = matched ? BOT_RESPONSES[matched] : "I'm not sure about that. Try typing 'Take a tour' to learn about CleanStreet!";
-    setMessages(prev => [...prev, userMsg, { from: "bot", text: botReply }]);
+    setMessages(prev => [...prev, { from: "user", text }, { from: "bot", text: botReply }]);
     setInput("");
   };
-
   return (
     <>
       <button onClick={() => setOpen(o => !o)} style={{
@@ -256,10 +279,9 @@ function Chatbot() {
         border: "none", cursor: "pointer", fontSize: 24,
         boxShadow: "0 4px 20px rgba(37,99,235,0.45)",
         display: "flex", alignItems: "center", justifyContent: "center",
-      }} title="Chat with us">
+      }}>
         {open ? "✕" : "🤖"}
       </button>
-
       {open && (
         <div style={{
           position: "fixed", bottom: 96, right: 28, zIndex: 998,
@@ -275,7 +297,6 @@ function Chatbot() {
               <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 11 }}>● Online</div>
             </div>
           </div>
-
           <div style={{ padding: "12px 14px", overflowY: "auto", height: 260, display: "flex", flexDirection: "column", gap: 8 }}>
             {messages.map((m, i) => (
               <div key={i} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start" }}>
@@ -291,7 +312,6 @@ function Chatbot() {
               </div>
             ))}
           </div>
-
           <div style={{ padding: "0 12px 10px", display: "flex", gap: 6, flexWrap: "wrap" }}>
             {QUICK_REPLIES.map((q, i) => (
               <button key={i} onClick={() => sendMessage(q)} style={{
@@ -301,7 +321,6 @@ function Chatbot() {
               }}>{q}</button>
             ))}
           </div>
-
           <div style={{ borderTop: "1px solid #e5e7eb", padding: "10px 12px", display: "flex", gap: 8 }}>
             <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage(input)}
               placeholder="Type a message..."
@@ -318,53 +337,55 @@ function Chatbot() {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function UserDashboard() {
   const navigate = useNavigate();
-  const { user, logout, getInitials } = useAuth();
+  const { user, getInitials } = useAuth();
 
-  // Dynamic user data from AuthContext — falls back to demo values
   const MOCK_USER = {
-    name: user?.name || "Demo User",
+    name:     user?.name     || "Demo User",
     username: user?.username ? `@${user.username}` : "@demo_user",
-    role: user?.role || "user",
-    avatar: user?.name ? getInitials(user.name) : "DU",
+    role:     user?.role     || "user",
+    avatar:   user?.name     ? getInitials(user.name) : "DU",
   };
 
   const [complaints, setComplaints] = useState([]);
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [selectedComplaint, setSelectedComplaint] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
-  async function fetchComplaints() {
-    try {
-      const res = await API.get("/api/complaints");
-      const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
-      const normalized = raw.map(c => ({
-        ...c,
-        id:        c._id || c.id,
-        location:  c.address || c.location || "No location",
-        image:     c.photo ? `http://localhost:5000${c.photo}` : null,
-        type:      c.type || c.issueType || "General",
-        typeIcon:  c.typeIcon || "📌",
-        votes:     c.votes || 0,
-        comments:  c.comments || 0,
-        createdAt: c.created_at || c.createdAt || new Date().toISOString(),
-        updatedAt: c.updated_at || c.updatedAt || new Date().toISOString(),
-      }));
-      setComplaints(normalized);
-    } catch (err) {
-      console.error("Failed to fetch complaints", err);
-    }
-  }
-  fetchComplaints();
-}, []);
+    const fetchComplaints = async () => {
+      try {
+        setLoading(true);
+        const res = await API.get("/api/complaints/my");
+        const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
+        setComplaints(raw.map(c => ({
+          ...c,
+          id:           c._id || c.id,
+          location:     c.address || c.location || "No location",
+          type:         c.type || c.issueType || "General",
+          upvotes:      c.upvotes   || 0,
+          downvotes:    c.downvotes || 0,
+          commentsList: c.commentsList || [],
+          comments:     c.comments  || 0,
+          createdAt:    c.created_at || c.createdAt || new Date().toISOString(),
+          updatedAt:    c.updated_at || c.updatedAt || new Date().toISOString(),
+        })));
+      } catch (err) {
+        console.error("Failed to fetch complaints", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchComplaints();
+  }, []);
+  const [activeFilter, setActiveFilter]       = useState("all");
+  const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [searchQuery, setSearchQuery]         = useState("");
 
-  const total = complaints.length;
-  const pending = complaints.filter(c => c.status === "received").length;
-  const inProg = complaints.filter(c => c.status === "in_review").length;
+  const total    = complaints.length;
+  const pending  = complaints.filter(c => c.status === "received").length;
+  const inProg   = complaints.filter(c => c.status === "in_review").length;
   const resolved = complaints.filter(c => c.status === "resolved").length;
 
   const filtered = complaints.filter(c => {
-    const matchStatus = activeFilter === "all" || c.status === activeFilter;
+    const matchStatus = activeFilter === "all" || (activeFilter === "resolved" ? c.status === "completed" : c.status === activeFilter);
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.location?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -372,48 +393,24 @@ export default function UserDashboard() {
   });
 
   const filters = [
-    { key: "all", label: "All", count: total },
-    { key: "received", label: "Received", count: pending },
-    { key: "in_review", label: "In Review", count: inProg },
-    { key: "resolved", label: "Resolved", count: resolved },
+    { key: "all",       label: "All",        count: total    },
+    { key: "received",  label: "Received",   count: pending  },
+    { key: "in_review", label: "In Review",  count: inProg   },
+    { key: "resolved",  label: "Resolved",   count: resolved },
   ];
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  const [recentActivity, setRecentActivity] = useState([]);
-
-  useEffect(() => {
-    /*
-      TODO (Backend): Fetch real recent activity from your API.
-      Suggested endpoint: GET /api/activity/recent?limit=5
-      Expected response array item shape:
-      {
-        icon: string,       // e.g. "✅", "➕", "🔄", "💬"
-        text: string,       // e.g. "Pothole on Main Street resolved"
-        time: string,       // e.g. "2 hours ago" or ISO timestamp
-        color: string       // hex color e.g. "#22c55e"
-      }
-      Once backend is ready, uncomment the fetch below and remove setRecentActivity([]).
-    */
-    // fetch("/api/activity/recent?limit=5")
-    //   .then(res => res.json())
-    //   .then(data => setRecentActivity(data))
-    //   .catch(err => console.error("Failed to fetch activity", err));
-    // Use complaints as recent activity feed until dedicated endpoint is ready
-    // TODO (Backend): Replace with GET /api/activity/recent?limit=5
-    setRecentActivity([]); // will be populated once backend activity endpoint is ready
-  }, []);
+  // ── Recent activity derived from complaints ────────────────────────────────
+  const recentActivity = complaints.slice(0, 5).map(c => ({
+    icon:  c.status === "resolved" ? "✅" : c.status === "in_review" ? "🔄" : "➕",
+    text:  c.title,
+    time:  timeAgo(c.createdAt),
+    color: c.status === "resolved" ? "#22c55e" : c.status === "in_review" ? "#f59e0b" : "#3b82f6",
+  }));
 
   return (
     <div className="cs-page">
-
-      {/* ── Navbar ── */}
       <Navbar />
 
-      {/* ── Main Content ── */}
       <div className="cs-main-content">
 
         {/* ── Hero ── */}
@@ -431,24 +428,18 @@ export default function UserDashboard() {
           <div className="cs-hero__img-wrap">
             <img
               src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80"
-              alt="City skyline"
-              className="cs-hero__img"
+              alt="City skyline" className="cs-hero__img"
             />
             <div className="cs-hero__img-overlay" />
             <div className="cs-hero__img-stats">
-              {/* 
-                TODO (Backend): Replace these hardcoded values with real API data.
-                Suggested endpoint: GET /api/stats/summary
-                Expected response: { totalResolved: number, activeCitizens: number, satisfactionRate: number }
-              */}
               <div className="cs-hero__img-stat">
-                <span className="cs-hero__img-stat-num">248</span>
+                <span className="cs-hero__img-stat-num">{resolved || 0}</span>
                 <span className="cs-hero__img-stat-label">Issues Resolved</span>
               </div>
               <div className="cs-hero__img-stat-divider" />
               <div className="cs-hero__img-stat">
-                <span className="cs-hero__img-stat-num">1.2k</span>
-                <span className="cs-hero__img-stat-label">Active Citizens</span>
+                <span className="cs-hero__img-stat-num">{total || 0}</span>
+                <span className="cs-hero__img-stat-label">Total Reports</span>
               </div>
             </div>
           </div>
@@ -459,44 +450,43 @@ export default function UserDashboard() {
 
           {/* ── Left: Stats + Complaints ── */}
           <div>
-            {/* 
-              Stat cards — counts are derived from complaints fetched from /api/complaints.
-              TODO (Backend): If you want richer stats (e.g. weekly delta, trends),
-              add a separate endpoint: GET /api/stats/complaints
-              Expected response: { total, pending, inProgress, resolved, totalThisWeek, resolvedToday }
-              Then replace `total`, `pending`, `inProg`, `resolved` below with that API data.
-            */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-              <StatCard icon="⚠️" count={total} label="Total Issues" />
-              <StatCard icon="⏳" count={pending} label="Pending" />
-              <StatCard icon="🔄" count={inProg} label="In Progress" />
-              <StatCard icon="✅" count={resolved} label="Resolved" />
+              <StatCard icon="⚠️" count={total}    label="Total Issues"  />
+              <StatCard icon="⏳" count={pending}  label="Pending"       />
+              <StatCard icon="🔄" count={inProg}   label="In Progress"   />
+              <StatCard icon="✅" count={resolved} label="Resolved"      />
             </div>
 
             {/* Filter bar */}
             <div className="cs-filter-bar">
-              <div className="cs-filter-tabs">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            {lastUpdated && (
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            )}
+          </div>
+          <div className="cs-filter-tabs">
                 {filters.map(f => (
-                  <button
-                    key={f.key}
+                  <button key={f.key}
                     className={`cs-filter-tab${activeFilter === f.key ? " cs-filter-tab--active" : ""}`}
-                    onClick={() => setActiveFilter(f.key)}
-                  >
+                    onClick={() => setActiveFilter(f.key)}>
                     {f.label}
                     <span className="cs-filter-tab__count">{f.count}</span>
                   </button>
                 ))}
               </div>
-              <input
-                className="cs-input cs-search-input"
+              <input className="cs-input cs-search-input"
                 placeholder="🔍 Search complaints..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
+                onChange={e => setSearchQuery(e.target.value)} />
             </div>
 
             {/* Complaints grid */}
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="cs-empty">
+                <div className="cs-empty__icon">⏳</div>
+                <div className="cs-empty__title">Loading complaints…</div>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="cs-empty">
                 <div className="cs-empty__icon">📭</div>
                 <div className="cs-empty__title">No complaints found</div>
@@ -531,7 +521,8 @@ export default function UserDashboard() {
                 {total > 0 ? Math.round((resolved / total) * 100) : 0}<span>/100</span>
               </div>
               <div className="cs-health-bar">
-                <div className="cs-health-bar__fill" style={{ width: total > 0 ? `${Math.round((resolved / total) * 100)}%` : "0%" }} />
+                <div className="cs-health-bar__fill"
+                  style={{ width: total > 0 ? `${Math.round((resolved / total) * 100)}%` : "0%" }} />
               </div>
               <div className="cs-health-card__note">
                 {total > 0 ? `${resolved} of ${total} issues resolved` : "No issues reported yet"}
@@ -554,7 +545,7 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Recent Activity */}
+            {/* Recent Activity — now derived from real complaints */}
             <div className="cs-sidebar-card">
               <div className="cs-sidebar-card__title">🕐 Recent Activity</div>
               <div className="cs-activity-list" style={{ marginTop: 12 }}>
@@ -580,10 +571,7 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      {/* Modal */}
       <ComplaintDetailModal complaint={selectedComplaint} onClose={() => setSelectedComplaint(null)} />
-
-      {/* Chatbot */}
       <Chatbot />
     </div>
   );

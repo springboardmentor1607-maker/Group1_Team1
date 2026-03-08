@@ -7,6 +7,7 @@ import SubmitComplaint from "./pages/SubmitComplaint";
 import VolunteerDashboard from "./pages/volunteerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import MapPage from "./pages/Mappage";
+import ViewComplaints from "./pages/ViewComplaints";
 
 export default function App() {
   return (
@@ -29,8 +30,8 @@ export default function App() {
       <Route path="/admin" element={<AdminDashboard />} />
 
       {/* shared */}
-      <Route path="/map"        element={<MapPage />}  />
-      <Route path="/complaints" element={<Dashboard />} />
+      <Route path="/map"        element={<MapPage />}        />
+      <Route path="/complaints" element={<ViewComplaints />} />
 
       {/* fallback — must be last */}
       <Route path="*" element={<Navigate to="/login" replace />} />
