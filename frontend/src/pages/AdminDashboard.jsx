@@ -76,15 +76,18 @@ function CleanStreetLogo({ size = 44 }) {
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
-  const map = {
-    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
-    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
-    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
-    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review" },
-    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received" },
+  const MAP = {
+    received:    { bg: "#dbeafe", color: "#1e40af", dot: "#3b82f6", label: "Received"    },
+    assigned:    { bg: "#e0f2fe", color: "#0369a1", dot: "#0ea5e9", label: "Assigned"    },
+    accepted:    { bg: "#dcfce7", color: "#15803d", dot: "#22c55e", label: "Accepted"    },
+    denied:      { bg: "#fee2e2", color: "#dc2626", dot: "#ef4444", label: "Denied"      },
+    in_progress: { bg: "#fff7ed", color: "#c2410c", dot: "#f97316", label: "In Progress" },
+    resolved:    { bg: "#ede9fe", color: "#7c3aed", dot: "#8b5cf6", label: "Resolved"    },
+    completed:   { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Completed"   },
+    in_review:   { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review"   },
   };
-  const key = status?.toLowerCase().replace(" ", "_") || "pending";
-  const s = map[key] || map["pending"];
+  const key = status?.toLowerCase().replace(" ", "_") || "received";
+  const s = MAP[key] || MAP["received"];
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
@@ -809,6 +812,7 @@ function AdminDashboard() {
 
   const fetchComplaints = async () => {
     try {
+      setLoading(true);
       const res = await fetch("http://localhost:5000/api/complaints", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -825,9 +829,12 @@ function AdminDashboard() {
           createdAt: c.created_at || c.createdAt,
         }));
         setComplaints(normalized);
+        setLastUpdated(new Date());
       }
+      setLoading(false);
     } catch (err) {
       console.error("Failed to fetch complaints", err);
+      setLoading(false);
     }
   };
 
@@ -868,7 +875,7 @@ function AdminDashboard() {
       const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: "resolved" }),
+        body: JSON.stringify({ status: "completed" }),
       });
       if (res.ok) fetchComplaints();
     } catch (err) {
@@ -989,7 +996,12 @@ function AdminDashboard() {
                   </div>
                   <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>View All →</button>
                 </div>
-                {complaints.length === 0 ? (
+                {loading ? (
+                  <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                    <div style={{ fontSize: 15 }}>Loading complaints…</div>
+                  </div>
+                ) : complaints.length === 0 ? (
                   <div className="cs-empty">
                     <div className="cs-empty__icon">📭</div>
                     <div className="cs-empty__title">No complaints yet</div>
@@ -1030,18 +1042,11 @@ function AdminDashboard() {
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
-<<<<<<< Updated upstream
-                    { key: "all", label: "All", count: total },
-                    { key: "received", label: "Pending", count: pending },
-                    { key: "in_review", label: "In Progress", count: inProg },
-                    { key: "resolved", label: "Resolved", count: resolved },
-=======
                     { key: "all",      label: "All",          count: total    },
                     { key: "received", label: "Pending",      count: pending  },
                     { key: "in_review",label: "In Progress",  count: inProg   },
                     { key: "denied",   label: "⚠️ Denied",   count: denied   },
                     { key: "resolved", label: "Resolved",     count: resolved },
->>>>>>> Stashed changes
                   ].map(f => (
                     <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -1050,15 +1055,17 @@ function AdminDashboard() {
                     </button>
                   ))}
                 </div>
-                <input className="cs-input cs-search-input"
-                  placeholder="🔍 Search complaints..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input className="cs-input cs-search-input"
+                    placeholder="🔍 Search complaints..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)} />
+                  <button onClick={fetchComplaints} title="Refresh" style={{
+                    background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8,
+                    padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b", flexShrink: 0
+                  }}>🔄</button>
+                </div>
               </div>
-<<<<<<< Updated upstream
-
-              {filteredComplaints.length === 0 ? (
-=======
               {lastUpdated && (
                 <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12 }}>
                   🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -1070,7 +1077,6 @@ function AdminDashboard() {
                   <div style={{ fontSize: 15 }}>Loading complaints…</div>
                 </div>
               ) : filteredComplaints.length === 0 ? (
->>>>>>> Stashed changes
                 <div className="cs-empty">
                   <div className="cs-empty__icon">📭</div>
                   <div className="cs-empty__title">No complaints found</div>
@@ -1078,90 +1084,6 @@ function AdminDashboard() {
                 </div>
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
-<<<<<<< Updated upstream
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <TH>Title</TH>
-                        <TH>Type</TH>
-                        <TH>Priority</TH>
-                        <TH>Reporter</TH>
-                        <TH>Status</TH>
-                        <TH>Assign Volunteer</TH>
-                        <TH>Actions</TH>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredComplaints.map(c => (
-                        <tr key={c._id || c.id}
-                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
-                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                          <TD>
-                            <div style={{ fontWeight: 600, color: "#111827" }}>{c.title}</div>
-                            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.address || "No address"}</div>
-                          </TD>
-                          <TD style={{ color: "#6b7280", textTransform: "capitalize" }}>{c.type || c.issueType || "—"}</TD>
-                          <TD><PriorityBadge priority={c.priority} /></TD>
-                          <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
-                          <TD><StatusBadge status={c.status} /></TD>
-                          <TD>
-                            {c.status === "resolved" ? (
-                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
-                                ✅ {c.assigned_to?.name || "—"}
-                              </div>
-                            ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>
-                                  👤 {c.assigned_to?.name || c.assigned_to}
-                                </div>
-                                <button
-                                  className="cs-btn cs-btn--outline cs-btn--sm"
-                                  style={{ fontSize: 11 }}
-                                  onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}
-                                >🔄 Change</button>
-                              </div>
-                            ) : (
-                              <select
-                                className="cs-input"
-                                style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
-                                value={assignSelections[c._id || c.id] || ""}
-                                onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}
-                              >
-                                <option value="">— Select Volunteer —</option>
-                                {volunteers.map(v => (
-                                  <option key={v._id} value={v._id}>{v.name}</option>
-                                ))}
-                              </select>
-                            )}
-                          </TD>
-                          <TD>
-                            <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
-                              {c.status === "resolved" ? (
-                                <span style={{ fontSize: 12, color: "#9ca3af" }}>Completed</span>
-                              ) : (
-                                <>
-                                  {(!c.assigned_to || assignSelections[c._id || c.id]) && (
-                                    <button
-                                      className="cs-btn cs-btn--outline cs-btn--sm"
-                                      style={{ fontSize: 11 }}
-                                      onClick={() => assignVolunteer(c._id || c.id)}
-                                      disabled={!assignSelections[c._id || c.id]?.trim()}
-                                    >Assign</button>
-                                  )}
-                                  <button
-                                    className="cs-btn cs-btn--primary cs-btn--sm"
-                                    style={{ fontSize: 11 }}
-                                    onClick={() => markResolved(c._id || c.id)}
-                                  >✓ Resolve</button>
-                                </>
-                              )}
-                            </div>
-                          </TD>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-=======
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
                       <thead>
@@ -1282,7 +1204,6 @@ function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
->>>>>>> Stashed changes
                 </div>
               )}
             </div>
@@ -1304,65 +1225,6 @@ function AdminDashboard() {
                 </div>
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
-<<<<<<< Updated upstream
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
-                        <TH>Name</TH>
-                        <TH>Email</TH>
-                        <TH>Current Role</TH>
-                        <TH>Location</TH>
-                        <TH>Joined</TH>
-                        <TH>Actions</TH>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map(u => (
-                        <tr key={u._id}
-                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
-                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                          <TD>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div className="cs-avatar" style={{ width: 30, height: 30, fontSize: 11, flexShrink: 0 }}>
-                                {u.name?.substring(0, 2).toUpperCase() || "??"}
-                              </div>
-                              <span style={{ fontWeight: 600 }}>{u.name}</span>
-                            </div>
-                          </TD>
-                          <TD style={{ color: "#6b7280" }}>{u.email}</TD>
-                          <TD>
-                            <span style={{
-                              background: u.role === "admin" ? "#fef2f2" : u.role === "volunteer" ? "#eff6ff" : "#f0fdf4",
-                              color: u.role === "admin" ? "#dc2626" : u.role === "volunteer" ? "#2563eb" : "#16a34a",
-                              padding: "2px 10px", borderRadius: 9999,
-                              fontSize: 12, fontWeight: 600, textTransform: "capitalize",
-                            }}>{u.role === "user" ? "user" : u.role || "user"}</span>
-                          </TD>
-                          <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
-                          <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
-                          <TD>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              {u.role !== "volunteer" && (
-                                <button
-                                  className="cs-btn cs-btn--outline cs-btn--sm"
-                                  style={{ fontSize: 11 }}
-                                  onClick={() => changeUserRole(u._id, "volunteer")}
-                                >Make Volunteer</button>
-                              )}
-                              {u.role !== "user" && u.role !== "user" && u.role !== "admin" && (
-                                <button
-                                  className="cs-btn cs-btn--outline cs-btn--sm"
-                                  style={{ fontSize: 11 }}
-                                  onClick={() => changeUserRole(u._id, "user")}
-                                >Make Citizen</button>
-                              )}
-                            </div>
-                          </TD>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-=======
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
                       <thead>
@@ -1412,7 +1274,6 @@ function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
->>>>>>> Stashed changes
                 </div>
               )}
             </div>
