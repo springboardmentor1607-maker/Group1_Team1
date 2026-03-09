@@ -5,20 +5,22 @@ import API from "../api";
 import Navbar from "./Navbar";
 
 const priorityColor = {
-  High:   { bg: "#fff0f0", text: "#c0392b" },
-  Medium: { bg: "#fffbf0", text: "#b7770d" },
-  Low:    { bg: "#f0fff4", text: "#1a7a4a" },
+  high:   { bg: "#fff0f0", text: "#c0392b" },
+  medium: { bg: "#fffbf0", text: "#b7770d" },
+  low:    { bg: "#f0fff4", text: "#1a7a4a" },
 };
 
+// Backend schema enum: "received" | "in_review" | "resolved"
 const statusColor = {
-  received:    { bg: "#dbeafe",  text: "#1e40af" },
-  in_review:   { bg: "#e8f0fe",  text: "#1a56db" },
-  assigned:    { bg: "#e8f0fe",  text: "#1a56db" },
-  accepted:    { bg: "#f0fdf4",  text: "#15803d" },
-  denied:      { bg: "#fef2f2",  text: "#dc2626" },
-  in_progress: { bg: "#fff3e0",  text: "#e65100" },
-  resolved:    { bg: "#ede9fe",  text: "#7c3aed" },
-  completed:   { bg: "#e8f5e9",  text: "#2e7d32" },
+  received:  { bg: "#f0f4ff", text: "#3b82f6" },
+  in_review: { bg: "#fff3e0", text: "#e65100" },
+  resolved:  { bg: "#e8f5e9", text: "#2e7d32" },
+};
+
+const statusLabel = {
+  received:  "Received",
+  in_review: "In Review",
+  resolved:  "Resolved",
 };
 
 const categoryIcon = {
@@ -28,6 +30,13 @@ const categoryIcon = {
   "Animal Control":   "🐕",
   Sanitation:         "🚰",
 };
+
+// Volunteer-accessible status buttons → backend enum values
+// Backend only accepts: received, in_review, resolved
+const STATUS_BUTTONS = [
+  { label: "In Review", api: "in_review" },
+  { label: "Resolved",  api: "resolved"  },
+];
 
 const POLL_INTERVAL = 15000;
 
@@ -43,8 +52,9 @@ export default function VolunteerDashboard() {
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [search, setSearch]               = useState("");
   const [updating, setUpdating]           = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
 
-  const tabs = ["All", "Assigned", "Accepted", "In Progress", "Resolved"];
+  const tabs = ["All", "In Review", "Resolved"];
 
   const fetchIssues = useCallback(async (silent = false) => {
     try {
@@ -61,59 +71,57 @@ export default function VolunteerDashboard() {
   }, []);
 
   useEffect(() => { fetchIssues(false); }, [fetchIssues]);
-
   useEffect(() => {
     const timer = setInterval(() => fetchIssues(true), POLL_INTERVAL);
     return () => clearInterval(timer);
   }, [fetchIssues]);
 
+  // Counts aligned to backend enum
   const counts = {
-    total:      issues.length,
-    assigned:   issues.filter(i => i.status === 'assigned' || i.status === 'in_review').length,
-    accepted:   issues.filter(i => i.status === 'accepted').length,
-    inProgress: issues.filter(i => i.status === 'in_progress').length,
-    resolved:   issues.filter(i => i.status === 'resolved' || i.status === 'completed').length,
+    total:    issues.length,
+    inReview: issues.filter(i => i.status === "in_review" || i.status === "received").length,
+    resolved: issues.filter(i => i.status === "resolved").length,
   };
 
-  const filtered = issues.filter(i => {
-  const matchTab =
-    activeTab === 'All'         ? true :
-    activeTab === 'Assigned'    ? (i.status === 'assigned' || i.status === 'in_review') :
-    activeTab === 'Accepted'    ? i.status === 'accepted' :
-    activeTab === 'In Progress' ? i.status === 'in_progress' :
-    activeTab === 'Resolved'    ? (i.status === 'resolved' || i.status === 'completed') : true;
-  const matchSearch =
-    i.title?.toLowerCase().includes(search.toLowerCase()) ||
-    i.address?.toLowerCase().includes(search.toLowerCase());
-  return matchTab && matchSearch;
-});
-
   const tabCount = (tab) =>
-    tab === "All"         ? counts.total      :
-    tab === "Assigned"    ? counts.assigned   :
-    tab === "Accepted"    ? counts.accepted   :
-    tab === "In Progress" ? counts.inProgress :
+    tab === "All"       ? counts.total    :
+    tab === "In Review" ? counts.inReview :
     counts.resolved;
 
-  const updateStatus = async (id, newStatus) => {
+  const filtered = issues.filter(i => {
+    const matchTab =
+      activeTab === "All"       ? true :
+      activeTab === "In Review" ? (i.status === "in_review" || i.status === "received") :
+      activeTab === "Resolved"  ? i.status === "resolved" : true;
+    const matchSearch =
+      i.title?.toLowerCase().includes(search.toLowerCase()) ||
+      i.address?.toLowerCase().includes(search.toLowerCase());
+    return matchTab && matchSearch;
+  });
+
+  // Sends only valid backend enum values: in_review | resolved
+  const updateStatus = async (id, apiStatus) => {
+    if (!apiStatus) return;
+    if (selectedIssue?.status === apiStatus) return; // already at this status
+
     try {
       setUpdating(true);
-      // Use accept/deny dedicated endpoints, status endpoint for others
-      let endpoint;
-      if (newStatus === "accepted") endpoint = `/api/complaints/${id}/accept`;
-      else if (newStatus === "denied") endpoint = `/api/complaints/${id}/deny`;
-      else endpoint = `/api/complaints/status/${id}`;
+      setUpdateSuccess(false);
+      await API.put(`/api/complaints/status/${id}`, { status: apiStatus });
 
-      await API.put(endpoint, { status: newStatus });
-      setIssues((prev) =>
-        prev.map((i) => String(i._id || i.id) === String(id) ? { ...i, status: newStatus } : i)
+      setIssues(prev =>
+        prev.map(i => String(i._id || i.id) === String(id) ? { ...i, status: apiStatus } : i)
       );
       if (selectedIssue) {
-        setSelectedIssue((prev) => ({ ...prev, status: newStatus }));
+        setSelectedIssue(prev => ({ ...prev, status: apiStatus }));
       }
-      if (newStatus === "denied") setSelectedIssue(null); // close modal on deny
+      setUpdateSuccess(true);
+      setTimeout(() => setUpdateSuccess(false), 2000);
     } catch (err) {
-      alert("Failed to update status. Please try again.");
+      const code    = err?.response?.status;
+      const message = err?.response?.data?.message || err?.response?.data?.error || err?.message;
+      console.error("updateStatus failed:", code, message);
+      alert(`Failed to update status (${code || "network error"}):\n${message || "Unknown error"}`);
     } finally {
       setUpdating(false);
     }
@@ -121,8 +129,8 @@ export default function VolunteerDashboard() {
 
   const issueId   = (issue) => String(issue._id || issue.id);
   const issueDate = (issue) =>
-    issue.createdAt || issue.created_at || issue.reportedAt
-      ? new Date(issue.createdAt || issue.created_at || issue.reportedAt).toLocaleDateString()
+    issue.created_at || issue.createdAt || issue.reportedAt
+      ? new Date(issue.created_at || issue.createdAt || issue.reportedAt).toLocaleDateString()
       : "—";
   const issueRef  = (issue) =>
     issue._id ? "#" + String(issue._id).slice(-5).toUpperCase() : issue.id || "—";
@@ -130,8 +138,6 @@ export default function VolunteerDashboard() {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: "#f4f6fb", minHeight: "100vh" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
-      {/* ── Shared Navbar ── */}
       <Navbar />
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
@@ -152,14 +158,14 @@ export default function VolunteerDashboard() {
               Welcome back, {userName} 👋
             </h2>
             <p style={{ opacity: 0.85, fontSize: 14, maxWidth: 480, lineHeight: 1.6, margin: 0 }}>
-              You have <strong>{counts.assigned + counts.inProgress}</strong> active tasks assigned to you. Keep up the great civic work!
+              You have <strong>{counts.inReview}</strong> active tasks assigned to you. Keep up the great civic work!
             </p>
           </div>
           <div style={{ display: "flex", gap: 12, position: "relative" }}>
             {[
-              { label: "Assigned",    value: counts.assigned    },
-              { label: "In Progress", value: counts.inProgress  },
-              { label: "Resolved",    value: counts.resolved    },
+              { label: "In Review", value: counts.inReview },
+              { label: "Resolved",  value: counts.resolved },
+              { label: "Total",     value: counts.total    },
             ].map((s) => (
               <div key={s.label} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "14px 22px", textAlign: "center", backdropFilter: "blur(8px)" }}>
                 <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value}</div>
@@ -170,12 +176,11 @@ export default function VolunteerDashboard() {
         </div>
 
         {/* ── Stat Cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
           {[
-            { label: "Total Assigned", value: counts.total,      icon: "📋", color: "#1a56db" },
-            { label: "Pending",        value: counts.assigned,   icon: "⏳", color: "#e65100" },
-            { label: "In Progress",    value: counts.inProgress, icon: "🔄", color: "#7c3aed" },
-            { label: "Resolved",       value: counts.resolved,   icon: "✅", color: "#16a34a" },
+            { label: "Total Assigned", value: counts.total,    icon: "📋", color: "#1a56db" },
+            { label: "In Review",      value: counts.inReview, icon: "🔄", color: "#e65100" },
+            { label: "Resolved",       value: counts.resolved, icon: "✅", color: "#16a34a" },
           ].map((s) => (
             <div key={s.label} style={{
               background: "#fff", borderRadius: 14, padding: "20px 22px",
@@ -220,10 +225,7 @@ export default function VolunteerDashboard() {
                 placeholder="🔍  Search issues..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  border: "1px solid #e5e9f2", borderRadius: 10, padding: "7px 14px",
-                  fontSize: 13, outline: "none", color: "#1a1a2e", width: 200, background: "#f9fafb"
-                }}
+                style={{ border: "1px solid #e5e9f2", borderRadius: 10, padding: "7px 14px", fontSize: 13, outline: "none", color: "#1a1a2e", width: 200, background: "#f9fafb" }}
               />
               <button onClick={() => fetchIssues(false)} title="Refresh tasks" style={{
                 background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8,
@@ -241,9 +243,7 @@ export default function VolunteerDashboard() {
             <div style={{ padding: 48, textAlign: "center", color: "#e74c3c" }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>⚠️</div>
               <div style={{ fontSize: 15 }}>{error}</div>
-              <button onClick={() => fetchIssues(false)} style={{ marginTop: 12, background: "#1a56db", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 600 }}>
-                Retry
-              </button>
+              <button onClick={() => fetchIssues(false)} style={{ marginTop: 12, background: "#1a56db", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 600 }}>Retry</button>
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
@@ -255,9 +255,8 @@ export default function VolunteerDashboard() {
           ) : (
             filtered.map((issue, idx) => {
               const id         = issueId(issue);
-              const sc         = statusColor[issue.status] || statusColor["assigned"];
-              const priorityKey = issue.priority ? issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1).toLowerCase() : "";
-              const pc         = priorityColor[priorityKey] || null;
+              const sc         = statusColor[issue.status] || statusColor["in_review"];
+              const pc         = priorityColor[issue.priority?.toLowerCase()];
               const isSelected = issueId(selectedIssue || {}) === id;
               return (
                 <div key={id}
@@ -281,7 +280,9 @@ export default function VolunteerDashboard() {
                       <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>{issueRef(issue)}</span>
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b" }}>
-                      📍 {issue.address || issue.location || 'No location'} &nbsp;·&nbsp; Reported by {issue.reportedBy?.name || issue.reportedBy} &nbsp;·&nbsp; {issueDate(issue)}
+                      📍 {issue.address || issue.location || "No location"} &nbsp;·&nbsp;
+                      Reported by {issue.user_id?.name || issue.reportedBy?.name || "—"} &nbsp;·&nbsp;
+                      {issueDate(issue)}
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -291,7 +292,7 @@ export default function VolunteerDashboard() {
                       </span>
                     )}
                     <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: sc.bg, color: sc.text }}>
-                      {issue.status}
+                      {statusLabel[issue.status] || issue.status}
                     </span>
                     <span style={{ fontSize: 18, color: "#cbd5e1", marginLeft: 4 }}>›</span>
                   </div>
@@ -317,7 +318,7 @@ export default function VolunteerDashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                   <p style={{ fontSize: 11, opacity: 0.8, margin: "0 0 6px", letterSpacing: 1, textTransform: "uppercase" }}>
-                    {issueRef(selectedIssue)} · {selectedIssue.category}
+                    {issueRef(selectedIssue)} · {selectedIssue.type || selectedIssue.category || "General"}
                   </p>
                   <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{selectedIssue.title}</h3>
                 </div>
@@ -332,10 +333,10 @@ export default function VolunteerDashboard() {
             <div style={{ padding: "22px 26px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
                 {[
-                  { label: "Location",      value: selectedIssue.address || selectedIssue.location || "Not provided",   icon: "📍" },
-                  { label: "Reported By",   value: selectedIssue.user_id?.name || selectedIssue.reportedBy?.name || selectedIssue.reportedBy || "—", icon: "👤" },
-                  { label: "Date Reported", value: issueDate(selectedIssue),                                                  icon: "📅" },
-                  { label: "Priority",      value: selectedIssue.priority || "—",                                             icon: "🚨" },
+                  { label: "Location",      value: selectedIssue.address || selectedIssue.location || "—", icon: "📍" },
+                  { label: "Reported By",   value: selectedIssue.user_id?.name || selectedIssue.reportedBy?.name || "—", icon: "👤" },
+                  { label: "Date Reported", value: issueDate(selectedIssue), icon: "📅" },
+                  { label: "Priority",      value: selectedIssue.priority || "—", icon: "🚨" },
                 ].map((f) => (
                   <div key={f.label} style={{ background: "#f8faff", borderRadius: 10, padding: "10px 14px" }}>
                     <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>{f.icon} {f.label}</div>
@@ -351,55 +352,62 @@ export default function VolunteerDashboard() {
                 </p>
               </div>
 
-              {/* Action buttons based on current status */}
+              {/* Status buttons — only valid backend enum values */}
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>
-                  Current Status: <span style={{ color: "#1a56db", textTransform: "capitalize" }}>{selectedIssue.status?.replace("_", " ")}</span>
+                  Update Status
+                  <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "#94a3b8" }}>
+                    Current: <strong style={{ color: "#1a1a2e" }}>{statusLabel[selectedIssue.status] || selectedIssue.status}</strong>
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {STATUS_BUTTONS.map(({ label, api }) => {
+                    const active = selectedIssue.status === api;
+                    return (
+                      <button key={api}
+                        onClick={() => updateStatus(issueId(selectedIssue), api)}
+                        disabled={updating || active}
+                        style={{
+                          flex: 1, padding: "9px 0", borderRadius: 10,
+                          border: active ? "2px solid #1a56db" : "2px solid #e5e9f2",
+                          background: active ? "#1a56db" : "#fff",
+                          color: active ? "#fff" : "#64748b",
+                          fontWeight: 600, fontSize: 12,
+                          cursor: (updating || active) ? "not-allowed" : "pointer",
+                          opacity: updating ? 0.7 : 1, transition: "all 0.15s"
+                        }}
+                      >
+                        {active ? `✓ ${label}` : label}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* ASSIGNED → Accept or Deny */}
-                {(selectedIssue.status === "assigned" || selectedIssue.status === "in_review") && (
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => updateStatus(issueId(selectedIssue), "accepted")} disabled={updating}
-                      style={{ flex: 1, padding: "11px 0", background: "#16a34a", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-                      ✅ Accept Issue
-                    </button>
-                    <button onClick={() => updateStatus(issueId(selectedIssue), "denied")} disabled={updating}
-                      style={{ flex: 1, padding: "11px 0", background: "#dc2626", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-                      ❌ Deny Issue
-                    </button>
-                  </div>
-                )}
+              {/* Success feedback */}
+              {updateSuccess && (
+                <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#16a34a", fontWeight: 600, textAlign: "center" }}>
+                  ✅ Status updated successfully!
+                </div>
+              )}
 
-                {/* ACCEPTED → Start Work */}
-                {selectedIssue.status === "accepted" && (
-                  <button onClick={() => updateStatus(issueId(selectedIssue), "in_progress")} disabled={updating}
-                    style={{ width: "100%", padding: "11px 0", background: "#e65100", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-                    🚀 Start Working
-                  </button>
-                )}
-
-                {/* IN_PROGRESS → Mark Resolved */}
-                {selectedIssue.status === "in_progress" && (
-                  <button onClick={() => updateStatus(issueId(selectedIssue), "resolved")} disabled={updating}
-                    style={{ width: "100%", padding: "11px 0", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
-                    🏁 Mark as Resolved
-                  </button>
-                )}
-
-                {/* RESOLVED → waiting for admin approval */}
-                {selectedIssue.status === "resolved" && (
-                  <div style={{ background: "#ede9fe", borderRadius: 10, padding: "12px 16px", textAlign: "center", color: "#7c3aed", fontWeight: 600 }}>
-                    ⏳ Awaiting admin approval to mark as completed
-                  </div>
-                )}
-
-                {/* COMPLETED → done */}
-                {selectedIssue.status === "completed" && (
-                  <div style={{ background: "#e8f5e9", borderRadius: 10, padding: "12px 16px", textAlign: "center", color: "#2e7d32", fontWeight: 600 }}>
-                    ✅ Issue completed and verified by admin
-                  </div>
-                )}
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => updateStatus(issueId(selectedIssue), selectedIssue.status === "resolved" ? "in_review" : "resolved")}
+                  disabled={updating}
+                  style={{
+                    flex: 1, padding: "11px 0",
+                    background: selectedIssue.status === "resolved" ? "#e65100" : "#16a34a",
+                    color: "#fff", border: "none", borderRadius: 10,
+                    fontWeight: 600, fontSize: 14,
+                    cursor: updating ? "not-allowed" : "pointer",
+                    opacity: updating ? 0.7 : 1
+                  }}>
+                  {updating ? "Updating…" : selectedIssue.status === "resolved" ? "↩️ Mark In Review" : "✅ Mark as Resolved"}
+                </button>
+                <button style={{
+                  padding: "11px 18px", background: "#fff", color: "#64748b",
+                  border: "1px solid #e5e9f2", borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: "pointer"
+                }}>💬 Comment</button>
               </div>
             </div>
           </div>
