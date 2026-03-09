@@ -59,7 +59,7 @@ export default function VolunteerDashboard() {
   const fetchIssues = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await API.get("/api/complaints/my-assignments");
+      const res = await API.get("/api/complaints/assigned-to-me");
       setIssues(res.data || []);
       setLastUpdated(new Date());
       setError("");
@@ -286,7 +286,7 @@ export default function VolunteerDashboard() {
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                    {pc && (
+                    {pc && pc.bg && (
                       <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: pc.bg, color: pc.text }}>
                         ● {issue.priority}
                       </span>
@@ -382,7 +382,6 @@ export default function VolunteerDashboard() {
                     );
                   })}
                 </div>
-              </div>
 
               {/* Success feedback */}
               {updateSuccess && (

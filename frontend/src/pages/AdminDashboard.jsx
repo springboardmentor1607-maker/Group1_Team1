@@ -76,15 +76,18 @@ function CleanStreetLogo({ size = 44 }) {
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
-  const map = {
-    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
-    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
-    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
-    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review" },
-    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received" },
+  const MAP = {
+    received:    { bg: "#dbeafe", color: "#1e40af", dot: "#3b82f6", label: "Received"    },
+    assigned:    { bg: "#e0f2fe", color: "#0369a1", dot: "#0ea5e9", label: "Assigned"    },
+    accepted:    { bg: "#dcfce7", color: "#15803d", dot: "#22c55e", label: "Accepted"    },
+    denied:      { bg: "#fee2e2", color: "#dc2626", dot: "#ef4444", label: "Denied"      },
+    in_progress: { bg: "#fff7ed", color: "#c2410c", dot: "#f97316", label: "In Progress" },
+    resolved:    { bg: "#ede9fe", color: "#7c3aed", dot: "#8b5cf6", label: "Resolved"    },
+    completed:   { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Completed"   },
+    in_review:   { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review"   },
   };
-  const key = status?.toLowerCase().replace(" ", "_") || "pending";
-  const s = map[key] || map["pending"];
+  const key = status?.toLowerCase().replace(" ", "_") || "received";
+  const s = MAP[key] || MAP["received"];
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
@@ -590,6 +593,212 @@ function ReportsTab({ complaints, users, volunteers }) {
   );
 }
 
+// ─── Zones Tab ────────────────────────────────────────────────────────────────
+function ZonesTab({ zones, setZones, volunteers, complaints }) {
+  const [zoneName,     setZoneName]     = useState("");
+  const [zoneArea,     setZoneArea]     = useState("");
+  const [zoneVolunteer,setZoneVolunteer]= useState("");
+  const [editingId,    setEditingId]    = useState(null);
+  const [editName,     setEditName]     = useState("");
+  const [editArea,     setEditArea]     = useState("");
+  const [editVolunteer,setEditVolunteer]= useState("");
+
+  const saveZones = (updated) => {
+    setZones(updated);
+    localStorage.setItem("cs_zones", JSON.stringify(updated));
+  };
+
+  const addZone = () => {
+    if (!zoneName.trim() || !zoneArea.trim()) return;
+    const newZone = {
+      id:          Date.now().toString(),
+      name:        zoneName.trim(),
+      area:        zoneArea.trim(),
+      volunteerId: zoneVolunteer || null,
+      createdAt:   new Date().toISOString(),
+    };
+    saveZones([...zones, newZone]);
+    setZoneName(""); setZoneArea(""); setZoneVolunteer("");
+  };
+
+  const deleteZone = (id) => saveZones(zones.filter(z => z.id !== id));
+
+  const startEdit = (z) => {
+    setEditingId(z.id);
+    setEditName(z.name);
+    setEditArea(z.area);
+    setEditVolunteer(z.volunteerId || "");
+  };
+
+  const saveEdit = (id) => {
+    saveZones(zones.map(z => z.id === id
+      ? { ...z, name: editName, area: editArea, volunteerId: editVolunteer || null }
+      : z
+    ));
+    setEditingId(null);
+  };
+
+  const getVolunteerName = (id) => volunteers.find(v => String(v._id) === String(id))?.name || "Unassigned";
+
+  const getZoneComplaintCount = (area) =>
+    complaints.filter(c => (c.address || c.location || "").toLowerCase().includes(area.toLowerCase())).length;
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Zone Management</h1>
+        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
+          Create and manage geographic zones. Assign volunteers to handle complaints in each zone.
+        </p>
+      </div>
+
+      {/* Add Zone Form */}
+      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: 20, marginBottom: 24 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>➕ Create New Zone</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "end" }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Zone Name *</div>
+            <input
+              value={zoneName}
+              onChange={e => setZoneName(e.target.value)}
+              placeholder="e.g. North District"
+              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              onFocus={e => e.target.style.borderColor = "#2563eb"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Area / Keyword *</div>
+            <input
+              value={zoneArea}
+              onChange={e => setZoneArea(e.target.value)}
+              placeholder="e.g. Downtown, Elm Street"
+              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              onFocus={e => e.target.style.borderColor = "#2563eb"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Assign Volunteer</div>
+            <select
+              value={zoneVolunteer}
+              onChange={e => setZoneVolunteer(e.target.value)}
+              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" }}
+            >
+              <option value="">— None —</option>
+              {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+            </select>
+          </div>
+          <button
+            onClick={addZone}
+            disabled={!zoneName.trim() || !zoneArea.trim()}
+            style={{
+              background: zoneName.trim() && zoneArea.trim() ? "#2563eb" : "#e5e7eb",
+              color: zoneName.trim() && zoneArea.trim() ? "#fff" : "#9ca3af",
+              border: "none", borderRadius: 8, padding: "9px 20px",
+              fontSize: 13, fontWeight: 600, cursor: zoneName.trim() && zoneArea.trim() ? "pointer" : "not-allowed",
+              whiteSpace: "nowrap",
+            }}
+          >Add Zone</button>
+        </div>
+      </div>
+
+      {/* Zones List */}
+      {zones.length === 0 ? (
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "48px 20px", textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>No zones created yet</div>
+          <div style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Create your first zone above to start managing areas.</div>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+          {zones.map(z => {
+            const complaintCount = getZoneComplaintCount(z.area);
+            const isEditing = editingId === z.id;
+            return (
+              <div key={z.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+                {/* Card Header */}
+                <div style={{ background: "linear-gradient(135deg,#1e3a8a,#2563eb)", padding: "16px 20px" }}>
+                  {isEditing ? (
+                    <input
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      style={{ width: "100%", background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 6, padding: "6px 10px", fontSize: 15, fontWeight: 700, color: "#fff", outline: "none", boxSizing: "border-box" }}
+                    />
+                  ) : (
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>🗺️ {z.name}</div>
+                  )}
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
+                    Created {new Date(z.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div style={{ padding: "16px 20px" }}>
+                  {isEditing ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>AREA KEYWORD</div>
+                        <input
+                          value={editArea}
+                          onChange={e => setEditArea(e.target.value)}
+                          style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                        />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>VOLUNTEER</div>
+                        <select
+                          value={editVolunteer}
+                          onChange={e => setEditVolunteer(e.target.value)}
+                          style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", background: "#fff" }}
+                        >
+                          <option value="">— None —</option>
+                          {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => saveEdit(z.id)} style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✓ Save</button>
+                        <button onClick={() => setEditingId(null)} style={{ flex: 1, background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 7, padding: "7px", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                        <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>Area</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{z.area}</div>
+                        </div>
+                        <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>Complaints</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: "#2563eb" }}>{complaintCount}</div>
+                        </div>
+                      </div>
+                      <div style={{ background: "#f0fdf4", borderRadius: 8, padding: "10px 12px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 16 }}>🤝</span>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>Assigned Volunteer</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: z.volunteerId ? "#166534" : "#9ca3af" }}>
+                            {z.volunteerId ? getVolunteerName(z.volunteerId) : "Not assigned"}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => startEdit(z)} style={{ flex: 1, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✏️ Edit</button>
+                        <button onClick={() => deleteZone(z.id)} style={{ flex: 1, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🗑️ Delete</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -602,6 +811,9 @@ function AdminDashboard() {
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [zones, setZones] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("cs_zones") || "[]"); } catch { return []; }
+  });
 
   const token = localStorage.getItem("token");
   const avatar = user?.name ? getInitials(user.name) : "AD";
@@ -615,6 +827,7 @@ function AdminDashboard() {
 
   const fetchComplaints = async () => {
     try {
+      setLoading(true);
       const res = await fetch("http://localhost:5000/api/complaints", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -632,9 +845,12 @@ function AdminDashboard() {
           createdAt: c.created_at || c.createdAt,
         }));
         setComplaints(normalized);
+        setLastUpdated(new Date());
       }
+      setLoading(false);
     } catch (err) {
       console.error("Failed to fetch complaints", err);
+      setLoading(false);
     }
   };
 
@@ -679,7 +895,7 @@ function AdminDashboard() {
       const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: "resolved" }),
+        body: JSON.stringify({ status: "completed" }),
       });
       if (res.ok) fetchComplaints();
     } catch (err) {
@@ -702,10 +918,10 @@ function AdminDashboard() {
   };
 
   // ── Stats ───────────────────────────────────────────────────────────────────
-  const total = complaints.length;
-  const pending = complaints.filter(c => c.status === "pending" || c.status === "received").length;
-  const resolved = complaints.filter(c => c.status === "resolved").length;
-  const inProg = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+  const total    = complaints.length;
+  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received" || !c.status).length;
+  const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
+  const inProg   = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
@@ -721,6 +937,7 @@ function AdminDashboard() {
     { key: "complaints", icon: "📋", label: "Complaints" },
     { key: "users",      icon: "👥", label: "User Management" },
     { key: "volunteers", icon: "🤝", label: "Volunteers" },
+    { key: "zones",      icon: "🗺️", label: "Zones" },
     { key: "reports",    icon: "📈", label: "Reports" },
   ];
 
@@ -807,7 +1024,12 @@ function AdminDashboard() {
                   </div>
                   <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>View All →</button>
                 </div>
-                {complaints.length === 0 ? (
+                {loading ? (
+                  <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                    <div style={{ fontSize: 15 }}>Loading complaints…</div>
+                  </div>
+                ) : complaints.length === 0 ? (
                   <div className="cs-empty">
                     <div className="cs-empty__icon">📭</div>
                     <div className="cs-empty__title">No complaints yet</div>
@@ -858,6 +1080,7 @@ function AdminDashboard() {
                     { key: "all", label: "All", count: total },
                     { key: "received", label: "Pending", count: pending },
                     { key: "in_review", label: "In Progress", count: inProg },
+                    { key: "denied", label: "⚠️ Denied", count: denied },
                     { key: "resolved", label: "Resolved", count: resolved },
                   ].map(f => (
                     <button key={f.key}
@@ -867,13 +1090,29 @@ function AdminDashboard() {
                     </button>
                   ))}
                 </div>
-                <input className="cs-input cs-search-input"
-                  placeholder="🔍 Search complaints..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input className="cs-input cs-search-input"
+                    placeholder="🔍 Search complaints..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)} />
+                  <button onClick={fetchComplaints} title="Refresh" style={{
+                    background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8,
+                    padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b", flexShrink: 0
+                  }}>🔄</button>
+                </div>
               </div>
+              {lastUpdated && (
+                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12 }}>
+                  🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              )}
 
-              {filteredComplaints.length === 0 ? (
+              {loading ? (
+                <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                  <div style={{ fontSize: 15 }}>Loading complaints…</div>
+                </div>
+              ) : filteredComplaints.length === 0 ? (
                 <div className="cs-empty">
                   <div className="cs-empty__icon">📭</div>
                   <div className="cs-empty__title">No complaints found</div>
@@ -881,7 +1120,8 @@ function AdminDashboard() {
                 </div>
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
                     <thead>
                       <tr>
                         <TH>Title</TH>
@@ -907,9 +1147,33 @@ function AdminDashboard() {
                           <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
                           <TD><StatusBadge status={c.status} /></TD>
                           <TD>
-                            {c.status === "resolved" ? (
+                            {(c.status === "completed") ? (
                               <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
-                                ✅ {c.assigned_to?.name || "—"}
+                                ✅ {c.assigned_to?.name || c.assigned_to || "—"}
+                              </div>
+                            ) : c.status === "denied" ? (
+                              // Show denied volunteer with strikethrough + reassign dropdown
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                <div style={{ fontSize: 12, color: "#dc2626", textDecoration: "line-through", fontWeight: 500 }}>
+                                  ❌ {c.assigned_to?.name || c.assigned_to || "—"}
+                                </div>
+                                <select
+                                  className="cs-input"
+                                  style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
+                                  value={assignSelections[c._id || c.id] || ""}
+                                  onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}
+                                >
+                                  <option value="">— Reassign Volunteer —</option>
+                                  {volunteers.map(v => {
+                                    const isDenied = (c.assigned_to?._id || c.assigned_to) === v._id;
+                                    return (
+                                      <option key={v._id} value={v._id} disabled={isDenied}
+                                        style={{ textDecoration: isDenied ? "line-through" : "none", color: isDenied ? "#9ca3af" : "inherit" }}>
+                                        {isDenied ? `❌ ${v.name} (denied)` : v.name}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
                               </div>
                             ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -938,8 +1202,33 @@ function AdminDashboard() {
                           </TD>
                           <TD>
                             <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
-                              {c.status === "resolved" ? (
-                                <span style={{ fontSize: 12, color: "#9ca3af" }}>Completed</span>
+                              {c.status === "completed" ? (
+                                <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>
+                              ) : c.status === "resolved" ? (
+                                // Volunteer marked resolved — admin must approve
+                                <button
+                                  onClick={() => markResolved(c._id || c.id)}
+                                  style={{
+                                    background: "#16a34a", color: "#fff", border: "none",
+                                    borderRadius: 8, padding: "6px 14px", fontSize: 12,
+                                    fontWeight: 700, cursor: "pointer",
+                                    boxShadow: "0 2px 8px rgba(22,163,74,0.3)"
+                                  }}>
+                                  ✅ Approve
+                                </button>
+                              ) : c.status === "denied" ? (
+                                // Volunteer denied — admin must reassign
+                                <div style={{ display: "flex", gap: 4, flexDirection: "column" }}>
+                                  <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600 }}>⚠️ Denied — Reassign</span>
+                                  {(!c.assigned_to || assignSelections[c._id || c.id]) && (
+                                    <button
+                                      className="cs-btn cs-btn--outline cs-btn--sm"
+                                      style={{ fontSize: 11 }}
+                                      onClick={() => assignVolunteer(c._id || c.id)}
+                                      disabled={!assignSelections[c._id || c.id]?.trim()}
+                                    >Assign</button>
+                                  )}
+                                </div>
                               ) : (
                                 <>
                                   {(!c.assigned_to || assignSelections[c._id || c.id]) && (
@@ -950,11 +1239,6 @@ function AdminDashboard() {
                                       disabled={!assignSelections[c._id || c.id]?.trim()}
                                     >Assign</button>
                                   )}
-                                  <button
-                                    className="cs-btn cs-btn--primary cs-btn--sm"
-                                    style={{ fontSize: 11 }}
-                                    onClick={() => markResolved(c._id || c.id)}
-                                  >✓ Resolve</button>
                                 </>
                               )}
                             </div>
@@ -963,6 +1247,7 @@ function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -989,7 +1274,8 @@ function AdminDashboard() {
                 </div>
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
                     <thead>
                       <tr>
                         <TH>Name</TH>
@@ -1046,6 +1332,7 @@ function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -1111,6 +1398,10 @@ function AdminDashboard() {
           )}
 
           {/* ══ REPORTS TAB ══ */}
+          {activeTab === "zones" && (
+            <ZonesTab zones={zones} setZones={setZones} volunteers={volunteers} complaints={complaints} />
+          )}
+
           {activeTab === "reports" && (
             <ReportsTab complaints={complaints} users={users} volunteers={volunteers} />
           )}

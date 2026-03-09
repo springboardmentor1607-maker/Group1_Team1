@@ -1,6 +1,6 @@
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
 import API from "../api";
@@ -97,9 +97,15 @@ function CleanStreetLogo({ size = 44 }) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
+  const s = STATUS_COLORS[status] || STATUS_COLORS["received"];
   return (
-    <span className={`cs-badge cs-badge--${status}`}>
-      <span className="cs-badge__dot" style={{ background: STATUS_DOT_COLORS[status] }} />
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: s.bg, color: s.text,
+      padding: "3px 10px", borderRadius: 9999,
+      fontSize: 12, fontWeight: 600,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
       {STATUS_LABELS[status] || status}
     </span>
   );
@@ -138,6 +144,11 @@ function ComplaintCard({ complaint, onView }) {
           <span>📍</span>
           <span>{complaint.location}</span>
         </div>
+        {complaint.assigned_to && (
+          <div style={{ padding: "4px 0 8px", fontSize: 12, color: "#6b7280" }}>
+            👷 Assigned to: <strong style={{ color: "#1a56db" }}>{complaint.assigned_to?.name || complaint.assigned_to}</strong>
+          </div>
+        )}
         <div className="cs-complaint-card__footer">
           <div className="cs-complaint-card__meta">
             <span className="cs-complaint-card__meta-item">👍 {complaint.upvotes || complaint.votes || 0}</span>
@@ -152,7 +163,15 @@ function ComplaintCard({ complaint, onView }) {
 
 function ComplaintDetailModal({ complaint, onClose }) {
   if (!complaint) return null;
-  const currentIdx = PROGRESS_STEPS.indexOf(complaint.status);
+  const statusToStep = {
+    received: 0, in_review: 1,
+    assigned: 1, denied: 1,
+    accepted: 2,
+    in_progress: 3,
+    resolved: 3,   // stays at step 3 until admin approves
+    completed: 4,  // only completed reaches final Resolved step
+  };
+  const currentIdx = statusToStep[complaint.status] ?? 0;
   return (
     <div className="cs-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="cs-modal">
@@ -366,7 +385,7 @@ export default function UserDashboard() {
   const resolved = complaints.filter(c => c.status === "resolved").length;
 
   const filtered = complaints.filter(c => {
-    const matchStatus = activeFilter === "all" || c.status === activeFilter;
+    const matchStatus = activeFilter === "all" || (activeFilter === "resolved" ? c.status === "completed" : c.status === activeFilter);
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.location?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -440,7 +459,12 @@ export default function UserDashboard() {
 
             {/* Filter bar */}
             <div className="cs-filter-bar">
-              <div className="cs-filter-tabs">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            {lastUpdated && (
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            )}
+          </div>
+          <div className="cs-filter-tabs">
                 {filters.map(f => (
                   <button key={f.key}
                     className={`cs-filter-tab${activeFilter === f.key ? " cs-filter-tab--active" : ""}`}
