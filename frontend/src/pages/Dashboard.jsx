@@ -6,20 +6,9 @@ import Navbar from "./Navbar";
 import API from "../api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const STATUS_LABELS     = { received: "Received", in_review: "In Review", resolved: "Resolved" };
+const STATUS_LABELS    = { received: "Received", in_review: "In Review", resolved: "Resolved" };
 const STATUS_DOT_COLORS = { received: "#3b82f6", in_review: "#f59e0b", resolved: "#22c55e" };
-// ✅ FIX: Added missing STATUS_COLORS constant used by StatusBadge
-const STATUS_COLORS = {
-  received:    { bg: "#dbeafe", text: "#1e40af", dot: "#3b82f6" },
-  in_review:   { bg: "#fff7ed", text: "#c2410c", dot: "#f59e0b" },
-  assigned:    { bg: "#e0f2fe", text: "#0369a1", dot: "#0ea5e9" },
-  accepted:    { bg: "#dcfce7", text: "#15803d", dot: "#22c55e" },
-  denied:      { bg: "#fee2e2", text: "#dc2626", dot: "#ef4444" },
-  in_progress: { bg: "#fff7ed", text: "#c2410c", dot: "#f97316" },
-  resolved:    { bg: "#ede9fe", text: "#7c3aed", dot: "#8b5cf6" },
-  completed:   { bg: "#dcfce7", text: "#166534", dot: "#22c55e" },
-};
-const PROGRESS_STEPS = ["received", "in_review", "resolved"];
+const PROGRESS_STEPS   = ["received", "in_review", "resolved"];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -179,8 +168,8 @@ function ComplaintDetailModal({ complaint, onClose }) {
     assigned: 1, denied: 1,
     accepted: 2,
     in_progress: 3,
-    resolved: 3,
-    completed: 4,
+    resolved: 3,   // stays at step 3 until admin approves
+    completed: 4,  // only completed reaches final Resolved step
   };
   const currentIdx = statusToStep[complaint.status] ?? 0;
   return (
@@ -204,6 +193,8 @@ function ComplaintDetailModal({ complaint, onClose }) {
           </div>
         </div>
         {!complaint.image && <div style={{ padding: "0 24px" }}><StatusBadge status={complaint.status} /></div>}
+
+        {/* Progress tracker */}
         <div style={{ padding: "16px 24px 0" }}>
           <div className="cs-progress">
             {PROGRESS_STEPS.map((step, i) => (
@@ -226,6 +217,7 @@ function ComplaintDetailModal({ complaint, onClose }) {
             ))}
           </div>
         </div>
+
         <div className="cs-modal__body">
           <div>
             <div className="cs-modal__field-label">Description</div>
@@ -354,10 +346,8 @@ export default function UserDashboard() {
     avatar:   user?.name     ? getInitials(user.name) : "DU",
   };
 
-  const [complaints, setComplaints]   = useState([]);
-  const [loading, setLoading]         = useState(true);
-  // ✅ FIX: Added missing lastUpdated state
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
     const fetchComplaints = async () => {
@@ -377,7 +367,6 @@ export default function UserDashboard() {
           createdAt:    c.created_at || c.createdAt || new Date().toISOString(),
           updatedAt:    c.updated_at || c.updatedAt || new Date().toISOString(),
         })));
-        setLastUpdated(new Date());
       } catch (err) {
         console.error("Failed to fetch complaints", err);
       } finally {
@@ -386,10 +375,9 @@ export default function UserDashboard() {
     };
     fetchComplaints();
   }, []);
-
-  const [activeFilter, setActiveFilter]           = useState("all");
+  const [activeFilter, setActiveFilter]       = useState("all");
   const [selectedComplaint, setSelectedComplaint] = useState(null);
-  const [searchQuery, setSearchQuery]             = useState("");
+  const [searchQuery, setSearchQuery]         = useState("");
 
   const total    = complaints.length;
   const pending  = complaints.filter(c => c.status === "received").length;
@@ -405,12 +393,13 @@ export default function UserDashboard() {
   });
 
   const filters = [
-    { key: "all",       label: "All",       count: total    },
-    { key: "received",  label: "Received",  count: pending  },
-    { key: "in_review", label: "In Review", count: inProg   },
-    { key: "resolved",  label: "Resolved",  count: resolved },
+    { key: "all",       label: "All",        count: total    },
+    { key: "received",  label: "Received",   count: pending  },
+    { key: "in_review", label: "In Review",  count: inProg   },
+    { key: "resolved",  label: "Resolved",   count: resolved },
   ];
 
+  // ── Recent activity derived from complaints ────────────────────────────────
   const recentActivity = complaints.slice(0, 5).map(c => ({
     icon:  c.status === "resolved" ? "✅" : c.status === "in_review" ? "🔄" : "➕",
     text:  c.title,
@@ -421,8 +410,10 @@ export default function UserDashboard() {
   return (
     <div className="cs-page">
       <Navbar />
+
       <div className="cs-main-content">
 
+        {/* ── Hero ── */}
         <div className="cs-hero">
           <div className="cs-hero__content">
             <div className="cs-hero__eyebrow">🏙️ Civic Dashboard</div>
@@ -454,24 +445,26 @@ export default function UserDashboard() {
           </div>
         </div>
 
+        {/* ── Two-column layout ── */}
         <div className="cs-grid-sidebar">
+
+          {/* ── Left: Stats + Complaints ── */}
           <div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-              <StatCard icon="⚠️" count={total}    label="Total Issues" />
-              <StatCard icon="⏳" count={pending}  label="Pending"      />
-              <StatCard icon="🔄" count={inProg}   label="In Progress"  />
-              <StatCard icon="✅" count={resolved} label="Resolved"     />
+              <StatCard icon="⚠️" count={total}    label="Total Issues"  />
+              <StatCard icon="⏳" count={pending}  label="Pending"       />
+              <StatCard icon="🔄" count={inProg}   label="In Progress"   />
+              <StatCard icon="✅" count={resolved} label="Resolved"      />
             </div>
 
+            {/* Filter bar */}
             <div className="cs-filter-bar">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                {lastUpdated && (
-                  <span style={{ fontSize: 12, color: "#94a3b8" }}>
-                    🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                )}
-              </div>
-              <div className="cs-filter-tabs">
+            {lastUpdated && (
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            )}
+          </div>
+          <div className="cs-filter-tabs">
                 {filters.map(f => (
                   <button key={f.key}
                     className={`cs-filter-tab${activeFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -487,6 +480,7 @@ export default function UserDashboard() {
                 onChange={e => setSearchQuery(e.target.value)} />
             </div>
 
+            {/* Complaints grid */}
             {loading ? (
               <div className="cs-empty">
                 <div className="cs-empty__icon">⏳</div>
@@ -507,7 +501,10 @@ export default function UserDashboard() {
             )}
           </div>
 
+          {/* ── Right: Sidebar ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* Profile card */}
             <div className="cs-profile-card">
               <div className="cs-avatar cs-avatar--lg">{MOCK_USER.avatar}</div>
               <div>
@@ -517,6 +514,7 @@ export default function UserDashboard() {
               </div>
             </div>
 
+            {/* City Health */}
             <div className="cs-health-card">
               <div className="cs-health-card__label">📊 City Health Score</div>
               <div className="cs-health-card__score">
@@ -531,6 +529,7 @@ export default function UserDashboard() {
               </div>
             </div>
 
+            {/* Quick Actions */}
             <div className="cs-sidebar-card">
               <div className="cs-sidebar-card__title">⚡ Quick Actions</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
@@ -546,6 +545,7 @@ export default function UserDashboard() {
               </div>
             </div>
 
+            {/* Recent Activity — now derived from real complaints */}
             <div className="cs-sidebar-card">
               <div className="cs-sidebar-card__title">🕐 Recent Activity</div>
               <div className="cs-activity-list" style={{ marginTop: 12 }}>
@@ -566,6 +566,7 @@ export default function UserDashboard() {
                 )}
               </div>
             </div>
+
           </div>
         </div>
       </div>
