@@ -154,28 +154,24 @@ function ReportsTab({ complaints, users, volunteers }) {
   const resolved   = complaints.filter(c => c.status === "resolved").length;
   const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
-  // Complaints by type
   const byType = complaints.reduce((acc, c) => {
     const t = c.type || "other";
     acc[t] = (acc[t] || 0) + 1;
     return acc;
   }, {});
 
-  // Complaints by priority
   const byPriority = complaints.reduce((acc, c) => {
     const p = c.priority || "medium";
     acc[p] = (acc[p] || 0) + 1;
     return acc;
   }, {});
 
-  // Top volunteers by resolved complaints
   const volStats = volunteers.map(v => ({
     name: v.name,
     resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length,
     assigned: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length,
   })).sort((a, b) => b.resolved - a.resolved);
 
-  // ── Download CSV ────────────────────────────────────────────────────────────
   const downloadCSV = () => {
     const headers = ["ID", "Title", "Type", "Priority", "Status", "Address", "Reported By", "Assigned To", "Created At", "Updated At"];
     const rows = complaints.map(c => [
@@ -200,7 +196,6 @@ function ReportsTab({ complaints, users, volunteers }) {
     URL.revokeObjectURL(url);
   };
 
-  // ── Download Summary PDF ────────────────────────────────────────────────────
   const downloadSummary = () => {
     const html = `
       <html><head><title>CleanStreet Summary Report</title>
@@ -280,6 +275,7 @@ function ReportsTab({ complaints, users, volunteers }) {
       setTimeout(() => document.body.removeChild(iframe), 1000);
     }, 500);
   };
+
   const downloadSingleReport = (c) => {
     const id = String(c._id).slice(-6).toUpperCase();
     const statusColor = c.status === "resolved" ? "#166534" : c.status === "in_review" ? "#5b21b6" : "#1d4ed8";
@@ -358,13 +354,13 @@ function ReportsTab({ complaints, users, volunteers }) {
       setTimeout(() => document.body.removeChild(iframe), 1000);
     }, 500);
   };
+
   const barMax = Math.max(...Object.values(byType), 1);
   const TYPE_COLORS = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
   const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", urgent: "#ef4444", critical: "#dc2626" };
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Reports & Analytics</h1>
@@ -387,7 +383,6 @@ function ReportsTab({ complaints, users, volunteers }) {
         </div>
       </div>
 
-      {/* Stats Row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
         {[
           { label: "Total Complaints", value: total,        icon: "📋", color: "#3b82f6" },
@@ -407,8 +402,6 @@ function ReportsTab({ complaints, users, volunteers }) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-
-        {/* Complaints by Type */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>📊 Complaints by Type</div>
           {Object.entries(byType).length === 0 ? (
@@ -435,7 +428,6 @@ function ReportsTab({ complaints, users, volunteers }) {
           )}
         </div>
 
-        {/* Resolution Rate */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🎯 Resolution Rate</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: "10px 0" }}>
@@ -470,7 +462,6 @@ function ReportsTab({ complaints, users, volunteers }) {
           </div>
         </div>
 
-        {/* By Priority */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🚨 Complaints by Priority</div>
           {Object.entries(byPriority).length === 0 ? (
@@ -500,7 +491,6 @@ function ReportsTab({ complaints, users, volunteers }) {
           )}
         </div>
 
-        {/* Top Volunteers */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🏆 Top Volunteers</div>
           {volStats.length === 0 ? (
@@ -538,7 +528,6 @@ function ReportsTab({ complaints, users, volunteers }) {
         </div>
       </div>
 
-      {/* Recent Complaints Table */}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
         <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 14 }}>📋 All Complaints Preview</div>
         <div style={{ overflowX: "auto" }}>
@@ -642,7 +631,6 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
 
   return (
     <div>
-      {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Zone Management</h1>
         <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
@@ -650,7 +638,6 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
         </p>
       </div>
 
-      {/* Add Zone Form */}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: 20, marginBottom: 24 }}>
         <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>➕ Create New Zone</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "end" }}>
@@ -701,7 +688,6 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
         </div>
       </div>
 
-      {/* Zones List */}
       {zones.length === 0 ? (
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "48px 20px", textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
@@ -715,7 +701,6 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
             const isEditing = editingId === z.id;
             return (
               <div key={z.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", overflow: "hidden" }}>
-                {/* Card Header */}
                 <div style={{ background: "linear-gradient(135deg,#1e3a8a,#2563eb)", padding: "16px 20px" }}>
                   {isEditing ? (
                     <input
@@ -730,8 +715,6 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
                     Created {new Date(z.createdAt).toLocaleDateString()}
                   </div>
                 </div>
-
-                {/* Card Body */}
                 <div style={{ padding: "16px 20px" }}>
                   {isEditing ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -806,6 +789,9 @@ function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
   const [assignSelections, setAssignSelections] = useState({});
+  // ✅ FIX: Added missing state declarations
+  const [loading, setLoading]         = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [zones, setZones] = useState(() => {
@@ -815,7 +801,6 @@ function AdminDashboard() {
   const token = localStorage.getItem("token");
   const avatar = user?.name ? getInitials(user.name) : "AD";
 
-  // ── Fetch all data ──────────────────────────────────────────────────────────
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchComplaints();
@@ -830,7 +815,6 @@ function AdminDashboard() {
       const data = await res.json();
       if (res.ok) {
         const raw = Array.isArray(data) ? data : data.complaints || [];
-        // Normalize backend fields
         const normalized = raw.map(c => ({
           ...c,
           id: c._id || c.id,
@@ -849,7 +833,6 @@ function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
-      // TODO (Backend): GET /api/users — admin sees all users
       const res = await fetch("http://localhost:5000/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -869,13 +852,11 @@ function AdminDashboard() {
     if (!volunteerId?.trim()) return;
     try {
       await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId });
-      // ✅ Clear the selection first so UI resets to "show volunteer name" mode
       setAssignSelections(prev => {
         const updated = { ...prev };
         delete updated[complaintId];
         return updated;
       });
-      // ✅ Then re-fetch to get updated data from backend
       await fetchComplaints();
     } catch (err) {
       console.error('Assign failed', err);
@@ -884,7 +865,6 @@ function AdminDashboard() {
 
   const markResolved = async (complaintId) => {
     try {
-      // Backend: PUT /api/complaints/status/:id { status }
       const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -898,7 +878,6 @@ function AdminDashboard() {
 
   const changeUserRole = async (userId, newRole) => {
     try {
-      // TODO (Backend): PATCH /api/users/:id/role { role }
       const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -915,6 +894,8 @@ function AdminDashboard() {
   const pending  = complaints.filter(c => c.status === "pending" || c.status === "received" || !c.status).length;
   const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
   const inProg   = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+  // ✅ FIX: Added missing denied count
+  const denied   = complaints.filter(c => c.status === "denied").length;
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
@@ -936,13 +917,8 @@ function AdminDashboard() {
 
   return (
     <div className="cs-page" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-
-      {/* ── Navbar ── */}
       <Navbar />
-
       <div style={{ display: "flex", flex: 1 }}>
-
-        {/* ── Sidebar ── */}
         <aside style={{
           width: 220, background: "#fff",
           borderRight: "1px solid #e5e7eb",
@@ -991,24 +967,20 @@ function AdminDashboard() {
           </div>
         </aside>
 
-        {/* ── Main Content ── */}
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
 
-          {/* ══ OVERVIEW TAB ══ */}
           {activeTab === "overview" && (
             <div>
               <div style={{ marginBottom: 24 }}>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>System Overview</h1>
                 <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Monitor all civic complaints across the platform.</p>
               </div>
-
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
                 <StatCard icon="⚠️" count={total} label="Total Complaints" accent="#3b82f6" />
                 <StatCard icon="⏳" count={pending} label="Pending" accent="#f59e0b" />
                 <StatCard icon="🔄" count={inProg} label="In Progress" accent="#8b5cf6" />
                 <StatCard icon="✅" count={resolved} label="Resolved" accent="#22c55e" />
               </div>
-
               <div className="cs-card">
                 <div className="cs-section-header" style={{ marginBottom: 16 }}>
                   <div>
@@ -1027,16 +999,12 @@ function AdminDashboard() {
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr>
-                        <TH>Title</TH>
-                        <TH>Type</TH>
-                        <TH>Priority</TH>
-                        <TH>Status</TH>
-                        <TH>Date</TH>
+                        <TH>Title</TH><TH>Type</TH><TH>Priority</TH><TH>Status</TH><TH>Date</TH>
                       </tr>
                     </thead>
                     <tbody>
                       {complaints.slice(0, 5).map(c => (
-                        <tr key={c._id || c.id} style={{ transition: "background 0.1s" }}
+                        <tr key={c._id || c.id}
                           onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
                           onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                           <TD style={{ fontWeight: 600 }}>{c.title}</TD>
@@ -1053,22 +1021,27 @@ function AdminDashboard() {
             </div>
           )}
 
-          {/* ══ COMPLAINTS TAB ══ */}
           {activeTab === "complaints" && (
             <div>
               <div style={{ marginBottom: 20 }}>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Manage Complaints</h1>
                 <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Assign volunteers and update complaint status.</p>
               </div>
-
-              {/* Filter bar */}
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
+<<<<<<< Updated upstream
                     { key: "all", label: "All", count: total },
                     { key: "received", label: "Pending", count: pending },
                     { key: "in_review", label: "In Progress", count: inProg },
                     { key: "resolved", label: "Resolved", count: resolved },
+=======
+                    { key: "all",      label: "All",          count: total    },
+                    { key: "received", label: "Pending",      count: pending  },
+                    { key: "in_review",label: "In Progress",  count: inProg   },
+                    { key: "denied",   label: "⚠️ Denied",   count: denied   },
+                    { key: "resolved", label: "Resolved",     count: resolved },
+>>>>>>> Stashed changes
                   ].map(f => (
                     <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -1082,8 +1055,22 @@ function AdminDashboard() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)} />
               </div>
+<<<<<<< Updated upstream
 
               {filteredComplaints.length === 0 ? (
+=======
+              {lastUpdated && (
+                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12 }}>
+                  🟢 Last updated · {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              )}
+              {loading ? (
+                <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                  <div style={{ fontSize: 15 }}>Loading complaints…</div>
+                </div>
+              ) : filteredComplaints.length === 0 ? (
+>>>>>>> Stashed changes
                 <div className="cs-empty">
                   <div className="cs-empty__icon">📭</div>
                   <div className="cs-empty__title">No complaints found</div>
@@ -1091,6 +1078,7 @@ function AdminDashboard() {
                 </div>
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
+<<<<<<< Updated upstream
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr>
@@ -1173,12 +1161,133 @@ function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+=======
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <TH>Title</TH><TH>Type</TH><TH>Priority</TH><TH>Reporter</TH>
+                          <TH>Status</TH><TH>Assign Volunteer</TH><TH>Actions</TH>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredComplaints.map(c => (
+                          <tr key={c._id || c.id}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <TD>
+                              <div style={{ fontWeight: 600, color: "#111827" }}>{c.title}</div>
+                              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.address || "No address"}</div>
+                            </TD>
+                            <TD style={{ color: "#6b7280", textTransform: "capitalize" }}>{c.type || c.issueType || "—"}</TD>
+                            <TD><PriorityBadge priority={c.priority} /></TD>
+                            <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
+                            <TD><StatusBadge status={c.status} /></TD>
+                            <TD>
+                              {(c.status === "completed") ? (
+                                <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                                  ✅ {c.assigned_to?.name || c.assigned_to || "—"}
+                                </div>
+                              ) : c.status === "denied" ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                  <div style={{ fontSize: 12, color: "#dc2626", textDecoration: "line-through", fontWeight: 500 }}>
+                                    ❌ {c.assigned_to?.name || c.assigned_to || "—"}
+                                  </div>
+                                  <select
+                                    className="cs-input"
+                                    style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
+                                    value={assignSelections[c._id || c.id] || ""}
+                                    onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}
+                                  >
+                                    <option value="">— Reassign Volunteer —</option>
+                                    {volunteers.map(v => {
+                                      const isDenied = (c.assigned_to?._id || c.assigned_to) === v._id;
+                                      return (
+                                        <option key={v._id} value={v._id} disabled={isDenied}
+                                          style={{ textDecoration: isDenied ? "line-through" : "none", color: isDenied ? "#9ca3af" : "inherit" }}>
+                                          {isDenied ? `❌ ${v.name} (denied)` : v.name}
+                                        </option>
+                                      );
+                                    })}
+                                  </select>
+                                </div>
+                              ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>
+                                    👤 {c.assigned_to?.name || c.assigned_to}
+                                  </div>
+                                  <button
+                                    className="cs-btn cs-btn--outline cs-btn--sm"
+                                    style={{ fontSize: 11 }}
+                                    onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}
+                                  >🔄 Change</button>
+                                </div>
+                              ) : (
+                                <select
+                                  className="cs-input"
+                                  style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
+                                  value={assignSelections[c._id || c.id] || ""}
+                                  onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}
+                                >
+                                  <option value="">— Select Volunteer —</option>
+                                  {volunteers.map(v => (
+                                    <option key={v._id} value={v._id}>{v.name}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </TD>
+                            <TD>
+                              <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
+                                {c.status === "completed" ? (
+                                  <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>
+                                ) : c.status === "resolved" ? (
+                                  <button
+                                    onClick={() => markResolved(c._id || c.id)}
+                                    style={{
+                                      background: "#16a34a", color: "#fff", border: "none",
+                                      borderRadius: 8, padding: "6px 14px", fontSize: 12,
+                                      fontWeight: 700, cursor: "pointer",
+                                      boxShadow: "0 2px 8px rgba(22,163,74,0.3)"
+                                    }}>
+                                    ✅ Approve
+                                  </button>
+                                ) : c.status === "denied" ? (
+                                  <div style={{ display: "flex", gap: 4, flexDirection: "column" }}>
+                                    <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600 }}>⚠️ Denied — Reassign</span>
+                                    {(!c.assigned_to || assignSelections[c._id || c.id]) && (
+                                      <button
+                                        className="cs-btn cs-btn--outline cs-btn--sm"
+                                        style={{ fontSize: 11 }}
+                                        onClick={() => assignVolunteer(c._id || c.id)}
+                                        disabled={!assignSelections[c._id || c.id]?.trim()}
+                                      >Assign</button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <>
+                                    {(!c.assigned_to || assignSelections[c._id || c.id]) && (
+                                      <button
+                                        className="cs-btn cs-btn--outline cs-btn--sm"
+                                        style={{ fontSize: 11 }}
+                                        onClick={() => assignVolunteer(c._id || c.id)}
+                                        disabled={!assignSelections[c._id || c.id]?.trim()}
+                                      >Assign</button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </TD>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+>>>>>>> Stashed changes
                 </div>
               )}
             </div>
           )}
 
-          {/* ══ USER MANAGEMENT TAB ══ */}
           {activeTab === "users" && (
             <div>
               <div style={{ marginBottom: 20 }}>
@@ -1187,18 +1296,15 @@ function AdminDashboard() {
                   {users.length} registered users · Manage roles and access.
                 </p>
               </div>
-
               {users.length === 0 ? (
                 <div className="cs-empty">
                   <div className="cs-empty__icon">👥</div>
                   <div className="cs-empty__title">No users found</div>
-                  <div className="cs-empty__desc">
-                    {/* TODO (Backend): GET /api/users must return all users for admin */}
-                    Users will appear here once the backend endpoint is connected.
-                  </div>
+                  <div className="cs-empty__desc">Users will appear here once the backend endpoint is connected.</div>
                 </div>
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
+<<<<<<< Updated upstream
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
                       <tr>
@@ -1256,21 +1362,68 @@ function AdminDashboard() {
                       ))}
                     </tbody>
                   </table>
+=======
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", minWidth: 900, borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <TH>Name</TH><TH>Email</TH><TH>Current Role</TH>
+                          <TH>Location</TH><TH>Joined</TH><TH>Actions</TH>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map(u => (
+                          <tr key={u._id}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <TD>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div className="cs-avatar" style={{ width: 30, height: 30, fontSize: 11, flexShrink: 0 }}>
+                                  {u.name?.substring(0, 2).toUpperCase() || "??"}
+                                </div>
+                                <span style={{ fontWeight: 600 }}>{u.name}</span>
+                              </div>
+                            </TD>
+                            <TD style={{ color: "#6b7280" }}>{u.email}</TD>
+                            <TD>
+                              <span style={{
+                                background: u.role === "admin" ? "#fef2f2" : u.role === "volunteer" ? "#eff6ff" : "#f0fdf4",
+                                color: u.role === "admin" ? "#dc2626" : u.role === "volunteer" ? "#2563eb" : "#16a34a",
+                                padding: "2px 10px", borderRadius: 9999,
+                                fontSize: 12, fontWeight: 600, textTransform: "capitalize",
+                              }}>{u.role || "user"}</span>
+                            </TD>
+                            <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
+                            <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
+                            <TD>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                {u.role !== "volunteer" && (
+                                  <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
+                                    onClick={() => changeUserRole(u._id, "volunteer")}>Make Volunteer</button>
+                                )}
+                                {u.role !== "user" && u.role !== "admin" && (
+                                  <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
+                                    onClick={() => changeUserRole(u._id, "user")}>Make Citizen</button>
+                                )}
+                              </div>
+                            </TD>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+>>>>>>> Stashed changes
                 </div>
               )}
             </div>
           )}
 
-          {/* ══ VOLUNTEERS TAB ══ */}
           {activeTab === "volunteers" && (
             <div>
               <div style={{ marginBottom: 20 }}>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
-                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
-                  {volunteers.length} active volunteers.
-                </p>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
               </div>
-
               {volunteers.length === 0 ? (
                 <div className="cs-empty">
                   <div className="cs-empty__icon">🤝</div>
@@ -1280,15 +1433,8 @@ function AdminDashboard() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
                   {volunteers.map(v => {
-                    const assigned = complaints.filter(c => {
-                      const id = c.assigned_to?._id || c.assigned_to;
-                      return String(id) === String(v._id);
-                    }).length;
-
-                    const resolved = complaints.filter(c => {
-                      const id = c.assigned_to?._id || c.assigned_to;
-                      return String(id) === String(v._id) && c.status === "resolved";
-                    }).length;
+                    const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
                     return (
                       <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
                         <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>
@@ -1303,7 +1449,7 @@ function AdminDashboard() {
                             <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
                           </div>
                           <div style={{ textAlign: "center" }}>
-                            <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{resolved}</div>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{volResolved}</div>
                             <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
                           </div>
                         </div>
@@ -1320,7 +1466,6 @@ function AdminDashboard() {
             </div>
           )}
 
-          {/* ══ REPORTS TAB ══ */}
           {activeTab === "zones" && (
             <ZonesTab zones={zones} setZones={setZones} volunteers={volunteers} complaints={complaints} />
           )}
