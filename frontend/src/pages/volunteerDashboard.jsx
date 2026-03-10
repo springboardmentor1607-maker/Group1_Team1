@@ -382,7 +382,7 @@ export default function VolunteerDashboard() {
                     );
                   })}
                 </div>
-
+              </div>
               {/* Success feedback */}
               {updateSuccess && (
                 <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#16a34a", fontWeight: 600, textAlign: "center" }}>

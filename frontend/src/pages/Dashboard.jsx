@@ -8,6 +8,12 @@ import API from "../api";
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STATUS_LABELS    = { received: "Received", in_review: "In Review", resolved: "Resolved" };
 const STATUS_DOT_COLORS = { received: "#3b82f6", in_review: "#f59e0b", resolved: "#22c55e" };
+
+const STATUS_COLORS = {
+  received:  { bg: "#eff6ff", text: "#1d4ed8", dot: "#3b82f6" },
+  in_review: { bg: "#fff7ed", text: "#c2410c", dot: "#f59e0b" },
+  resolved:  { bg: "#f0fdf4", text: "#15803d", dot: "#22c55e" }
+};
 const PROGRESS_STEPS   = ["received", "in_review", "resolved"];
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -348,6 +354,7 @@ export default function UserDashboard() {
 
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
     const fetchComplaints = async () => {
@@ -367,6 +374,8 @@ export default function UserDashboard() {
           createdAt:    c.created_at || c.createdAt || new Date().toISOString(),
           updatedAt:    c.updated_at || c.updatedAt || new Date().toISOString(),
         })));
+
+        setLastUpdated(new Date());
       } catch (err) {
         console.error("Failed to fetch complaints", err);
       } finally {

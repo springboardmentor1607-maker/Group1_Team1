@@ -155,9 +155,13 @@ function ReportsTab({ complaints, users, volunteers }) {
   const received   = complaints.filter(c => c.status === "received").length;
   const inReview   = complaints.filter(c => c.status === "in_review").length;
   const resolved   = complaints.filter(c => c.status === "resolved").length;
+  const denied = complaints.filter(c => c.status === "denied"
+).length;
   const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
   // Complaints by type
+
+
   const byType = complaints.reduce((acc, c) => {
     const t = c.type || "other";
     acc[t] = (acc[t] || 0) + 1;
@@ -803,8 +807,11 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
 function AdminDashboard() {
   const navigate = useNavigate();
   const { user, getInitials } = useAuth();
-
+  
   const [activeTab, setActiveTab] = useState("overview");
+
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [complaints, setComplaints] = useState([]);
   const [users, setUsers] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
@@ -922,6 +929,7 @@ function AdminDashboard() {
   const pending  = complaints.filter(c => c.status === "pending" || c.status === "received" || !c.status).length;
   const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
   const inProg   = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+  const denied = complaints.filter(c => c.status === "denied")
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
@@ -1173,6 +1181,7 @@ function AdminDashboard() {
                                       </option>
                                     );
                                   })}
+                                  
                                 </select>
                               </div>
                             ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
