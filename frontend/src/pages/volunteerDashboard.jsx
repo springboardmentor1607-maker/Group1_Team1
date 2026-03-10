@@ -10,7 +10,6 @@ const priorityColor = {
   low:    { bg: "#f0fff4", text: "#1a7a4a" },
 };
 
-// Backend schema enum: "received" | "in_review" | "resolved"
 const statusColor = {
   received:  { bg: "#f0f4ff", text: "#3b82f6" },
   in_review: { bg: "#fff3e0", text: "#e65100" },
@@ -31,8 +30,6 @@ const categoryIcon = {
   Sanitation:         "🚰",
 };
 
-// Volunteer-accessible status buttons → backend enum values
-// Backend only accepts: received, in_review, resolved
 const STATUS_BUTTONS = [
   { label: "In Review", api: "in_review" },
   { label: "Resolved",  api: "resolved"  },
@@ -76,7 +73,6 @@ export default function VolunteerDashboard() {
     return () => clearInterval(timer);
   }, [fetchIssues]);
 
-  // Counts aligned to backend enum
   const counts = {
     total:    issues.length,
     inReview: issues.filter(i => i.status === "in_review" || i.status === "received").length,
@@ -99,16 +95,13 @@ export default function VolunteerDashboard() {
     return matchTab && matchSearch;
   });
 
-  // Sends only valid backend enum values: in_review | resolved
   const updateStatus = async (id, apiStatus) => {
     if (!apiStatus) return;
-    if (selectedIssue?.status === apiStatus) return; // already at this status
-
+    if (selectedIssue?.status === apiStatus) return;
     try {
       setUpdating(true);
       setUpdateSuccess(false);
       await API.put(`/api/complaints/status/${id}`, { status: apiStatus });
-
       setIssues(prev =>
         prev.map(i => String(i._id || i.id) === String(id) ? { ...i, status: apiStatus } : i)
       );
@@ -314,6 +307,7 @@ export default function VolunteerDashboard() {
             boxShadow: "0 20px 60px rgba(0,0,0,0.15)", overflow: "hidden"
           }} onClick={(e) => e.stopPropagation()}>
 
+            {/* Modal Header */}
             <div style={{ background: "linear-gradient(120deg, #1a56db, #3b82f6)", padding: "22px 26px", color: "#fff" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -330,7 +324,10 @@ export default function VolunteerDashboard() {
               </div>
             </div>
 
+            {/* Modal Body */}
             <div style={{ padding: "22px 26px" }}>
+
+              {/* Detail fields */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
                 {[
                   { label: "Location",      value: selectedIssue.address || selectedIssue.location || "—", icon: "📍" },
@@ -345,6 +342,7 @@ export default function VolunteerDashboard() {
                 ))}
               </div>
 
+              {/* Description */}
               <div style={{ background: "#f8faff", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>📝 Description</div>
                 <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>
@@ -352,7 +350,7 @@ export default function VolunteerDashboard() {
                 </p>
               </div>
 
-              {/* Status buttons — only valid backend enum values */}
+              {/* Status selector buttons */}
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>
                   Update Status
@@ -391,25 +389,21 @@ export default function VolunteerDashboard() {
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  onClick={() => updateStatus(issueId(selectedIssue), selectedIssue.status === "resolved" ? "in_review" : "resolved")}
-                  disabled={updating}
-                  style={{
-                    flex: 1, padding: "11px 0",
-                    background: selectedIssue.status === "resolved" ? "#e65100" : "#16a34a",
-                    color: "#fff", border: "none", borderRadius: 10,
-                    fontWeight: 600, fontSize: 14,
-                    cursor: updating ? "not-allowed" : "pointer",
-                    opacity: updating ? 0.7 : 1
-                  }}>
-                  {updating ? "Updating…" : selectedIssue.status === "resolved" ? "↩️ Mark In Review" : "✅ Mark as Resolved"}
-                </button>
-                <button style={{
-                  padding: "11px 18px", background: "#fff", color: "#64748b",
-                  border: "1px solid #e5e9f2", borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: "pointer"
-                }}>💬 Comment</button>
-              </div>
+              {/* Main action button — full width, Comment button removed */}
+              <button
+                onClick={() => updateStatus(issueId(selectedIssue), selectedIssue.status === "resolved" ? "in_review" : "resolved")}
+                disabled={updating}
+                style={{
+                  width: "100%", padding: "12px 0",
+                  background: selectedIssue.status === "resolved" ? "#e65100" : "#16a34a",
+                  color: "#fff", border: "none", borderRadius: 10,
+                  fontWeight: 600, fontSize: 14,
+                  cursor: updating ? "not-allowed" : "pointer",
+                  opacity: updating ? 0.7 : 1
+                }}>
+                {updating ? "Updating…" : selectedIssue.status === "resolved" ? "↩️ Mark In Review" : "✅ Mark as Resolved"}
+              </button>
+
             </div>
           </div>
         </div>
