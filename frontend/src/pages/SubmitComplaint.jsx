@@ -74,7 +74,6 @@ function CleanStreetLogo({ size = 44 }) {
 }
 
 // ─── Leaflet Map Component ────────────────────────────────────────────────────
-function LocationMap({ onLocationSelect, selectedCoords }) {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markerRef = useRef(null);
