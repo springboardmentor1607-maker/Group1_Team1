@@ -21,7 +21,7 @@ const categoryIcon = {
   other:       "📌", general:     "📌", sanitation: "🚰",
 };
 
-// ─── Status config (covers all statuses in the flow) ─────────────────────────
+// ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
   received:    { bg: "#dbeafe", text: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
   pending:     { bg: "#dbeafe", text: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
@@ -56,8 +56,6 @@ function IssueRow({ issue, isSelected, onSelect }) {
   const ref  = "#" + id.slice(-5).toUpperCase();
   const pc   = priorityColor[issue.priority?.toLowerCase()] || priorityColor.medium;
   const date = new Date(issue.created_at || issue.createdAt || issue.reportedAt).toLocaleDateString();
-
-  // Highlight if action needed
   const needsAction = ["assigned", "received", "pending"].includes(issue.status);
 
   return (
@@ -169,10 +167,10 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
           {/* Detail grid */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
             {[
-              { label: "Location",    value: issue.address || issue.location || "—",           icon: "📍" },
+              { label: "Location",    value: issue.address || issue.location || "—",               icon: "📍" },
               { label: "Reported By", value: issue.user_id?.name || issue.reportedBy?.name || "—", icon: "👤" },
-              { label: "Date",        value: date,                                              icon: "📅" },
-              { label: "Priority",    value: issue.priority || "medium",                        icon: "🚨" },
+              { label: "Date",        value: date,                                                  icon: "📅" },
+              { label: "Priority",    value: issue.priority || "medium",                            icon: "🚨" },
             ].map(f => (
               <div key={f.label} style={{ background: "#f8faff", borderRadius: 10, padding: "10px 14px" }}>
                 <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>{f.icon} {f.label}</div>
@@ -210,10 +208,10 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
               Actions
             </div>
 
-            {/* 1. Needs Accept / Deny */}
+            {/* STEP 1 — Needs Accept / Deny */}
             {isPendingAccept && (
               <div>
-                <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 12, margin: "0 0 12px" }}>
+                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
                   You have been assigned this complaint. Accept to work on it, or deny to decline.
                 </p>
                 <div style={{ display: "flex", gap: 10 }}>
@@ -249,13 +247,35 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
               </div>
             )}
 
-            {/* 2. Accepted → Mark as Resolved directly (purple button matching screenshot) */}
-            {(isAccepted || isInProgress) && (
+            {/* STEP 2 — Accepted → Start Working */}
+            {isAccepted && (
               <div>
                 <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
-                  {isAccepted
-                    ? "You've accepted this complaint. Mark it resolved once the issue is fixed."
-                    : "You are currently working on this. Mark it as resolved when done."}
+                  You've accepted this complaint. Click below to start working on it.
+                </p>
+                <button
+                  onClick={() => onStartWorking(issue._id || issue.id)}
+                  disabled={loading}
+                  style={{
+                    width: "100%", padding: "13px 0", borderRadius: 10,
+                    background: loading ? "#93c5fd" : "linear-gradient(135deg, #1d4ed8, #2563eb)",
+                    color: "#fff", border: "none", fontWeight: 700, fontSize: 15,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.75 : 1,
+                    boxShadow: loading ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+                    transition: "opacity 0.15s",
+                  }}
+                >
+                  {loading ? "Updating…" : "🔄 Start Working"}
+                </button>
+              </div>
+            )}
+
+            {/* STEP 3 — In Progress → Mark as Resolved */}
+            {isInProgress && (
+              <div>
+                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
+                  You are currently working on this. Mark it as resolved when done.
                 </p>
                 <button
                   onClick={() => onMarkResolved(issue._id || issue.id)}
@@ -275,7 +295,7 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
               </div>
             )}
 
-            {/* 3. Resolved — awaiting admin approval (matches screenshot: purple info bar) */}
+            {/* STEP 4 — Resolved — awaiting admin approval */}
             {isResolved && (
               <div style={{
                 background: "#f5f3ff", border: "1px solid #ddd6fe",
@@ -284,12 +304,12 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
               }}>
                 <span style={{ fontSize: 20 }}>⏳</span>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#6d28d9" }}>
-                  Awaiting admin approval to mark as completed
+                  Marked as resolved. Awaiting admin approval to complete.
                 </div>
               </div>
             )}
 
-            {/* 4. Completed — verified by admin (matches screenshot: green bar) */}
+            {/* STEP 5 — Completed — verified by admin */}
             {isCompleted && (
               <div style={{
                 background: "#f0fdf4", border: "1px solid #86efac",
@@ -298,14 +318,17 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
               }}>
                 <span style={{ fontSize: 20 }}>✅</span>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#166534" }}>
-                  Issue completed and verified by admin
+                  Issue completed and verified by admin.
                 </div>
               </div>
             )}
 
-            {/* 6. Denied */}
+            {/* Denied */}
             {isDenied && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "14px", textAlign: "center" }}>
+              <div style={{
+                background: "#fef2f2", border: "1px solid #fecaca",
+                borderRadius: 10, padding: "14px", textAlign: "center",
+              }}>
                 <div style={{ fontSize: 26, marginBottom: 6 }}>🚫</div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#991b1b" }}>You Denied This Complaint</div>
                 <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Admin has been notified and may reassign it.</div>
@@ -429,8 +452,6 @@ export default function VolunteerDashboard() {
   };
 
   // ── ACCEPT ─────────────────────────────────────────────────────────────────
-  // Backend: PUT /api/complaints/status/:id  { status: "accepted" }
-  // Complaint model status enum must include: "accepted"
   const handleAccept = async (id) => {
     try {
       setActionLoading(true);
@@ -445,9 +466,6 @@ export default function VolunteerDashboard() {
   };
 
   // ── DENY ───────────────────────────────────────────────────────────────────
-  // Backend: PUT /api/complaints/status/:id  { status: "denied" }
-  // Complaint model status enum must include: "denied"
-  // Admin will be notified and can reassign to another volunteer
   const handleDeny = async (id) => {
     try {
       setActionLoading(true);
@@ -462,8 +480,6 @@ export default function VolunteerDashboard() {
   };
 
   // ── START WORKING ──────────────────────────────────────────────────────────
-  // Backend: PUT /api/complaints/status/:id  { status: "in_progress" }
-  // Complaint model status enum must include: "in_progress"
   const handleStartWorking = async (id) => {
     try {
       setActionLoading(true);
@@ -478,8 +494,6 @@ export default function VolunteerDashboard() {
   };
 
   // ── MARK RESOLVED ──────────────────────────────────────────────────────────
-  // Backend: PUT /api/complaints/status/:id  { status: "resolved" }
-  // → Admin then approves → "completed"
   const handleMarkResolved = async (id) => {
     try {
       setActionLoading(true);

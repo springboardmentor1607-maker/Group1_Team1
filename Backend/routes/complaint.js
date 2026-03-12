@@ -145,6 +145,7 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
     if (!complaint) return res.status(404).json({ message: "Complaint not found" });
 
     complaint.assigned_to = volunteerId;
+    complaint.status      = "assigned";
     complaint.updated_at  = new Date();
     await complaint.save();
 
@@ -164,7 +165,18 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
 router.put("/status/:id", protect, authorize("admin", "volunteer"), async (req, res) => {
   try {
     const { status } = req.body;
-    const allowedStatus = ["received", "in_review", "resolved"];
+    const allowedStatus = [
+      "received",
+      "pending",
+      "assigned",
+      "accepted",
+      "in_review",
+      "in_progress",
+      "denied",
+      "resolved",
+      "completed",
+    ];
+
     if (!allowedStatus.includes(status))
       return res.status(400).json({ message: "Invalid status value" });
 

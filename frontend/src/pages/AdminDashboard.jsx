@@ -149,10 +149,10 @@ const TD = ({ children, style }) => (
 // ─── Reports Tab ─────────────────────────────────────────────────────────────
 function ReportsTab({ complaints, users, volunteers }) {
   const total      = complaints.length;
-  const received   = complaints.filter(c => c.status === "received").length;
-  const inReview   = complaints.filter(c => c.status === "in_review").length;
-  const resolved   = complaints.filter(c => c.status === "resolved").length;
-  const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+const resolved    = complaints.filter(c => c.status === "resolved").length;
+const pending     = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+const inProgress  = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
   const byType = complaints.reduce((acc, c) => {
     const t = c.type || "other";
@@ -712,18 +712,30 @@ function AdminDashboard() {
   };
 
   const markResolved = async (complaintId) => {
-    try {
-      // Backend: PUT /api/complaints/status/:id { status }
-      const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: "resolved" }),
-      });
-      if (res.ok) fetchComplaints();
-    } catch (err) {
-      console.error("Resolve failed", err);
-    }
-  };
+  try {
+    const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: "resolved" }),
+    });
+    if (res.ok) fetchComplaints();
+  } catch (err) {
+    console.error("Resolve failed", err);
+  }
+};
+
+const approveComplaint = async (complaintId) => {
+  try {
+    const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: "completed" }),  // ← changed from "resolved" to "completed"
+    });
+    if (res.ok) fetchComplaints();
+  } catch (err) {
+    console.error("Approve failed", err);
+  }
+};
 
   const changeUserRole = async (userId, newRole) => {
     try {
