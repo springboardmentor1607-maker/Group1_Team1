@@ -815,11 +815,11 @@ function AdminDashboard() {
                 <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Monitor all civic complaints across the platform.</p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={total}    label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={pending}  label="Pending"          accent="#f59e0b" />
-                <StatCard icon="🔄" count={inProg}   label="In Progress"      accent="#8b5cf6" />
-                <StatCard icon="✅" count={resolved} label="Resolved"         accent="#22c55e" />
-                <StatCard icon="🚫" count={denied}   label="Denied"           accent="#ef4444" />
+                <StatCard icon="⚠️" count={loadingComplaints ? "…" : total}    label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={loadingComplaints ? "…" : pending}  label="Pending"          accent="#f59e0b" />
+                <StatCard icon="🔄" count={loadingComplaints ? "…" : inProg}   label="In Progress"      accent="#8b5cf6" />
+                <StatCard icon="✅" count={loadingComplaints ? "…" : resolved} label="Resolved"         accent="#22c55e" />
+                <StatCard icon="🚫" count={loadingComplaints ? "…" : denied}   label="Denied"           accent="#ef4444" />
               </div>
               <div className="cs-card">
                 <div className="cs-section-header" style={{ marginBottom: 16 }}>
@@ -829,7 +829,12 @@ function AdminDashboard() {
                   </div>
                   <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>View All →</button>
                 </div>
-                {complaints.length === 0 ? (
+                {loadingComplaints ? (
+                  <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                    <div>Loading complaints…</div>
+                  </div>
+                ) : complaints.length === 0 ? (
                   <div className="cs-empty">
                     <div className="cs-empty__icon">📭</div>
                     <div className="cs-empty__title">No complaints yet</div>
