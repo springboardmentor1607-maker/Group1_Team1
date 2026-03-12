@@ -617,7 +617,10 @@ export default function VolunteerDashboard() {
                 onChange={e => setSearch(e.target.value)}
                 style={{ border: "1px solid #e5e9f2", borderRadius: 10, padding: "7px 14px", fontSize: 13, outline: "none", color: "#1a1a2e", width: 200, background: "#f9fafb" }}
               />
-              <button onClick={() => fetchIssues(false)} title="Refresh" style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b" }}>🔄</button>
+              <button onClick={() => fetchIssues(false)} title="Refresh" style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b" }}>
+                <span style={{ display: "inline-block", animation: loading ? "spin-v 0.7s linear infinite" : "none" }}>🔄</span>
+                <style>{`@keyframes spin-v { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+              </button>
             </div>
           </div>
 
