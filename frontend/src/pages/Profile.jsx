@@ -82,63 +82,77 @@ function StatMini({ icon, value, label, colorClass }) {
     );
 }
 
+// ─── Time helper ─────────────────────────────────────────────────────────────
+function timeAgo(dateStr) {
+    if (!dateStr) return "—";
+    const diff  = Date.now() - new Date(dateStr).getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins  < 1)   return "Just now";
+    if (mins  < 60)  return `${mins}m ago`;
+    if (hours < 24)  return `${hours}h ago`;
+    if (days  === 1) return "Yesterday";
+    return `${days}d ago`;
+}
+
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function Profile() {
     const navigate = useNavigate();
     const { user, updateUser, logout } = useAuth();
 
-    // ── Real stats fetched from complaints API ──────────────────────────────
-    const [stats, setStats] = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
+    // ── Real stats + activity fetched from complaints API ──────────────────
+    const [stats, setStats]           = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
+    const [complaints, setComplaints] = useState([]);
+    const [activityLoading, setActivityLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Fetch ALL complaints — same as Dashboard.jsx and AdminDashboard.jsx
-                const res = await API.get("/api/complaints");
-                const raw = Array.isArray(res.data)
-                    ? res.data
-                    : res.data?.complaints || [];
+                setActivityLoading(true);
 
-                const isVolunteer = user?.role === "volunteer";
-                const userId = user?._id || user?.id;
+                // Admin gets all complaints; volunteer gets their assignments; user gets their own
+                const endpoint = user?.role === "admin"
+                    ? "/api/complaints"
+                    : user?.role === "volunteer"
+                        ? "/api/complaints/assigned-to-me"
+                        : "/api/complaints/my";
 
-                let complaints = [];
-                if (isVolunteer) {
-                    // Volunteer: complaints assigned to them
-                    complaints = raw.filter(c => {
-                        const assignedId = c.assigned_to?._id || c.assigned_to;
-                        return String(assignedId) === String(userId);
-                    });
-                } else {
-                    // Citizen: complaints they reported
-                    complaints = raw.filter(c => {
-                        const reporterId = c.user_id?._id || c.user_id;
-                        return String(reporterId) === String(userId);
-                    });
-                }
+                const res = await API.get(endpoint);
 
-                const reports  = complaints.length;
-                const resolved = complaints.filter(c => c.status === "resolved").length;
-                const votes    = complaints.reduce((sum, c) => sum + (Number(c.votes) || Number(c.upvotes) || 0), 0);
+                // Handle all possible response shapes
+                let raw = [];
+                if (Array.isArray(res.data))                    raw = res.data;
+                else if (Array.isArray(res.data?.complaints))   raw = res.data.complaints;
+                else if (Array.isArray(res.data?.data))         raw = res.data.data;
+
+                setComplaints(raw);
+
+                const reports  = raw.length;
+                const resolved = raw.filter(c => ["resolved", "completed"].includes(c.status)).length;
+                const votes    = raw.reduce((sum, c) => sum + (Number(c.upvotes) || 0), 0);
 
                 let badges = 0;
-                if (isVolunteer) {
-                    if (reports >= 1)  badges += 1;   // First Assignment
-                    if (resolved >= 5) badges += 1;   // Street Champion
+                if (user?.role === "volunteer") {
+                    if (reports >= 1)  badges += 1;
+                    if (resolved >= 5) badges += 1;
                 } else {
-                    if (reports >= 1)  badges += 1;   // First Report
-                    if (votes >= 10)   badges += 1;   // Community Helper
-                    if (resolved >= 5) badges += 1;   // Street Champion
+                    if (reports >= 1)  badges += 1;
+                    if (votes >= 10)   badges += 1;
+                    if (resolved >= 5) badges += 1;
                 }
 
                 setStats({ reports, resolved, votes, badges });
             } catch (err) {
-                console.error("[Profile Stats] fetch failed:", err?.response?.status, err?.message);
+                console.error("[Profile] fetch failed:", err?.response?.status, err?.message);
+            } finally {
+                setActivityLoading(false);
             }
         };
 
-        if ((user?._id || user?.id) && user?.role !== 'admin') fetchStats();
-    }, [user]);
+        fetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // run once on mount — user is already in context by then (same as Dashboard.jsx)
 
     // Dynamic data from AuthContext with fallbacks
     const initialData = {
@@ -370,25 +384,78 @@ function Profile() {
                                 <div className="pf-card__header">
                                     <div>
                                         <h2 className="pf-card__title">Recent Activity</h2>
-                                        <p className="pf-card__sub">Your latest actions on CleanStreet</p>
+                                        <p className="pf-card__sub">{user?.role === "admin" ? "Latest complaints submitted on the platform" : "Your latest actions on CleanStreet"}</p>
                                     </div>
                                 </div>
                                 <div className="pf-activity-list">
-                                    {[
-                                        { icon: "✅", text: "Pothole on Main Street resolved", time: "2 hours ago", color: "#22c55e" },
-                                        { icon: "➕", text: "Reported broken streetlight on Elm Ave", time: "4 hours ago", color: "#3b82f6" },
-                                        { icon: "🔄", text: "Garbage dump complaint updated", time: "6 hours ago", color: "#f59e0b" },
-                                        { icon: "💬", text: "New comment on water leak report", time: "1 day ago", color: "#8b5cf6" },
-                                        { icon: "👍", text: "Voted on 3 community issues", time: "2 days ago", color: "#06b6d4" },
-                                    ].map((a, i) => (
-                                        <div key={i} className="pf-activity-item">
-                                            <div className="pf-activity-item__icon" style={{ background: a.color + "18" }}>{a.icon}</div>
-                                            <div className="pf-activity-item__body">
-                                                <p className="pf-activity-item__text">{a.text}</p>
-                                                <p className="pf-activity-item__time">{a.time}</p>
+                                    {activityLoading ? (
+                                        <div style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>
+                                            <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
+                                            <div style={{ fontSize: 14 }}>Loading activity…</div>
+                                        </div>
+                                    ) : complaints.length === 0 ? (
+                                        <div style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>
+                                            <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+                                            <div style={{ fontSize: 14, fontWeight: 600 }}>No activity yet</div>
+                                            <div style={{ fontSize: 12, marginTop: 4 }}>
+                                                {user?.role === "admin"
+                                                    ? "No complaints have been submitted to the platform yet."
+                                                    : user?.role === "volunteer"
+                                                        ? "No assignments yet. Check back once admin assigns you a complaint."
+                                                        : "Start by reporting a civic issue in your area!"}
                                             </div>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        // Sort by most recent first, take up to 10
+                                        [...complaints]
+                                            .sort((a, b) => new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt) - new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt))
+                                            .slice(0, 10)
+                                            .map((c, i) => {
+                                                const status  = c.status || "received";
+                                                const dateStr = c.updated_at || c.updatedAt || c.created_at || c.createdAt;
+
+                                                // Icon + color + text based on status — matching Dashboard.jsx logic
+                                                const STATUS_DISPLAY = {
+                                                    completed:   { icon: "🏆", color: "#10b981", verb: "completed"   },
+                                                    resolved:    { icon: "🎉", color: "#22c55e", verb: "resolved"    },
+                                                    denied:      { icon: "🚫", color: "#ef4444", verb: "denied"      },
+                                                    accepted:    { icon: "✅", color: "#16a34a", verb: "accepted"    },
+                                                    in_progress: { icon: "🔄", color: "#8b5cf6", verb: "in progress" },
+                                                    in_review:   { icon: "🔄", color: "#8b5cf6", verb: "in review"  },
+                                                    assigned:    { icon: "👤", color: "#f59e0b", verb: "assigned"    },
+                                                    received:    { icon: "➕", color: "#3b82f6", verb: "submitted"   },
+                                                    pending:     { icon: "➕", color: "#3b82f6", verb: "submitted"   },
+                                                };
+                                                const disp = STATUS_DISPLAY[status] || STATUS_DISPLAY.received;
+
+                                                const text = user?.role === "admin"
+                                                    ? `[${(c.user_id?.name || "User")}] "${c.title}" — ${disp.verb}`
+                                                    : user?.role === "volunteer"
+                                                        ? `"${c.title}" marked as ${disp.verb}`
+                                                        : status === "received" || status === "pending"
+                                                            ? `Reported: ${c.title}`
+                                                            : `"${c.title}" is now ${disp.verb}`;
+
+                                                return (
+                                                    <div key={c._id || i} className="pf-activity-item">
+                                                        <div className="pf-activity-item__icon" style={{ background: disp.color + "18", color: disp.color }}>
+                                                            {disp.icon}
+                                                        </div>
+                                                        <div className="pf-activity-item__body">
+                                                            <p className="pf-activity-item__text">{text}</p>
+                                                            <p className="pf-activity-item__time">{timeAgo(dateStr)}</p>
+                                                        </div>
+                                                        <span style={{
+                                                            fontSize: 10, fontWeight: 700, padding: "2px 8px",
+                                                            borderRadius: 9999, background: disp.color + "18",
+                                                            color: disp.color, whiteSpace: "nowrap",
+                                                        }}>
+                                                            {status.replace("_", " ").toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })
+                                    )}
                                 </div>
                             </div>
                         )}
