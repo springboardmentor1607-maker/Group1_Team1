@@ -77,11 +77,15 @@ function CleanStreetLogo({ size = 44 }) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
-    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
-    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
-    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review" },
-    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received" },
+    resolved:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved"    },
+    completed:   { bg: "#d1fae5", color: "#065f46", dot: "#10b981", label: "Completed"   },
+    assigned:    { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"    },
+    accepted:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted"    },
+    pending:     { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
+    in_review:   { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
+    in_progress: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
+    received:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
+    denied:      { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied"      },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
   const s = map[key] || map["pending"];
@@ -148,11 +152,11 @@ const TD = ({ children, style }) => (
 
 // ─── Reports Tab ─────────────────────────────────────────────────────────────
 function ReportsTab({ complaints, users, volunteers }) {
-  const total      = complaints.length;
-const resolved    = complaints.filter(c => c.status === "resolved").length;
-const pending     = complaints.filter(c => c.status === "pending" || c.status === "received").length;
-const inProgress  = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
-const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+  const total       = complaints.length;
+  const pending     = complaints.filter(c => c.status === "received" || c.status === "pending").length;
+  const inProgress  = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
+  const resolved    = complaints.filter(c => c.status === "resolved").length;
+  const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
   const byType = complaints.reduce((acc, c) => {
     const t = c.type || "other";
@@ -652,53 +656,43 @@ function AdminDashboard() {
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery]       = useState("");
   const [statusFilter, setStatusFilter]     = useState("all");
+  const [loadingComplaints, setLoadingComplaints] = useState(true);
+  const [refreshing, setRefreshing]         = useState(false);
 
-  const token = localStorage.getItem("token");
   const avatar = user?.name ? getInitials(user.name) : "AD";
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchComplaints(); fetchUsers(); }, []);
 
-  const fetchComplaints = async () => {
+  const fetchComplaints = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoadingComplaints(true);
     try {
-      const res = await fetch("http://localhost:5000/api/complaints", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const raw = Array.isArray(data) ? data : data.complaints || [];
-        // Normalize backend fields
-        const normalized = raw.map(c => ({
-          ...c,
-          id: c._id || c.id,
-          address: c.address || c.location || "No address",
-          type: c.type || c.issueType || "General",
-          priority: c.priority || "low",
-          status: c.status || "received",
-          createdAt: c.created_at || c.createdAt,
-        }));
-        setComplaints(normalized);
-      }
-    } catch (err) {
-      console.error("Failed to fetch complaints", err);
-    }
+      const res  = await API.get("/api/complaints");
+      const data = res.data;
+      const raw = Array.isArray(data) ? data : data.complaints || [];
+      const VALID = ["pending","received","assigned","accepted","in_review","in_progress","resolved","completed","denied"];
+      setComplaints(raw.map(c => ({
+        ...c,
+        id:       c._id || c.id,
+        address:  c.address || c.location || "No address",
+        type:     c.type || c.issueType || "General",
+        priority: c.priority || "low",
+        status:   VALID.includes(c.status) ? c.status : "received",
+        createdAt: c.created_at || c.createdAt,
+      })));
+    } catch (err) { console.error("Failed to fetch complaints", err); }
+    finally { setLoadingComplaints(false); setRefreshing(false); }
   };
 
   const fetchUsers = async () => {
     try {
-      // TODO (Backend): GET /api/users — admin sees all users
-      const res = await fetch("http://localhost:5000/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const allUsers = Array.isArray(data) ? data : data.users || [];
-        setUsers(allUsers);
-        setVolunteers(allUsers.filter(u => u.role === "volunteer"));
-      }
-    } catch (err) {
-      console.error("Failed to fetch users", err);
-    }
+      const res  = await API.get("/api/users");
+      const data = res.data;
+      const allUsers = Array.isArray(data) ? data : data.users || [];
+      setUsers(allUsers);
+      setVolunteers(allUsers.filter(u => u.role === "volunteer"));
+    } catch (err) { console.error("Failed to fetch users", err); }
   };
 
   const assignVolunteer = async (complaintId) => {
@@ -712,50 +706,33 @@ function AdminDashboard() {
   };
 
   const markResolved = async (complaintId) => {
-  try {
-    const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: "resolved" }),
-    });
-    if (res.ok) fetchComplaints();
-  } catch (err) {
-    console.error("Resolve failed", err);
-  }
-};
+    try {
+      await API.put(`/api/complaints/status/${complaintId}`, { status: "resolved" });
+      fetchComplaints();
+    } catch (err) { console.error("Resolve failed", err); }
+  };
 
-const approveComplaint = async (complaintId) => {
-  try {
-    const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: "completed" }),  // ← changed from "resolved" to "completed"
-    });
-    if (res.ok) fetchComplaints();
-  } catch (err) {
-    console.error("Approve failed", err);
-  }
-};
+  // BACKEND: PUT /api/complaints/status/:id { status: "completed" }
+  // Admin approves a volunteer-resolved complaint → marks it as completed
+  const approveComplaint = async (complaintId) => {
+    try {
+      await API.put(`/api/complaints/status/${complaintId}`, { status: "completed" });
+      fetchComplaints();
+    } catch (err) { console.error("Approve failed", err); }
+  };
 
   const changeUserRole = async (userId, newRole) => {
     try {
-      // TODO (Backend): PATCH /api/users/:id/role { role }
-      const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ role: newRole }),
-      });
-      if (res.ok) fetchUsers();
-    } catch (err) {
-      console.error("Role change failed", err);
-    }
+      await API.patch(`/api/users/${userId}/role`, { role: newRole });
+      fetchUsers();
+    } catch (err) { console.error("Role change failed", err); }
   };
 
-  // ── Stats ───────────────────────────────────────────────────────────────────
-  const total = complaints.length;
-  const pending = complaints.filter(c => c.status === "pending" || c.status === "received").length;
-  const resolved = complaints.filter(c => c.status === "resolved").length;
-  const inProg = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+  const total    = complaints.length;
+  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+  const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
+  const inProg   = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
+  const denied   = complaints.filter(c => c.status === "denied").length;
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus =
@@ -837,12 +814,12 @@ const approveComplaint = async (complaintId) => {
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>System Overview</h1>
                 <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Monitor all civic complaints across the platform.</p>
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={total} label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={pending} label="Pending" accent="#f59e0b" />
-                <StatCard icon="🔄" count={inProg} label="In Progress" accent="#8b5cf6" />
-                <StatCard icon="✅" count={resolved} label="Resolved" accent="#22c55e" />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, marginBottom: 28 }}>
+                <StatCard icon="⚠️" count={total}    label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={pending}  label="Pending"          accent="#f59e0b" />
+                <StatCard icon="🔄" count={inProg}   label="In Progress"      accent="#8b5cf6" />
+                <StatCard icon="✅" count={resolved} label="Resolved"         accent="#22c55e" />
+                <StatCard icon="🚫" count={denied}   label="Denied"           accent="#ef4444" />
               </div>
               <div className="cs-card">
                 <div className="cs-section-header" style={{ marginBottom: 16 }}>
@@ -890,10 +867,11 @@ const approveComplaint = async (complaintId) => {
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
-                    { key: "all", label: "All", count: total },
-                    { key: "received", label: "Pending", count: pending },
-                    { key: "in_review", label: "In Progress", count: inProg },
-                    { key: "resolved", label: "Resolved", count: resolved },
+                    { key: "all",       label: "All",         count: total    },
+                    { key: "received",  label: "Pending",     count: pending  },
+                    { key: "in_review", label: "In Progress", count: inProg   },
+                    { key: "resolved",  label: "Resolved",    count: resolved },
+                    { key: "denied",    label: "Denied",      count: denied },
                   ].map(f => (
                     <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -908,21 +886,22 @@ const approveComplaint = async (complaintId) => {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)} />
                   <button
-                    onClick={() => fetchComplaints()}
+                    onClick={() => fetchComplaints(true)}
                     title="Refresh complaints"
-                    style={{
-                      background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 8,
-                      padding: "7px 11px", cursor: "pointer", fontSize: 15, color: "#6b7280",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
-                    onMouseLeave={e => e.currentTarget.style.background = "#f9fafb"}
-                  >🔄</button>
+                    style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    <style>{`@keyframes spin-a { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+                    <span style={{ display: "inline-block", animation: refreshing ? "spin-a 0.7s linear infinite" : "none" }}>🔄</span>
+                  </button>
                 </div>
               </div>
 
-              {filteredComplaints.length === 0 ? (
+              {loadingComplaints ? (
+                <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                  <div>Loading complaints…</div>
+                </div>
+              ) : filteredComplaints.length === 0 ? (
                 <div className="cs-empty">
                   <div className="cs-empty__icon">📭</div>
                   <div className="cs-empty__title">No complaints found</div>
@@ -946,11 +925,26 @@ const approveComplaint = async (complaintId) => {
                           <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
                           <TD><StatusBadge status={c.status} /></TD>
                           <TD>
-                            {c.status === "resolved" ? (
-                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
-                                ✅ {c.assigned_to?.name || "—"}
+                            {(c.status === "resolved" || c.status === "completed") ? (
+                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ {c.assigned_to?.name || "—"}</div>
+                            ) : c.status === "denied" ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>🚫 Denied by {c.assigned_to?.name || "volunteer"}</div>
+                                {assignSelections[c._id || c.id] ? (
+                                  <select className="cs-input" style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
+                                    value={assignSelections[c._id || c.id] || ""}
+                                    onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}>
+                                    <option value="">— Reassign Volunteer —</option>
+                                    {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+                                  </select>
+                                ) : (
+                                  <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11, color: "#dc2626", borderColor: "#fca5a5" }}
+                                    onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Reassign</button>
+                                )}
                               </div>
-                            ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
+                            ) : (c.status === "accepted" || c.status === "in_review" || c.status === "in_progress") ? (
+                              <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || "—"}</div>
+                            ) : c.status === "assigned" && c.assigned_to && !assignSelections[c._id || c.id] ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || c.assigned_to}</div>
                                 <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
@@ -970,37 +964,23 @@ const approveComplaint = async (complaintId) => {
                               {c.status === "completed" ? (
                                 <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>
                               ) : c.status === "resolved" ? (
-                                <button
-                                  onClick={() => approveComplaint(c._id || c.id)}
-                                  style={{
-                                    padding: "7px 16px", borderRadius: 8, border: "none",
-                                    background: "#16a34a", color: "#fff",
-                                    fontWeight: 700, fontSize: 13, cursor: "pointer",
-                                    display: "flex", alignItems: "center", gap: 6,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
+                                <button onClick={() => approveComplaint(c._id || c.id)}
+                                  style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
                                   ✓ Approve
                                 </button>
                               ) : c.status === "denied" ? (
                                 <>
                                   {assignSelections[c._id || c.id]?.trim() && (
                                     <button className="cs-btn cs-btn--primary cs-btn--sm" style={{ fontSize: 11 }}
-                                      onClick={() => assignVolunteer(c._id || c.id)}>
-                                      ⚠️ Reassign
-                                    </button>
+                                      onClick={() => assignVolunteer(c._id || c.id)}>⚠️ Reassign</button>
                                   )}
                                 </>
+                              ) : (c.status === "pending" || c.status === "received" || c.status === "assigned") ? (
+                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
+                                  onClick={() => assignVolunteer(c._id || c.id)}
+                                  disabled={!assignSelections[c._id || c.id]?.trim()}>Assign</button>
                               ) : (
-                                <>
-                                  {(!c.assigned_to || assignSelections[c._id || c.id]) && (
-                                    <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
-                                      onClick={() => assignVolunteer(c._id || c.id)}
-                                      disabled={!assignSelections[c._id || c.id]?.trim()}>Assign</button>
-                                  )}
-                                  <button className="cs-btn cs-btn--primary cs-btn--sm" style={{ fontSize: 11 }}
-                                    onClick={() => markResolved(c._id || c.id)}>✓ Resolve</button>
-                                </>
+                                null
                               )}
                             </div>
                           </TD>

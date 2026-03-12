@@ -1,6 +1,6 @@
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "../Dashboard.css";
 import Navbar from "./Navbar";
 import API from "../api";
@@ -383,36 +383,37 @@ export default function UserDashboard() {
 
   const [complaints, setComplaints]               = useState([]);
   const [loading, setLoading]                     = useState(true);
+  const [refreshing, setRefreshing]               = useState(false);
   const [activeFilter, setActiveFilter]           = useState("all");
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [searchQuery, setSearchQuery]             = useState("");
 
-  useEffect(() => {
-    const fetchComplaints = async () => {
-      try {
-        setLoading(true);
-        const res = await API.get("/api/complaints/my");
-        const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
-        setComplaints(raw.map(c => ({
-          ...c,
-          id:           c._id || c.id,
-          location:     c.address || c.location || "No location",
-          type:         c.type || c.issueType || "General",
-          upvotes:      c.upvotes   || 0,
-          downvotes:    c.downvotes || 0,
-          commentsList: c.commentsList || [],
-          comments:     c.comments  || 0,
-          createdAt:    c.created_at || c.createdAt || new Date().toISOString(),
-          updatedAt:    c.updated_at || c.updatedAt || new Date().toISOString(),
-        })));
-      } catch (err) {
-        console.error("Failed to fetch complaints", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchComplaints();
+  const fetchComplaints = useCallback(async (silent = false) => {
+    try {
+      if (!silent) setLoading(true); else setRefreshing(true);
+      const res = await API.get("/api/complaints/my");
+      const raw = Array.isArray(res.data) ? res.data : res.data.complaints || [];
+      setComplaints(raw.map(c => ({
+        ...c,
+        id:           c._id || c.id,
+        location:     c.address || c.location || "No location",
+        type:         c.type || c.issueType || "General",
+        upvotes:      c.upvotes   || 0,
+        downvotes:    c.downvotes || 0,
+        commentsList: c.commentsList || [],
+        comments:     c.comments  || 0,
+        createdAt:    c.created_at || c.createdAt || new Date().toISOString(),
+        updatedAt:    c.updated_at || c.updatedAt || new Date().toISOString(),
+      })));
+    } catch (err) {
+      console.error("Failed to fetch complaints", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => { fetchComplaints(false); }, [fetchComplaints]);
 
   const total    = complaints.length;
   const pending  = complaints.filter(c => ["received", "pending"].includes(c.status)).length;
@@ -508,17 +509,30 @@ export default function UserDashboard() {
                   </button>
                 ))}
               </div>
-              <input
-                className="cs-input cs-search-input"
-                placeholder="🔍 Search complaints..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  className="cs-input cs-search-input"
+                  placeholder="🔍 Search complaints..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
+                <button
+                  onClick={() => fetchComplaints(true)}
+                  title="Refresh"
+                  style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b" }}
+                >
+                  <span style={{ display: "inline-block", animation: refreshing ? "spin-r 0.7s linear infinite" : "none" }}>🔄</span>
+                  <style>{`@keyframes spin-r { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+                </button>
+              </div>
             </div>
 
             {/* Complaints Grid */}
             {loading ? (
-              <div className="cs-empty"><div className="cs-empty__icon">⏳</div><div className="cs-empty__title">Loading complaints…</div></div>
+              <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                <div>Loading complaints…</div>
+              </div>
             ) : filtered.length === 0 ? (
               <div className="cs-empty"><div className="cs-empty__icon">📭</div><div className="cs-empty__title">No complaints found</div><div className="cs-empty__desc">Try adjusting your search or filter.</div></div>
             ) : (
