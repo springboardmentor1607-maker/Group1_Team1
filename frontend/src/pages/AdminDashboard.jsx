@@ -653,7 +653,9 @@ function AdminDashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchComplaints(); fetchUsers(); }, []);
 
-  const fetchComplaints = async () => {
+  const fetchComplaints = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoadingComplaints(true);
     try {
       const res = await fetch("http://localhost:5000/api/complaints", {
         headers: { Authorization: `Bearer ${token}` },
@@ -926,21 +928,22 @@ function AdminDashboard() {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)} />
                   <button
-                    onClick={() => fetchComplaints()}
+                    onClick={() => fetchComplaints(true)}
                     title="Refresh complaints"
-                    style={{
-                      background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 8,
-                      padding: "7px 11px", cursor: "pointer", fontSize: 15, color: "#6b7280",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
-                    onMouseLeave={e => e.currentTarget.style.background = "#f9fafb"}
-                  >🔄</button>
+                    style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    <style>{`@keyframes spin-a { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+                    <span style={{ display: "inline-block", animation: refreshing ? "spin-a 0.7s linear infinite" : "none" }}>🔄</span>
+                  </button>
                 </div>
               </div>
 
-              {filteredComplaints.length === 0 ? (
+              {loadingComplaints ? (
+                <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                  <div>Loading complaints…</div>
+                </div>
+              ) : filteredComplaints.length === 0 ? (
                 <div className="cs-empty">
                   <div className="cs-empty__icon">📭</div>
                   <div className="cs-empty__title">No complaints found</div>
