@@ -26,7 +26,7 @@ const complaintSchema = new mongoose.Schema(
 
     priority: {
       type: String,
-      enum: ["low", "medium", "high", "urgent"],
+      enum: ["low", "medium", "high", "urgent", "critical"],
       default: "medium",
     },
 
@@ -65,7 +65,17 @@ const complaintSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["received", "in_review", "resolved"],
+      enum: [
+        "received",
+        "pending",
+        "assigned",
+        "accepted",
+        "in_review",
+        "in_progress",
+        "denied",
+        "resolved",
+        "completed",
+      ],
       default: "received",
     },
 
@@ -82,7 +92,7 @@ const complaintSchema = new mongoose.Schema(
 
     voters: [
       {
-        user:     { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         voteType: { type: String, enum: ["upvote", "downvote"] },
       },
     ],
@@ -95,8 +105,8 @@ const complaintSchema = new mongoose.Schema(
 
     commentsList: [
       {
-        user_id:   { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        content:   { type: String, required: true },
+        user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        content: { type: String, required: true },
         timestamp: { type: Date, default: Date.now },
       },
     ],
