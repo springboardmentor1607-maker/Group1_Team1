@@ -1,6 +1,6 @@
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../Profile.css";
 import Navbar from "./Navbar";
 import API from "../api";
@@ -82,10 +82,77 @@ function StatMini({ icon, value, label, colorClass }) {
     );
 }
 
+// ─── Time helper ─────────────────────────────────────────────────────────────
+function timeAgo(dateStr) {
+    if (!dateStr) return "—";
+    const diff  = Date.now() - new Date(dateStr).getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins  < 1)   return "Just now";
+    if (mins  < 60)  return `${mins}m ago`;
+    if (hours < 24)  return `${hours}h ago`;
+    if (days  === 1) return "Yesterday";
+    return `${days}d ago`;
+}
+
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function Profile() {
     const navigate = useNavigate();
     const { user, updateUser, logout } = useAuth();
+
+    // ── Real stats + activity fetched from complaints API ──────────────────
+    const [stats, setStats]           = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
+    const [complaints, setComplaints] = useState([]);
+    const [activityLoading, setActivityLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                setActivityLoading(true);
+
+                // Admin gets all complaints; volunteer gets their assignments; user gets their own
+                const endpoint = user?.role === "admin"
+                    ? "/api/complaints"
+                    : user?.role === "volunteer"
+                        ? "/api/complaints/assigned-to-me"
+                        : "/api/complaints/my";
+
+                const res = await API.get(endpoint);
+
+                // Handle all possible response shapes
+                let raw = [];
+                if (Array.isArray(res.data))                    raw = res.data;
+                else if (Array.isArray(res.data?.complaints))   raw = res.data.complaints;
+                else if (Array.isArray(res.data?.data))         raw = res.data.data;
+
+                setComplaints(raw);
+
+                const reports  = raw.length;
+                const resolved = raw.filter(c => ["resolved", "completed"].includes(c.status)).length;
+                const votes    = raw.reduce((sum, c) => sum + (Number(c.upvotes) || 0), 0);
+
+                let badges = 0;
+                if (user?.role === "volunteer") {
+                    if (reports >= 1)  badges += 1;
+                    if (resolved >= 5) badges += 1;
+                } else {
+                    if (reports >= 1)  badges += 1;
+                    if (votes >= 10)   badges += 1;
+                    if (resolved >= 5) badges += 1;
+                }
+
+                setStats({ reports, resolved, votes, badges });
+            } catch (err) {
+                console.error("[Profile] fetch failed:", err?.response?.status, err?.message);
+            } finally {
+                setActivityLoading(false);
+            }
+        };
+
+        fetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // run once on mount — user is already in context by then (same as Dashboard.jsx)
 
     // Dynamic data from AuthContext with fallbacks
     const initialData = {
@@ -97,37 +164,43 @@ function Profile() {
         bio: user?.bio || "",
     };
 
-    const [formData, setFormData] = useState(initialData);
+    const [formData, setFormData]   = useState(initialData);
     const [savedData, setSavedData] = useState(initialData);
-    const [editMode, setEditMode] = useState(false);
-    const [message, setMessage] = useState("");
+    const [editMode, setEditMode]   = useState(false);
+    const [message, setMessage]     = useState("");
     const [activeTab, setActiveTab] = useState("info");
 
-    const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
-    const handleEdit = () => { setEditMode(true); setMessage(""); };
-    const handleCancel = () => { setFormData(savedData); setEditMode(false); setMessage(""); };
-    const handleSave = () => {
+    const handleChange  = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
+    const handleEdit    = () => { setEditMode(true); setMessage(""); };
+    const handleCancel  = () => { setFormData(savedData); setEditMode(false); setMessage(""); };
+    const handleSave    = () => {
         setSavedData(formData);
-        updateUser({ name: formData.fullName, username: formData.username, email: formData.email, phone: formData.phone, location: formData.location, bio: formData.bio });
+        updateUser({
+            name: formData.fullName, username: formData.username,
+            email: formData.email,   phone: formData.phone,
+            location: formData.location, bio: formData.bio,
+        });
         setEditMode(false);
         setMessage("Profile updated successfully ✅");
     };
-    const handleLogout = () => {
-        logout();
-        navigate("/login");
-    };
+    const handleLogout  = () => { logout(); navigate("/login"); };
 
     const fields = [
-        { name: "username", label: "Username", icon: "👤", type: "text" },
-        { name: "email", label: "Email", icon: "✉️", type: "email" },
-        { name: "fullName", label: "Full Name", icon: "🪪", type: "text" },
-        { name: "phone", label: "Phone Number", icon: "📞", type: "tel" },
+        { name: "username", label: "Username",     icon: "👤", type: "text"  },
+        { name: "email",    label: "Email",         icon: "✉️", type: "email" },
+        { name: "fullName", label: "Full Name",     icon: "🪪", type: "text"  },
+        { name: "phone",    label: "Phone Number",  icon: "📞", type: "tel"   },
     ];
 
     const tabs = ["info", "activity", "security"];
+    const avatarText = savedData.fullName
+        ? savedData.fullName.substring(0, 2).toUpperCase()
+        : "DU";
 
-    // Avatar initials from name
-    const avatarText = savedData.fullName ? savedData.fullName.substring(0, 2).toUpperCase() : "DU";
+    // Format member since date
+    const memberSince = user?.createdAt || user?.memberSince
+        ? new Date(user.createdAt || user.memberSince).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+        : "July 2025";
 
     return (
         <div className="pf-page">
@@ -143,19 +216,22 @@ function Profile() {
                     <div className="pf-hero__text">
                         <p className="pf-hero__eyebrow">👤 My Profile</p>
                         <h1 className="pf-hero__title">{savedData.fullName}</h1>
-                        <p className="pf-hero__sub">@{savedData.username} · Member since {user?.memberSince || "July 2025"}</p>
+                        <p className="pf-hero__sub">
+                            @{savedData.username} · Member since {memberSince}
+                        </p>
                     </div>
-                    {/*
-                      TODO (Backend): Replace these zeros with real user stats.
-                      Suggested endpoint: GET /api/users/me/stats
-                      Expected response: { totalReports, resolved, votes, badges }
-                    */}
+
+                    {/* ── Live stats from API — hidden for admin ── */}
+                    {user?.role !== "admin" && (
                     <div className="pf-hero__stats">
-                        <StatMini icon="⚠️" value="0" label="Reports" colorClass="pf-stat--blue" />
-                        <StatMini icon="✅" value="0" label="Resolved" colorClass="pf-stat--green" />
-                        <StatMini icon="👍" value="0" label="Votes" colorClass="pf-stat--purple" />
-                        <StatMini icon="🏅" value="0" label="Badges" colorClass="pf-stat--yellow" />
+                        <StatMini icon="⚠️" value={stats.reports}  label="Reports"  colorClass="pf-stat--blue"   />
+                        <StatMini icon="✅" value={stats.resolved} label="Resolved" colorClass="pf-stat--green"  />
+                        {user?.role !== "volunteer" && (
+                            <StatMini icon="👍" value={stats.votes} label="Votes" colorClass="pf-stat--purple" />
+                        )}
+                        <StatMini icon="🏅" value={stats.badges}   label="Badges"   colorClass="pf-stat--yellow" />
                     </div>
+                    )}
                 </div>
 
                 {/* ── Main grid ── */}
@@ -171,7 +247,9 @@ function Profile() {
                             </div>
                             <h2 className="pf-avatar-card__name">{savedData.fullName}</h2>
                             <p className="pf-avatar-card__username">@{savedData.username}</p>
-                            <span className="pf-role-badge">🧑‍💼 {user?.role === "user" ? "Citizen" : user?.role || "user"}</span>
+                            <span className="pf-role-badge">
+                                🧑‍💼 {user?.role === "user" ? "Citizen" : user?.role || "user"}
+                            </span>
                             <p className="pf-avatar-card__bio">{savedData.bio}</p>
                             <div className="pf-avatar-card__divider" />
                             <div className="pf-avatar-card__meta">
@@ -179,36 +257,46 @@ function Profile() {
                                 <span>📞 {savedData.phone}</span>
                                 <span>✉️ {savedData.email}</span>
                             </div>
-                            <p className="pf-avatar-card__since">Member since {user?.memberSince || "July 3, 2025"}</p>
+                            <p className="pf-avatar-card__since">Member since {memberSince}</p>
                         </div>
 
-                        {/* Badges card */}
-                        <div className="pf-badges-card">
+                        {/* Badges card — hidden for admin */}
+                        {user?.role !== "admin" && <div className="pf-badges-card">
                             <div className="pf-badges-card__title">🏅 Civic Badges</div>
                             <div className="pf-badges-list">
-                                <div className="pf-badge-item">
-                                    <span className="pf-badge-item__icon">🌟</span>
+                                <div className={`pf-badge-item${stats.reports < 1 ? " pf-badge-item--locked" : ""}`}>
+                                    <span className="pf-badge-item__icon">{stats.reports >= 1 ? "🌟" : "🔒"}</span>
                                     <div>
-                                        <div className="pf-badge-item__name">First Report</div>
-                                        <div className="pf-badge-item__desc">Submitted your first civic issue</div>
+                                        <div className="pf-badge-item__name">{user?.role === "volunteer" ? "First Assignment" : "First Report"}</div>
+                                        <div className="pf-badge-item__desc">{user?.role === "volunteer" ? "Received your first assignment" : "Submitted your first civic issue"}</div>
                                     </div>
                                 </div>
-                                <div className="pf-badge-item">
-                                    <span className="pf-badge-item__icon">🤝</span>
+                                {user?.role !== "volunteer" && (
+                                <div className={`pf-badge-item${stats.votes < 10 ? " pf-badge-item--locked" : ""}`}>
+                                    <span className="pf-badge-item__icon">{stats.votes >= 10 ? "🤝" : "🔒"}</span>
                                     <div>
                                         <div className="pf-badge-item__name">Community Helper</div>
-                                        <div className="pf-badge-item__desc">Voted on 10+ community issues</div>
+                                        <div className="pf-badge-item__desc">
+                                            {stats.votes >= 10
+                                                ? "Voted on 10+ community issues"
+                                                : `${stats.votes}/10 votes to unlock`}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="pf-badge-item pf-badge-item--locked">
-                                    <span className="pf-badge-item__icon">🔒</span>
+                                )}
+                                <div className={`pf-badge-item${stats.resolved < 5 ? " pf-badge-item--locked" : ""}`}>
+                                    <span className="pf-badge-item__icon">{stats.resolved >= 5 ? "🏆" : "🔒"}</span>
                                     <div>
                                         <div className="pf-badge-item__name">Street Champion</div>
-                                        <div className="pf-badge-item__desc">Get 5 issues resolved</div>
+                                        <div className="pf-badge-item__desc">
+                                            {stats.resolved >= 5
+                                                ? "Got 5 issues resolved!"
+                                                : `${stats.resolved}/5 resolved to unlock`}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </div>}
 
                     </aside>
 
@@ -223,7 +311,7 @@ function Profile() {
                                     className={`pf-tab${activeTab === tab ? " pf-tab--active" : ""}`}
                                     onClick={() => setActiveTab(tab)}
                                 >
-                                    {tab === "info" && "📋 Account Info"}
+                                    {tab === "info"     && "📋 Account Info"}
                                     {tab === "activity" && "🕐 Activity"}
                                     {tab === "security" && "🔒 Security"}
                                 </button>
@@ -296,25 +384,78 @@ function Profile() {
                                 <div className="pf-card__header">
                                     <div>
                                         <h2 className="pf-card__title">Recent Activity</h2>
-                                        <p className="pf-card__sub">Your latest actions on CleanStreet</p>
+                                        <p className="pf-card__sub">{user?.role === "admin" ? "Latest complaints submitted on the platform" : "Your latest actions on CleanStreet"}</p>
                                     </div>
                                 </div>
                                 <div className="pf-activity-list">
-                                    {[
-                                        { icon: "✅", text: "Pothole on Main Street resolved", time: "2 hours ago", color: "#22c55e" },
-                                        { icon: "➕", text: "Reported broken streetlight on Elm Ave", time: "4 hours ago", color: "#3b82f6" },
-                                        { icon: "🔄", text: "Garbage dump complaint updated", time: "6 hours ago", color: "#f59e0b" },
-                                        { icon: "💬", text: "New comment on water leak report", time: "1 day ago", color: "#8b5cf6" },
-                                        { icon: "👍", text: "Voted on 3 community issues", time: "2 days ago", color: "#06b6d4" },
-                                    ].map((a, i) => (
-                                        <div key={i} className="pf-activity-item">
-                                            <div className="pf-activity-item__icon" style={{ background: a.color + "18" }}>{a.icon}</div>
-                                            <div className="pf-activity-item__body">
-                                                <p className="pf-activity-item__text">{a.text}</p>
-                                                <p className="pf-activity-item__time">{a.time}</p>
+                                    {activityLoading ? (
+                                        <div style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>
+                                            <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
+                                            <div style={{ fontSize: 14 }}>Loading activity…</div>
+                                        </div>
+                                    ) : complaints.length === 0 ? (
+                                        <div style={{ padding: "32px", textAlign: "center", color: "#94a3b8" }}>
+                                            <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+                                            <div style={{ fontSize: 14, fontWeight: 600 }}>No activity yet</div>
+                                            <div style={{ fontSize: 12, marginTop: 4 }}>
+                                                {user?.role === "admin"
+                                                    ? "No complaints have been submitted to the platform yet."
+                                                    : user?.role === "volunteer"
+                                                        ? "No assignments yet. Check back once admin assigns you a complaint."
+                                                        : "Start by reporting a civic issue in your area!"}
                                             </div>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        // Sort by most recent first, take up to 10
+                                        [...complaints]
+                                            .sort((a, b) => new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt) - new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt))
+                                            .slice(0, 10)
+                                            .map((c, i) => {
+                                                const status  = c.status || "received";
+                                                const dateStr = c.updated_at || c.updatedAt || c.created_at || c.createdAt;
+
+                                                // Icon + color + text based on status — matching Dashboard.jsx logic
+                                                const STATUS_DISPLAY = {
+                                                    completed:   { icon: "🏆", color: "#10b981", verb: "completed"   },
+                                                    resolved:    { icon: "🎉", color: "#22c55e", verb: "resolved"    },
+                                                    denied:      { icon: "🚫", color: "#ef4444", verb: "denied"      },
+                                                    accepted:    { icon: "✅", color: "#16a34a", verb: "accepted"    },
+                                                    in_progress: { icon: "🔄", color: "#8b5cf6", verb: "in progress" },
+                                                    in_review:   { icon: "🔄", color: "#8b5cf6", verb: "in review"  },
+                                                    assigned:    { icon: "👤", color: "#f59e0b", verb: "assigned"    },
+                                                    received:    { icon: "➕", color: "#3b82f6", verb: "submitted"   },
+                                                    pending:     { icon: "➕", color: "#3b82f6", verb: "submitted"   },
+                                                };
+                                                const disp = STATUS_DISPLAY[status] || STATUS_DISPLAY.received;
+
+                                                const text = user?.role === "admin"
+                                                    ? `[${(c.user_id?.name || "User")}] "${c.title}" — ${disp.verb}`
+                                                    : user?.role === "volunteer"
+                                                        ? `"${c.title}" marked as ${disp.verb}`
+                                                        : status === "received" || status === "pending"
+                                                            ? `Reported: ${c.title}`
+                                                            : `"${c.title}" is now ${disp.verb}`;
+
+                                                return (
+                                                    <div key={c._id || i} className="pf-activity-item">
+                                                        <div className="pf-activity-item__icon" style={{ background: disp.color + "18", color: disp.color }}>
+                                                            {disp.icon}
+                                                        </div>
+                                                        <div className="pf-activity-item__body">
+                                                            <p className="pf-activity-item__text">{text}</p>
+                                                            <p className="pf-activity-item__time">{timeAgo(dateStr)}</p>
+                                                        </div>
+                                                        <span style={{
+                                                            fontSize: 10, fontWeight: 700, padding: "2px 8px",
+                                                            borderRadius: 9999, background: disp.color + "18",
+                                                            color: disp.color, whiteSpace: "nowrap",
+                                                        }}>
+                                                            {status.replace("_", " ").toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -331,10 +472,10 @@ function Profile() {
                                     </div>
                                     <div className="pf-security-list">
                                         {[
-                                            { icon: "🔑", title: "Password", sub: "Last changed 30 days ago", btn: "Change Password" },
-                                            { icon: "📱", title: "Two-Factor Authentication", sub: "Add an extra layer of security", btn: "Enable 2FA" },
-                                            { icon: "🛡️", title: "Privacy Settings", sub: "Control who sees your activity", btn: "Manage" },
-                                            { icon: "🔔", title: "Notifications", sub: "Email and push preferences", btn: "Configure" },
+                                            { icon: "🔑", title: "Password",                  sub: "Last changed 30 days ago",          btn: "Change Password" },
+                                            { icon: "📱", title: "Two-Factor Authentication", sub: "Add an extra layer of security",     btn: "Enable 2FA"      },
+                                            { icon: "🛡️", title: "Privacy Settings",          sub: "Control who sees your activity",    btn: "Manage"          },
+                                            { icon: "🔔", title: "Notifications",             sub: "Email and push preferences",        btn: "Configure"       },
                                         ].map((item, i) => (
                                             <div key={i} className="pf-security-item">
                                                 <div className="pf-security-item__left">
