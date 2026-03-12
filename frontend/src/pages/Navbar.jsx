@@ -85,7 +85,6 @@ const NAV_LINKS = {
   admin: [
     { label: "Admin Panel",      path: "/admin"             },
     { label: "Issue Map",        path: "/map"               },
-    { label: "User Dashboard",   path: "/dashboard"         },
   ],
 };
 
