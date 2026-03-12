@@ -77,11 +77,11 @@ function CleanStreetLogo({ size = 44 }) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    resolved:  { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved"    },
-    assigned:  { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"    },
-    pending:   { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
-    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
-    received:  { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
+    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
+    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
+    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Review" },
+    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Received" },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
   const s = map[key] || map["pending"];
@@ -148,10 +148,10 @@ const TD = ({ children, style }) => (
 
 // ─── Reports Tab ─────────────────────────────────────────────────────────────
 function ReportsTab({ complaints, users, volunteers }) {
-  const total       = complaints.length;
-  const pending     = complaints.filter(c => c.status === "received" || c.status === "pending").length;
-  const inProgress  = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
-  const resolved    = complaints.filter(c => c.status === "resolved").length;
+  const total      = complaints.length;
+  const received   = complaints.filter(c => c.status === "received").length;
+  const inReview   = complaints.filter(c => c.status === "in_review").length;
+  const resolved   = complaints.filter(c => c.status === "resolved").length;
   const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
   const byType = complaints.reduce((acc, c) => {
@@ -653,7 +653,7 @@ function AdminDashboard() {
   const [searchQuery, setSearchQuery]       = useState("");
   const [statusFilter, setStatusFilter]     = useState("all");
 
-  const token  = localStorage.getItem("token");
+  const token = localStorage.getItem("token");
   const avatar = user?.name ? getInitials(user.name) : "AD";
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -661,33 +661,44 @@ function AdminDashboard() {
 
   const fetchComplaints = async () => {
     try {
-      const res  = await fetch("http://localhost:5000/api/complaints", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch("http://localhost:5000/api/complaints", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (res.ok) {
         const raw = Array.isArray(data) ? data : data.complaints || [];
-        setComplaints(raw.map(c => ({
+        // Normalize backend fields
+        const normalized = raw.map(c => ({
           ...c,
-          id:       c._id || c.id,
-          address:  c.address || c.location || "No address",
-          type:     c.type || c.issueType || "General",
+          id: c._id || c.id,
+          address: c.address || c.location || "No address",
+          type: c.type || c.issueType || "General",
           priority: c.priority || "low",
-          status:   c.status || "received",
+          status: c.status || "received",
           createdAt: c.created_at || c.createdAt,
-        })));
+        }));
+        setComplaints(normalized);
       }
-    } catch (err) { console.error("Failed to fetch complaints", err); }
+    } catch (err) {
+      console.error("Failed to fetch complaints", err);
+    }
   };
 
   const fetchUsers = async () => {
     try {
-      const res  = await fetch("http://localhost:5000/api/users", { headers: { Authorization: `Bearer ${token}` } });
+      // TODO (Backend): GET /api/users — admin sees all users
+      const res = await fetch("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (res.ok) {
         const allUsers = Array.isArray(data) ? data : data.users || [];
         setUsers(allUsers);
         setVolunteers(allUsers.filter(u => u.role === "volunteer"));
       }
-    } catch (err) { console.error("Failed to fetch users", err); }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
   };
 
   const assignVolunteer = async (complaintId) => {
@@ -702,33 +713,45 @@ function AdminDashboard() {
 
   const markResolved = async (complaintId) => {
     try {
+      // Backend: PUT /api/complaints/status/:id { status }
       const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: "resolved" }),
       });
       if (res.ok) fetchComplaints();
-    } catch (err) { console.error("Resolve failed", err); }
+    } catch (err) {
+      console.error("Resolve failed", err);
+    }
   };
 
   const changeUserRole = async (userId, newRole) => {
     try {
+      // TODO (Backend): PATCH /api/users/:id/role { role }
       const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ role: newRole }),
       });
       if (res.ok) fetchUsers();
-    } catch (err) { console.error("Role change failed", err); }
+    } catch (err) {
+      console.error("Role change failed", err);
+    }
   };
 
-  const total    = complaints.length;
-  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  const total = complaints.length;
+  const pending = complaints.filter(c => c.status === "pending" || c.status === "received").length;
   const resolved = complaints.filter(c => c.status === "resolved").length;
-  const inProg   = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
+  const inProg = complaints.filter(c => c.status === "in_review" || c.status === "assigned").length;
 
   const filteredComplaints = complaints.filter(c => {
-    const matchStatus = statusFilter === "all" || c.status === statusFilter;
+    const matchStatus =
+      statusFilter === "all"         ? true :
+      statusFilter === "received"    ? ["received", "pending"].includes(c.status) :
+      statusFilter === "in_review"   ? ["assigned", "accepted", "in_review", "in_progress"].includes(c.status) :
+      statusFilter === "denied"      ? c.status === "denied" :
+      c.status === statusFilter;
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -802,11 +825,12 @@ function AdminDashboard() {
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>System Overview</h1>
                 <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Monitor all civic complaints across the platform.</p>
               </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={total}    label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={pending}  label="Pending"          accent="#f59e0b" />
-                <StatCard icon="🔄" count={inProg}   label="In Progress"      accent="#8b5cf6" />
-                <StatCard icon="✅" count={resolved} label="Resolved"         accent="#22c55e" />
+                <StatCard icon="⚠️" count={total} label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={pending} label="Pending" accent="#f59e0b" />
+                <StatCard icon="🔄" count={inProg} label="In Progress" accent="#8b5cf6" />
+                <StatCard icon="✅" count={resolved} label="Resolved" accent="#22c55e" />
               </div>
               <div className="cs-card">
                 <div className="cs-section-header" style={{ marginBottom: 16 }}>
@@ -854,10 +878,10 @@ function AdminDashboard() {
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
-                    { key: "all",       label: "All",         count: total    },
-                    { key: "received",  label: "Pending",     count: pending  },
-                    { key: "in_review", label: "In Progress", count: inProg   },
-                    { key: "resolved",  label: "Resolved",    count: resolved },
+                    { key: "all", label: "All", count: total },
+                    { key: "received", label: "Pending", count: pending },
+                    { key: "in_review", label: "In Progress", count: inProg },
+                    { key: "resolved", label: "Resolved", count: resolved },
                   ].map(f => (
                     <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -866,10 +890,24 @@ function AdminDashboard() {
                     </button>
                   ))}
                 </div>
-                <input className="cs-input cs-search-input"
-                  placeholder="🔍 Search complaints..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input className="cs-input cs-search-input"
+                    placeholder="🔍 Search complaints..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)} />
+                  <button
+                    onClick={() => fetchComplaints()}
+                    title="Refresh complaints"
+                    style={{
+                      background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 8,
+                      padding: "7px 11px", cursor: "pointer", fontSize: 15, color: "#6b7280",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
+                    onMouseLeave={e => e.currentTarget.style.background = "#f9fafb"}
+                  >🔄</button>
+                </div>
               </div>
 
               {filteredComplaints.length === 0 ? (
@@ -897,7 +935,9 @@ function AdminDashboard() {
                           <TD><StatusBadge status={c.status} /></TD>
                           <TD>
                             {c.status === "resolved" ? (
-                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ {c.assigned_to?.name || "—"}</div>
+                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                                ✅ {c.assigned_to?.name || "—"}
+                              </div>
                             ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || c.assigned_to}</div>
@@ -915,8 +955,30 @@ function AdminDashboard() {
                           </TD>
                           <TD>
                             <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
-                              {c.status === "resolved" ? (
-                                <span style={{ fontSize: 12, color: "#9ca3af" }}>Completed</span>
+                              {c.status === "completed" ? (
+                                <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>
+                              ) : c.status === "resolved" ? (
+                                <button
+                                  onClick={() => approveComplaint(c._id || c.id)}
+                                  style={{
+                                    padding: "7px 16px", borderRadius: 8, border: "none",
+                                    background: "#16a34a", color: "#fff",
+                                    fontWeight: 700, fontSize: 13, cursor: "pointer",
+                                    display: "flex", alignItems: "center", gap: 6,
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  ✓ Approve
+                                </button>
+                              ) : c.status === "denied" ? (
+                                <>
+                                  {assignSelections[c._id || c.id]?.trim() && (
+                                    <button className="cs-btn cs-btn--primary cs-btn--sm" style={{ fontSize: 11 }}
+                                      onClick={() => assignVolunteer(c._id || c.id)}>
+                                      ⚠️ Reassign
+                                    </button>
+                                  )}
+                                </>
                               ) : (
                                 <>
                                   {(!c.assigned_to || assignSelections[c._id || c.id]) && (

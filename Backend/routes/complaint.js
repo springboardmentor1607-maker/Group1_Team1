@@ -71,7 +71,26 @@ router.get("/my", protect, async (req, res) => {
 });
 
 // ============================================================
-// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS
+// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS — volunteer dashboard
+// ⚠️ Must be BEFORE "/:id"
+// ============================================================
+router.get("/assigned-to-me", protect, async (req, res) => {
+  try {
+    console.log("🔍 assigned-to-me hit, user:", req.user?._id, "role:", req.user?.role);
+    const complaints = await Complaint.find({ assigned_to: req.user._id })
+      .populate("user_id",     "name email")
+      .populate("assigned_to", "name email")
+      .sort({ created_at: -1 });
+    console.log("✅ complaints found:", complaints.length);
+    res.json(complaints);
+  } catch (error) {
+    console.error("❌ assigned-to-me error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ============================================================
+// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS (legacy)
 // ⚠️ Must be BEFORE "/:id"
 // ============================================================
 router.get("/my-assignments", protect, authorize("volunteer"), async (req, res) => {
