@@ -82,9 +82,9 @@ function StatusBadge({ status }) {
     assigned:    { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"    },
     accepted:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted"    },
     pending:     { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
+    received:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
     in_review:   { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
     in_progress: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
-    received:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
     denied:      { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied"      },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
@@ -153,9 +153,9 @@ const TD = ({ children, style }) => (
 // ─── Reports Tab ─────────────────────────────────────────────────────────────
 function ReportsTab({ complaints, users, volunteers }) {
   const total       = complaints.length;
-  const pending     = complaints.filter(c => c.status === "received" || c.status === "pending").length;
+  const resolved    = complaints.filter(c => ["resolved", "completed"].includes(c.status)).length;
+  const pending     = complaints.filter(c => ["pending", "received"].includes(c.status)).length;
   const inProgress  = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
-  const resolved    = complaints.filter(c => c.status === "resolved").length;
   const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
   const byType = complaints.reduce((acc, c) => {
@@ -172,7 +172,7 @@ function ReportsTab({ complaints, users, volunteers }) {
 
   const volStats = volunteers.map(v => ({
     name:     v.name,
-    resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length,
+    resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && ["resolved", "completed"].includes(c.status)).length,
     assigned: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length,
   })).sort((a, b) => b.resolved - a.resolved);
 
@@ -217,9 +217,12 @@ function ReportsTab({ complaints, users, volunteers }) {
         th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
         td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
         .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
-        .resolved { background: #dcfce7; color: #166534; }
-        .in_review { background: #ede9fe; color: #5b21b6; }
-        .received  { background: #dbeafe; color: #1d4ed8; }
+        .resolved    { background: #dcfce7; color: #166534; }
+        .completed   { background: #d1fae5; color: #065f46; }
+        .in_review   { background: #ede9fe; color: #5b21b6; }
+        .in_progress { background: #ede9fe; color: #5b21b6; }
+        .received    { background: #dbeafe; color: #1d4ed8; }
+        .denied      { background: #fee2e2; color: #991b1b; }
         @media print { body { padding: 20px; } }
       </style></head><body>
       <h1>🌿 CleanStreet — Summary Report</h1>
@@ -234,7 +237,7 @@ function ReportsTab({ complaints, users, volunteers }) {
         <div class="stat-box"><div class="stat-num">${resolveRate}%</div><div class="stat-label">Resolution Rate</div></div>
         <div class="stat-box"><div class="stat-num">${users.length}</div><div class="stat-label">Total Users</div></div>
         <div class="stat-box"><div class="stat-num">${volunteers.length}</div><div class="stat-label">Volunteers</div></div>
-        <div class="stat-box"><div class="stat-num">${total - resolved}</div><div class="stat-label">Pending</div></div>
+        <div class="stat-box"><div class="stat-num">${total - resolved}</div><div class="stat-label">Unresolved</div></div>
       </div>
       <div class="section">
         <div class="section-title">Complaints by Type</div>
@@ -282,8 +285,8 @@ function ReportsTab({ complaints, users, volunteers }) {
 
   const downloadSingleReport = (c) => {
     const id          = String(c._id).slice(-6).toUpperCase();
-    const statusColor = c.status === "resolved" ? "#166534" : c.status === "in_review" ? "#5b21b6" : "#1d4ed8";
-    const statusBg    = c.status === "resolved" ? "#dcfce7" : c.status === "in_review" ? "#ede9fe" : "#dbeafe";
+    const statusColor = ["resolved", "completed"].includes(c.status) ? "#166534" : ["in_review", "in_progress"].includes(c.status) ? "#5b21b6" : c.status === "denied" ? "#991b1b" : "#1d4ed8";
+    const statusBg    = ["resolved", "completed"].includes(c.status) ? "#dcfce7" : ["in_review", "in_progress"].includes(c.status) ? "#ede9fe" : c.status === "denied" ? "#fee2e2" : "#dbeafe";
     const html = `
       <html><head><title>Complaint #${id}</title>
       <style>
@@ -364,8 +367,8 @@ function ReportsTab({ complaints, users, volunteers }) {
   const totalPages = Math.ceil(complaints.length / PAGE_SIZE);
   const pagedComplaints = complaints.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const barMax         = Math.max(...Object.values(byType), 1);
-  const TYPE_COLORS    = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
+  const barMax          = Math.max(...Object.values(byType), 1);
+  const TYPE_COLORS     = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
   const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", urgent: "#ef4444", critical: "#dc2626" };
 
   return (
@@ -390,7 +393,7 @@ function ReportsTab({ complaints, users, volunteers }) {
         </div>
       </div>
 
-      {/* ── Stats Row — NOW: Pending / In Progress / Resolved ── */}
+      {/* Stats Row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
         {[
           { label: "Total Complaints", value: total,       icon: "📋", color: "#3b82f6" },
@@ -438,7 +441,7 @@ function ReportsTab({ complaints, users, volunteers }) {
           )}
         </div>
 
-        {/* Resolution Rate — legend NOW shows Pending / In Progress / Resolved */}
+        {/* Resolution Rate */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🎯 Resolution Rate</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: "10px 0" }}>
@@ -535,7 +538,6 @@ function ReportsTab({ complaints, users, volunteers }) {
 
       {/* All Complaints Table — Paginated */}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
-        {/* Table header + page info */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>📋 All Complaints</div>
           <div style={{ fontSize: 12, color: "#6b7280" }}>
@@ -564,16 +566,7 @@ function ReportsTab({ complaints, users, volunteers }) {
                     <span style={{ background: (PRIORITY_COLORS[c.priority] || "#6b7280") + "20", color: PRIORITY_COLORS[c.priority] || "#6b7280", padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 700, textTransform: "capitalize" }}>{c.priority || "medium"}</span>
                   </td>
                   <td style={{ padding: "10px 12px" }}>
-                    <span style={{
-                      background: c.status === "resolved" ? "#dcfce7" : c.status === "in_review" || c.status === "assigned" ? "#ede9fe" : "#dbeafe",
-                      color: c.status === "resolved" ? "#166534" : c.status === "in_review" || c.status === "assigned" ? "#5b21b6" : "#1d4ed8",
-                      padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 600,
-                    }}>
-                      {c.status === "received" || c.status === "pending" ? "Pending"
-                        : c.status === "in_review" || c.status === "assigned" ? "In Progress"
-                        : c.status === "resolved" ? "Resolved"
-                        : c.status?.replace("_", " ")}
-                    </span>
+                    <StatusBadge status={c.status} />
                   </td>
                   <td style={{ padding: "10px 12px", color: "#6b7280" }}>{c.user_id?.name || "—"}</td>
                   <td style={{ padding: "10px 12px", color: "#9ca3af" }}>{new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
@@ -592,7 +585,6 @@ function ReportsTab({ complaints, users, volunteers }) {
         {/* Pagination controls */}
         {totalPages > 1 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, paddingTop: 16, borderTop: "1px solid #f3f4f6", marginTop: 12 }}>
-            {/* Prev */}
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
@@ -604,7 +596,6 @@ function ReportsTab({ complaints, users, volunteers }) {
                 fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
               }}>‹</button>
 
-            {/* Page numbers — show max 7 buttons with ellipsis */}
             {Array.from({ length: totalPages }, (_, i) => i)
               .filter(i => i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 2)
               .reduce((acc, i, idx, arr) => {
@@ -627,7 +618,6 @@ function ReportsTab({ complaints, users, volunteers }) {
                   }}>{item + 1}</button>
               ))}
 
-            {/* Next */}
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page === totalPages - 1}
@@ -649,10 +639,10 @@ function ReportsTab({ complaints, users, volunteers }) {
 function AdminDashboard() {
   const { user, getInitials } = useAuth();
 
-  const [activeTab, setActiveTab]           = useState("overview");
-  const [complaints, setComplaints]         = useState([]);
-  const [users, setUsers]                   = useState([]);
-  const [volunteers, setVolunteers]         = useState([]);
+  const [activeTab, setActiveTab]               = useState("overview");
+  const [complaints, setComplaints]             = useState([]);
+  const [users, setUsers]                       = useState([]);
+  const [volunteers, setVolunteers]             = useState([]);
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery]       = useState("");
   const [statusFilter, setStatusFilter]     = useState("all");
@@ -662,6 +652,7 @@ function AdminDashboard() {
     try { return JSON.parse(localStorage.getItem("cs_zones") || "[]"); } catch { return []; }
   });
 
+  const token  = localStorage.getItem("token");
   const avatar = user?.name ? getInitials(user.name) : "AD";
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -671,78 +662,121 @@ function AdminDashboard() {
     if (isRefresh) setRefreshing(true);
     else setLoadingComplaints(true);
     try {
-      const res  = await API.get("/api/complaints");
-      const data = res.data;
-      const raw = Array.isArray(data) ? data : data.complaints || [];
-      const VALID = ["pending","received","assigned","accepted","in_review","in_progress","resolved","completed","denied"];
-      setComplaints(raw.map(c => ({
-        ...c,
-        id:       c._id || c.id,
-        address:  c.address || c.location || "No address",
-        type:     c.type || c.issueType || "General",
-        priority: c.priority || "low",
-        status:   VALID.includes(c.status) ? c.status : "received",
-        createdAt: c.created_at || c.createdAt,
-      })));
-    } catch (err) { console.error("Failed to fetch complaints", err); }
-    finally { setLoadingComplaints(false); setRefreshing(false); }
+      const res = await fetch("http://localhost:5000/api/complaints", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const raw = Array.isArray(data) ? data : data.complaints || [];
+        const VALID_STATUSES = ["received","pending","assigned","accepted","in_review","in_progress","denied","resolved","completed"];
+        const normalized = raw.map(c => {
+          // Preserve the exact status from backend — only fall back if truly missing
+          const rawStatus = c.status || c.Status || "";
+          const status = VALID_STATUSES.includes(rawStatus) ? rawStatus : "received";
+          return {
+            ...c,
+            id:        c._id || c.id,
+            address:   c.address || c.location || "No address",
+            type:      c.type || c.issueType || "General",
+            priority:  c.priority || "low",
+            status,
+            createdAt: c.created_at || c.createdAt,
+          };
+        });
+        setComplaints(normalized);
+      }
+    } catch (err) {
+      console.error("Failed to fetch complaints", err);
+    }
   };
 
   const fetchUsers = async () => {
     try {
-      const res  = await API.get("/api/users");
-      const data = res.data;
-      const allUsers = Array.isArray(data) ? data : data.users || [];
-      setUsers(allUsers);
-      setVolunteers(allUsers.filter(u => u.role === "volunteer"));
-    } catch (err) { console.error("Failed to fetch users", err); }
+      const res = await fetch("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const allUsers = Array.isArray(data) ? data : data.users || [];
+        setUsers(allUsers);
+        setVolunteers(allUsers.filter(u => u.role === "volunteer"));
+      }
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    }
   };
 
   const assignVolunteer = async (complaintId) => {
     const volunteerId = assignSelections[complaintId];
     if (!volunteerId?.trim()) return;
     try {
-      await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId });
-      setAssignSelections(prev => { const u = { ...prev }; delete u[complaintId]; return u; });
-      await fetchComplaints();
+      const res = await fetch(`http://localhost:5000/api/complaints/assign/${complaintId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ volunteerId }),
+      });
+      if (res.ok) {
+        setAssignSelections(prev => { const u = { ...prev }; delete u[complaintId]; return u; });
+        await fetchComplaints();
+      } else {
+        console.error("Assign failed", await res.text());
+      }
     } catch (err) { console.error("Assign failed", err); }
   };
 
   const markResolved = async (complaintId) => {
     try {
-      await API.put(`/api/complaints/status/${complaintId}`, { status: "resolved" });
-      fetchComplaints();
-    } catch (err) { console.error("Resolve failed", err); }
+      const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: "resolved" }),
+      });
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Resolve failed", err);
+    }
   };
 
-  // BACKEND: PUT /api/complaints/status/:id { status: "completed" }
-  // Admin approves a volunteer-resolved complaint → marks it as completed
   const approveComplaint = async (complaintId) => {
     try {
-      await API.put(`/api/complaints/status/${complaintId}`, { status: "completed" });
-      fetchComplaints();
-    } catch (err) { console.error("Approve failed", err); }
+      const res = await fetch(`http://localhost:5000/api/complaints/status/${complaintId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: "completed" }),
+      });
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Approve failed", err);
+    }
   };
 
   const changeUserRole = async (userId, newRole) => {
     try {
-      await API.patch(`/api/users/${userId}/role`, { role: newRole });
-      fetchUsers();
-    } catch (err) { console.error("Role change failed", err); }
+      const res = await fetch(`http://localhost:5000/api/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (res.ok) fetchUsers();
+    } catch (err) {
+      console.error("Role change failed", err);
+    }
   };
 
+  // ── Stats ───────────────────────────────────────────────────────────────────
   const total    = complaints.length;
-  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received").length;
-  const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
+  const pending  = complaints.filter(c => ["pending", "received"].includes(c.status)).length;
+  const resolved = complaints.filter(c => ["resolved", "completed"].includes(c.status)).length;
   const inProg   = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
   const denied   = complaints.filter(c => c.status === "denied").length;
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus =
-      statusFilter === "all"         ? true :
-      statusFilter === "received"    ? ["received", "pending"].includes(c.status) :
-      statusFilter === "in_review"   ? ["assigned", "accepted", "in_review", "in_progress"].includes(c.status) :
-      statusFilter === "denied"      ? c.status === "denied" :
+      statusFilter === "all"        ? true :
+      statusFilter === "received"   ? ["received", "pending"].includes(c.status) :
+      statusFilter === "in_review"  ? ["assigned", "accepted", "in_review", "in_progress"].includes(c.status) :
+      statusFilter === "resolved"   ? ["resolved", "completed"].includes(c.status) :
+      statusFilter === "denied"     ? c.status === "denied" :
       c.status === statusFilter;
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -759,6 +793,9 @@ function AdminDashboard() {
     { key: "zones",      icon: "🗺️", label: "Zones"            },
     { key: "reports",    icon: "📈", label: "Reports"          },
   ];
+
+  // terminal = truly done, no more actions at all
+  const isTerminal = (status) => status === "completed";
 
   return (
     <div className="cs-page" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -793,6 +830,13 @@ function AdminDashboard() {
                     background: activeTab === item.key ? "#2563eb" : "#e5e7eb",
                     color: activeTab === item.key ? "#fff" : "#6b7280",
                   }}>{total}</span>
+                )}
+                {item.key === "complaints" && denied > 0 && (
+                  <span style={{
+                    marginLeft: activeTab === item.key ? 4 : "auto", fontSize: 10, fontWeight: 700,
+                    padding: "1px 6px", borderRadius: 9999,
+                    background: "#ef4444", color: "#fff",
+                  }}>🚫 {denied}</span>
                 )}
               </button>
             ))}
@@ -880,7 +924,7 @@ function AdminDashboard() {
                     { key: "received",  label: "Pending",     count: pending  },
                     { key: "in_review", label: "In Progress", count: inProg   },
                     { key: "resolved",  label: "Resolved",    count: resolved },
-                    { key: "denied",    label: "Denied",      count: denied },
+                    { key: "denied",    label: "Denied",      count: denied   },
                   ].map(f => (
                     <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -919,82 +963,132 @@ function AdminDashboard() {
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead><tr><TH>Title</TH><TH>Type</TH><TH>Priority</TH><TH>Reporter</TH><TH>Status</TH><TH>Assign Volunteer</TH><TH>Actions</TH></tr></thead>
+                    <thead>
+                      <tr><TH>Title</TH><TH>Type</TH><TH>Priority</TH><TH>Reporter</TH><TH>Status</TH><TH>Assign Volunteer</TH><TH>Actions</TH></tr>
+                    </thead>
                     <tbody>
-                      {filteredComplaints.map(c => (
-                        <tr key={c._id || c.id}
-                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
-                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                          <TD>
-                            <div style={{ fontWeight: 600, color: "#111827" }}>{c.title}</div>
-                            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.address || "No address"}</div>
-                          </TD>
-                          <TD style={{ color: "#6b7280", textTransform: "capitalize" }}>{c.type || "—"}</TD>
-                          <TD><PriorityBadge priority={c.priority} /></TD>
-                          <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
-                          <TD><StatusBadge status={c.status} /></TD>
-                          <TD>
-                            {(c.status === "resolved" || c.status === "completed") ? (
-                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ {c.assigned_to?.name || "—"}</div>
-                            ) : c.status === "denied" ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>🚫 Denied by {c.assigned_to?.name || "volunteer"}</div>
-                                {assignSelections[c._id || c.id] ? (
-                                  <select className="cs-input" style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
-                                    value={assignSelections[c._id || c.id] || ""}
-                                    onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}>
-                                    <option value="">— Reassign Volunteer —</option>
+                      {/* Sort: denied first so admin sees them immediately */}
+                      {[...filteredComplaints].sort((a, b) => {
+                        if (a.status === "denied" && b.status !== "denied") return -1;
+                        if (b.status === "denied" && a.status !== "denied") return 1;
+                        return 0;
+                      }).map(c => {
+                        const cid = c._id || c.id;
+                        const isDenied = c.status === "denied";
+                        return (
+                          <tr key={cid}
+                            style={{ borderLeft: isDenied ? "3px solid #ef4444" : "3px solid transparent" }}
+                            onMouseEnter={e => e.currentTarget.style.background = isDenied ? "#fff5f5" : "#f9fafb"}
+                            onMouseLeave={e => e.currentTarget.style.background = isDenied ? "#fff8f8" : "transparent"}>
+                            <TD>
+                              <div style={{ fontWeight: 600, color: "#111827" }}>
+                                {isDenied && <span style={{ fontSize: 10, background: "#fee2e2", color: "#991b1b", padding: "1px 6px", borderRadius: 4, fontWeight: 700, marginRight: 6 }}>NEEDS REASSIGN</span>}
+                                {c.title}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.address || "No address"}</div>
+                            </TD>
+                            <TD style={{ color: "#6b7280", textTransform: "capitalize" }}>{c.type || "—"}</TD>
+                            <TD><PriorityBadge priority={c.priority} /></TD>
+                            <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
+                            <TD><StatusBadge status={c.status} /></TD>
+
+                            {/* ── Assign Volunteer Column ── */}
+                            <TD>
+                              {c.status === "completed" ? (
+                                // completed — no assignment UI, just show who fixed it
+                                <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                                  {c.assigned_to?.name ? `👤 ${c.assigned_to.name}` : "—"}
+                                </div>
+                              ) : c.status === "resolved" ? (
+                                // resolved awaiting approval — show volunteer, no changes
+                                <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                                  ✅ {c.assigned_to?.name || "—"}
+                                </div>
+                              ) : isDenied ? (
+                                // DENIED — always show dropdown to pick a NEW volunteer
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  {c.assigned_to?.name && (
+                                    <div style={{ fontSize: 11, color: "#991b1b", textDecoration: "line-through" }}>
+                                      ✗ {c.assigned_to.name}
+                                    </div>
+                                  )}
+                                  <select className="cs-input" style={{ padding: "5px 8px", fontSize: 12, minWidth: 140, borderColor: "#fca5a5" }}
+                                    value={assignSelections[cid] || ""}
+                                    onChange={e => setAssignSelections(prev => ({ ...prev, [cid]: e.target.value }))}>
+                                    <option value="">— Pick new volunteer —</option>
                                     {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
                                   </select>
-                                ) : (
-                                  <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11, color: "#dc2626", borderColor: "#fca5a5" }}
-                                    onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Reassign</button>
+                                </div>
+                              ) : c.assigned_to && !assignSelections[cid] ? (
+                                // already assigned — show name + change button
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || c.assigned_to}</div>
+                                  <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
+                                    onClick={() => setAssignSelections(prev => ({ ...prev, [cid]: " " }))}>🔄 Change</button>
+                                </div>
+                              ) : (
+                                // not yet assigned — show dropdown
+                                <select className="cs-input" style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
+                                  value={assignSelections[cid] || ""}
+                                  onChange={e => setAssignSelections(prev => ({ ...prev, [cid]: e.target.value }))}>
+                                  <option value="">— Select Volunteer —</option>
+                                  {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+                                </select>
+                              )}
+                            </TD>
+
+                            {/* ── Actions Column ── */}
+                            <TD>
+                              <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
+
+                                {/* COMPLETED — terminal, no actions */}
+                                {c.status === "completed" && (
+                                  <span style={{ fontSize: 12, color: "#065f46", fontWeight: 700, background: "#d1fae5", padding: "4px 10px", borderRadius: 8, display: "inline-block", textAlign: "center" }}>
+                                    🏆 Completed
+                                  </span>
+                                )}
+
+                                {/* RESOLVED — admin can approve → completed */}
+                                {c.status === "resolved" && (
+                                  <button onClick={() => approveComplaint(cid)}
+                                    style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                                    ✓ Approve
+                                  </button>
+                                )}
+
+                                {/* DENIED — reassign button, enabled only when volunteer selected */}
+                                {isDenied && (
+                                  <button
+                                    onClick={() => assignVolunteer(cid)}
+                                    disabled={!assignSelections[cid]?.trim()}
+                                    style={{
+                                      padding: "7px 14px", borderRadius: 8, border: "none",
+                                      background: assignSelections[cid]?.trim() ? "#dc2626" : "#f3f4f6",
+                                      color: assignSelections[cid]?.trim() ? "#fff" : "#9ca3af",
+                                      fontWeight: 700, fontSize: 12, cursor: assignSelections[cid]?.trim() ? "pointer" : "not-allowed",
+                                      whiteSpace: "nowrap", transition: "all 0.15s",
+                                    }}>
+                                    🔁 Reassign
+                                  </button>
+                                )}
+
+                                {/* ACTIVE statuses — assign + force resolve */}
+                                {["received", "pending", "assigned", "accepted", "in_review", "in_progress"].includes(c.status) && (
+                                  <>
+                                    {(!c.assigned_to || assignSelections[cid]) && (
+                                      <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
+                                        onClick={() => assignVolunteer(cid)}
+                                        disabled={!assignSelections[cid]?.trim()}>Assign</button>
+                                    )}
+                                    <button className="cs-btn cs-btn--primary cs-btn--sm" style={{ fontSize: 11 }}
+                                      onClick={() => markResolved(cid)}>✓ Resolve</button>
+                                  </>
                                 )}
                               </div>
-                            ) : (c.status === "accepted" || c.status === "in_review" || c.status === "in_progress") ? (
-                              <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || "—"}</div>
-                            ) : c.status === "assigned" && c.assigned_to && !assignSelections[c._id || c.id] ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || c.assigned_to}</div>
-                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
-                                  onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Change</button>
-                              </div>
-                            ) : (
-                              <select className="cs-input" style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
-                                value={assignSelections[c._id || c.id] || ""}
-                                onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}>
-                                <option value="">— Select Volunteer —</option>
-                                {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                              </select>
-                            )}
-                          </TD>
-                          <TD>
-                            <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
-                              {c.status === "completed" ? (
-                                <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>
-                              ) : c.status === "resolved" ? (
-                                <button onClick={() => approveComplaint(c._id || c.id)}
-                                  style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
-                                  ✓ Approve
-                                </button>
-                              ) : c.status === "denied" ? (
-                                <>
-                                  {assignSelections[c._id || c.id]?.trim() && (
-                                    <button className="cs-btn cs-btn--primary cs-btn--sm" style={{ fontSize: 11 }}
-                                      onClick={() => assignVolunteer(c._id || c.id)}>⚠️ Reassign</button>
-                                  )}
-                                </>
-                              ) : (c.status === "pending" || c.status === "received" || c.status === "assigned") ? (
-                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
-                                  onClick={() => assignVolunteer(c._id || c.id)}
-                                  disabled={!assignSelections[c._id || c.id]?.trim()}>Assign</button>
-                              ) : (
-                                null
-                              )}
-                            </div>
-                          </TD>
-                        </tr>
-                      ))}
+                            </TD>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1077,8 +1171,8 @@ function AdminDashboard() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
                   {volunteers.map(v => {
-                    const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
-                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
+                    const assigned    = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && ["resolved", "completed"].includes(c.status)).length;
                     return (
                       <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
                         <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
