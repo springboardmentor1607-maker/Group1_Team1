@@ -87,57 +87,49 @@ function Profile() {
     const navigate = useNavigate();
     const { user, updateUser, logout } = useAuth();
 
-    // ── Real stats fetched from complaints API ──────────────────────────────
-    const [stats, setStats] = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
+    // ── Real stats + activity ──────────────────────────────────────────────────
+    const [stats,    setStats]    = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
+    const [activity, setActivity] = useState([]);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                // Fetch ALL complaints — same as Dashboard.jsx and AdminDashboard.jsx
-                const res = await API.get("/api/complaints");
-                const raw = Array.isArray(res.data)
-                    ? res.data
-                    : res.data?.complaints || [];
-
                 const isVolunteer = user?.role === "volunteer";
-                const userId = user?._id || user?.id;
-
-                let complaints = [];
-                if (isVolunteer) {
-                    // Volunteer: complaints assigned to them
-                    complaints = raw.filter(c => {
-                        const assignedId = c.assigned_to?._id || c.assigned_to;
-                        return String(assignedId) === String(userId);
-                    });
-                } else {
-                    // Citizen: complaints they reported
-                    complaints = raw.filter(c => {
-                        const reporterId = c.user_id?._id || c.user_id;
-                        return String(reporterId) === String(userId);
-                    });
-                }
-
-                const reports  = complaints.length;
-                const resolved = complaints.filter(c => c.status === "resolved").length;
-                const votes    = complaints.reduce((sum, c) => sum + (Number(c.votes) || Number(c.upvotes) || 0), 0);
-
+                const isAdmin     = user?.role === "admin";
+                const endpoint    = isVolunteer ? "/api/complaints/assigned-to-me"
+                                  : isAdmin     ? "/api/complaints"
+                                  :               "/api/complaints/my";
+                const res        = await API.get(endpoint);
+                const complaints = Array.isArray(res.data) ? res.data : res.data?.complaints || [];
+                const reports    = complaints.length;
+                const resolved   = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
+                const votes      = complaints.reduce((sum, c) => sum + (Number(c.upvotes) || 0), 0);
                 let badges = 0;
-                if (isVolunteer) {
-                    if (reports >= 1)  badges += 1;   // First Assignment
-                    if (resolved >= 5) badges += 1;   // Street Champion
-                } else {
-                    if (reports >= 1)  badges += 1;   // First Report
-                    if (votes >= 10)   badges += 1;   // Community Helper
-                    if (resolved >= 5) badges += 1;   // Street Champion
-                }
-
+                if (isVolunteer)    { if (reports >= 1) badges++; if (resolved >= 5) badges++; }
+                else if (!isAdmin)  { if (reports >= 1) badges++; if (votes >= 10) badges++; if (resolved >= 5) badges++; }
                 setStats({ reports, resolved, votes, badges });
-            } catch (err) {
-                console.error("[Profile Stats] fetch failed:", err?.response?.status, err?.message);
-            }
+                const META = {
+                    completed:   { icon: "✅", verb: isVolunteer ? "completed"         : isAdmin ? "approved"          : "resolved", color: "#10b981" },
+                    resolved:    { icon: "🎉", verb: "resolved",                                                                      color: "#22c55e" },
+                    in_progress: { icon: "🔄", verb: "updated to in progress",                                                        color: "#f59e0b" },
+                    in_review:   { icon: "🔄", verb: "updated",                                                                       color: "#f59e0b" },
+                    accepted:    { icon: "✔️", verb: "accepted",                                                                      color: "#2563eb" },
+                    assigned:    { icon: "👤", verb: isVolunteer ? "assigned to you"   : isAdmin ? "assigned volunteer" : "assigned", color: "#f59e0b" },
+                    denied:      { icon: "🚫", verb: "denied",                                                                        color: "#ef4444" },
+                    received:    { icon: "➕", verb: isAdmin ? "received"              : "reported",                                  color: "#3b82f6" },
+                    pending:     { icon: "➕", verb: isAdmin ? "received"              : "reported",                                  color: "#3b82f6" },
+                };
+                const timeAgo = (d) => {
+                    if (!d) return "Recently";
+                    const s = Math.floor((Date.now() - new Date(d)) / 1000);
+                    if (s < 60) return "Just now"; if (s < 3600) return `${Math.floor(s/60)}m ago`;
+                    if (s < 86400) return `${Math.floor(s/3600)}h ago`; if (s < 172800) return "Yesterday";
+                    return `${Math.floor(s/86400)}d ago`;
+                };
+                setActivity(complaints.slice().sort((a,b) => new Date(b.updated_at||b.updatedAt||b.created_at||b.createdAt) - new Date(a.updated_at||a.updatedAt||a.created_at||a.createdAt)).slice(0,8).map(c => { const m = META[c.status]||META.pending; return { icon:m.icon, color:m.color, text:`${c.title||"Complaint"} ${m.verb}`, time:timeAgo(c.updated_at||c.updatedAt||c.created_at||c.createdAt) }; }));
+            } catch (err) { console.error("[Profile] fetch failed:", err?.response?.status, err?.message); }
         };
-
-        if ((user?._id || user?.id) && user?.role !== 'admin') fetchStats();
+        if (user?.username || user?._id || user?.id) fetchStats();
     }, [user]);
 
     // Dynamic data from AuthContext with fallbacks
@@ -155,19 +147,50 @@ function Profile() {
     const [editMode, setEditMode]   = useState(false);
     const [message, setMessage]     = useState("");
     const [activeTab, setActiveTab] = useState("info");
+    const [locating, setLocating]   = useState(false);
+
+    const handleUseCurrentLocation = () => {
+        if (!navigator.geolocation) return setMessage("Geolocation not supported by your browser ❌");
+        setLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                try {
+                    const { latitude: lat, longitude: lng } = pos.coords;
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+                    const data = await res.json();
+                    const address = data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    setFormData(prev => ({ ...prev, location: address }));
+                } catch {
+                    setMessage("Could not fetch address ❌");
+                } finally {
+                    setLocating(false);
+                }
+            },
+            () => { setMessage("Location access denied ❌"); setLocating(false); }
+        );
+    };
 
     const handleChange  = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
     const handleEdit    = () => { setEditMode(true); setMessage(""); };
     const handleCancel  = () => { setFormData(savedData); setEditMode(false); setMessage(""); };
-    const handleSave    = () => {
-        setSavedData(formData);
-        updateUser({
-            name: formData.fullName, username: formData.username,
-            email: formData.email,   phone: formData.phone,
-            location: formData.location, bio: formData.bio,
-        });
-        setEditMode(false);
-        setMessage("Profile updated successfully ✅");
+    const handleSave    = async () => {
+        try {
+            await API.put("/api/users/profile", {
+                name: formData.fullName, username: formData.username,
+                email: formData.email,   phone: formData.phone,
+                location: formData.location, bio: formData.bio,
+            });
+            updateUser({
+                name: formData.fullName, username: formData.username,
+                email: formData.email,   phone: formData.phone,
+                location: formData.location, bio: formData.bio,
+            });
+            setSavedData(formData);
+            setEditMode(false);
+            setMessage("Profile updated successfully ✅");
+        } catch (err) {
+            setMessage("Failed to save profile. Please try again ❌");
+        }
     };
     const handleLogout  = () => { logout(); navigate("/login"); };
 
@@ -339,13 +362,26 @@ function Profile() {
 
                                     <div className="pf-form-group">
                                         <label className="pf-label">📍 Location</label>
-                                        <input
-                                            className={`pf-input${editMode ? " pf-input--active" : ""}`}
-                                            name="location"
-                                            value={formData.location}
-                                            disabled={!editMode}
-                                            onChange={handleChange}
-                                        />
+                                        <div style={{ display: "flex", gap: 8 }}>
+                                            <input
+                                                className={`pf-input${editMode ? " pf-input--active" : ""}`}
+                                                name="location"
+                                                value={formData.location}
+                                                disabled={!editMode}
+                                                onChange={handleChange}
+                                                style={{ flex: 1 }}
+                                            />
+                                            {editMode && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleUseCurrentLocation}
+                                                    disabled={locating}
+                                                    style={{ whiteSpace: "nowrap", padding: "0 14px", borderRadius: 8, border: "1px solid #e5e9f2", background: "#f4f6fb", color: "#374151", fontSize: 13, fontWeight: 500, cursor: locating ? "not-allowed" : "pointer", opacity: locating ? 0.7 : 1 }}
+                                                >
+                                                    {locating ? "Locating…" : "📍 Use Current"}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="pf-form-group pf-form-group--full">
@@ -374,13 +410,12 @@ function Profile() {
                                     </div>
                                 </div>
                                 <div className="pf-activity-list">
-                                    {[
-                                        { icon: "✅", text: "Pothole on Main Street resolved", time: "2 hours ago", color: "#22c55e" },
-                                        { icon: "➕", text: "Reported broken streetlight on Elm Ave", time: "4 hours ago", color: "#3b82f6" },
-                                        { icon: "🔄", text: "Garbage dump complaint updated", time: "6 hours ago", color: "#f59e0b" },
-                                        { icon: "💬", text: "New comment on water leak report", time: "1 day ago", color: "#8b5cf6" },
-                                        { icon: "👍", text: "Voted on 3 community issues", time: "2 days ago", color: "#06b6d4" },
-                                    ].map((a, i) => (
+                                    {activity.length === 0 ? (
+                                        <div style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "32px 0" }}>
+                                            <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+                                            <div>No activity yet.</div>
+                                        </div>
+                                    ) : activity.map((a, i) => (
                                         <div key={i} className="pf-activity-item">
                                             <div className="pf-activity-item__icon" style={{ background: a.color + "18" }}>{a.icon}</div>
                                             <div className="pf-activity-item__body">

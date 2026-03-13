@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: "/",
   headers: {
     "Content-Type": "application/json",
   },
@@ -24,7 +24,6 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // ✅ Don't redirect if already on login or signup page
       if (!window.location.pathname.includes("/login") && 
           !window.location.pathname.includes("/signup")) {
         localStorage.removeItem("token");
