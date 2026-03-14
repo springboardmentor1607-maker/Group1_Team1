@@ -4,6 +4,7 @@ import "../Dashboard.css";
 import API from "../api";
 import Navbar from "./Navbar";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
 const POLL_INTERVAL = 15000;
 
 const priorityColor = {
@@ -15,11 +16,12 @@ const priorityColor = {
 };
 
 const categoryIcon = {
-  pothole: "🕳️", streetlight: "💡", garbage: "🗑️",
-  water: "💧", road: "🛣️", noise: "🔊",
-  other: "📌", general: "📌", sanitation: "🚰",
+  pothole:     "🕳️", streetlight: "💡", garbage:  "🗑️",
+  water:       "💧", road:        "🛣️", noise:    "🔊",
+  other:       "📌", general:     "📌", sanitation: "🚰",
 };
 
+// ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
   received:    { bg: "#dbeafe", text: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
   pending:     { bg: "#dbeafe", text: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
@@ -33,6 +35,7 @@ const STATUS_CONFIG = {
 };
 function getStatusCfg(s) { return STATUS_CONFIG[s?.toLowerCase()] || STATUS_CONFIG.received; }
 
+// ─── StatusBadge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const c = getStatusCfg(status);
   return (
@@ -47,10 +50,11 @@ function StatusBadge({ status }) {
   );
 }
 
+// ─── IssueRow ─────────────────────────────────────────────────────────────────
 function IssueRow({ issue, isSelected, onSelect }) {
-  const id  = String(issue._id || issue.id);
-  const ref = "#" + id.slice(-5).toUpperCase();
-  const pc  = priorityColor[issue.priority?.toLowerCase()] || priorityColor.medium;
+  const id   = String(issue._id || issue.id);
+  const ref  = "#" + id.slice(-5).toUpperCase();
+  const pc   = priorityColor[issue.priority?.toLowerCase()] || priorityColor.medium;
   const date = new Date(issue.created_at || issue.createdAt || issue.reportedAt).toLocaleDateString();
   const needsAction = ["assigned", "received", "pending"].includes(issue.status);
 
@@ -58,8 +62,10 @@ function IssueRow({ issue, isSelected, onSelect }) {
     <div
       onClick={() => onSelect(issue)}
       style={{
-        padding: "18px 24px", borderBottom: "1px solid #f1f5f9",
-        cursor: "pointer", display: "flex", alignItems: "center", gap: 16,
+        padding: "18px 24px",
+        borderBottom: "1px solid #f1f5f9",
+        cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 16,
         background: isSelected ? "#f0f5ff" : needsAction ? "#fffbeb" : "#fff",
         transition: "background 0.15s",
         borderLeft: needsAction ? "3px solid #f59e0b" : "3px solid transparent",
@@ -67,17 +73,22 @@ function IssueRow({ issue, isSelected, onSelect }) {
       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#f8faff"; }}
       onMouseLeave={e => { e.currentTarget.style.background = isSelected ? "#f0f5ff" : needsAction ? "#fffbeb" : "#fff"; }}
     >
-      <div style={{ width: 42, height: 42, borderRadius: 12, background: "#f4f6fb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+      <div style={{
+        width: 42, height: 42, borderRadius: 12, background: "#f4f6fb",
+        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0,
+      }}>
         {categoryIcon[issue.type] || categoryIcon[issue.category] || "📌"}
       </div>
+
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a2e" }}>{issue.title}</span>
           <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>{ref}</span>
           {needsAction && (
-            <span style={{ fontSize: 10, fontWeight: 700, background: "#f59e0b", color: "#fff", padding: "2px 7px", borderRadius: 9999 }}>
-              ACTION REQUIRED
-            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, background: "#f59e0b", color: "#fff",
+              padding: "2px 7px", borderRadius: 9999,
+            }}>ACTION REQUIRED</span>
           )}
         </div>
         <div style={{ fontSize: 12, color: "#64748b" }}>
@@ -85,8 +96,12 @@ function IssueRow({ issue, isSelected, onSelect }) {
           {issue.user_id?.name || "—"} &nbsp;·&nbsp; {date}
         </div>
       </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: pc.bg, color: pc.text, border: `1px solid ${pc.border}` }}>
+        <span style={{
+          fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
+          background: pc.bg, color: pc.text, border: `1px solid ${pc.border}`,
+        }}>
           ● {issue.priority || "medium"}
         </span>
         <StatusBadge status={issue.status} />
@@ -96,7 +111,8 @@ function IssueRow({ issue, isSelected, onSelect }) {
   );
 }
 
-function IssueDetailModal({ issue, onClose, onAccept, onDeny, onMarkResolved, loading, successMsg, errorMsg }) {
+// ─── IssueDetailModal ─────────────────────────────────────────────────────────
+function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, onMarkResolved, loading, successMsg, errorMsg }) {
   if (!issue) return null;
 
   const ref  = "#" + String(issue._id || issue.id).slice(-5).toUpperCase();
@@ -112,11 +128,19 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onMarkResolved, lo
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+        zIndex: 200, display: "flex", alignItems: "center",
+        justifyContent: "center", padding: 24,
+      }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 560, boxShadow: "0 24px 64px rgba(0,0,0,0.18)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" }}
+        style={{
+          background: "#fff", borderRadius: 20, width: "100%", maxWidth: 560,
+          boxShadow: "0 24px 64px rgba(0,0,0,0.18)", overflow: "hidden",
+          maxHeight: "90vh", overflowY: "auto",
+        }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -129,12 +153,18 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onMarkResolved, lo
               <h3 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 8px" }}>{issue.title}</h3>
               <StatusBadge status={issue.status} />
             </div>
-            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <button onClick={onClose} style={{
+              background: "rgba(255,255,255,0.2)", border: "none", color: "#fff",
+              width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 16,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>✕</button>
           </div>
         </div>
 
         {/* Body */}
         <div style={{ padding: "22px 26px" }}>
+
+          {/* Detail grid */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 18 }}>
             {[
               { label: "Location",    value: issue.address || issue.location || "—",               icon: "📍" },
@@ -149,80 +179,156 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onMarkResolved, lo
             ))}
           </div>
 
+          {/* Description */}
           <div style={{ background: "#f8faff", borderRadius: 10, padding: "12px 14px", marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>📝 Description</div>
-            <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{issue.description || "No description provided."}</p>
+            <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>
+              {issue.description || "No description provided."}
+            </p>
           </div>
 
+          {/* Photo */}
           {issue.photo && (
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>📷 Photo</div>
-              <img src={`http://localhost:5000${issue.photo}`} alt="Complaint" style={{ width: "100%", borderRadius: 10, maxHeight: 200, objectFit: "cover" }} />
+              <img
+                src={`http://localhost:5001${issue.photo}`}
+                alt="Complaint"
+                style={{ width: "100%", borderRadius: 10, maxHeight: 200, objectFit: "cover" }}
+              />
             </div>
           )}
 
-          {/* Action Panel */}
-          <div style={{ background: "#f8faff", borderRadius: 12, padding: "18px", border: "1px solid #e0e7ff", marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#4b5563", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>Actions</div>
+          {/* ── ACTION PANEL ── */}
+          <div style={{
+            background: "#f8faff", borderRadius: 12, padding: "18px",
+            border: "1px solid #e0e7ff", marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#4b5563", marginBottom: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Actions
+            </div>
 
-            {/* Accept / Deny */}
+            {/* STEP 1 — Needs Accept / Deny */}
             {isPendingAccept && (
               <div>
                 <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
                   You have been assigned this complaint. Accept to work on it, or deny to decline.
                 </p>
                 <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => onAccept(issue._id || issue.id)} disabled={loading} style={{
-                    flex: 1, padding: "12px 0", borderRadius: 10,
-                    background: loading ? "#86efac" : "#16a34a", color: "#fff",
-                    border: "none", fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
-                  }}>✅ Accept Issue</button>
-                  <button onClick={() => onDeny(issue._id || issue.id)} disabled={loading} style={{
-                    flex: 1, padding: "12px 0", borderRadius: 10,
-                    background: loading ? "#fca5a5" : "#ef4444", color: "#fff",
-                    border: "none", fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
-                  }}>❌ Deny Issue</button>
+                  <button
+                    onClick={() => onAccept(issue._id || issue.id)}
+                    disabled={loading}
+                    style={{
+                      flex: 1, padding: "12px 0", borderRadius: 10,
+                      background: loading ? "#86efac" : "#16a34a", color: "#fff",
+                      border: "none", fontWeight: 700, fontSize: 15,
+                      cursor: loading ? "not-allowed" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      transition: "opacity 0.15s",
+                    }}
+                  >
+                    ✅ Accept Issue
+                  </button>
+                  <button
+                    onClick={() => onDeny(issue._id || issue.id)}
+                    disabled={loading}
+                    style={{
+                      flex: 1, padding: "12px 0", borderRadius: 10,
+                      background: loading ? "#fca5a5" : "#ef4444", color: "#fff",
+                      border: "none", fontWeight: 700, fontSize: 15,
+                      cursor: loading ? "not-allowed" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      transition: "opacity 0.15s",
+                    }}
+                  >
+                    ❌ Deny Issue
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Mark Resolved */}
-            {(isAccepted || isInProgress) && (
+            {/* STEP 2 — Accepted → Start Working */}
+            {isAccepted && (
               <div>
                 <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
-                  {isAccepted ? "You've accepted this complaint. Mark it resolved once the issue is fixed." : "You are currently working on this. Mark it as resolved when done."}
+                  You've accepted this complaint. Click below to start working on it.
                 </p>
-                <button onClick={() => onMarkResolved(issue._id || issue.id)} disabled={loading} style={{
-                  width: "100%", padding: "13px 0", borderRadius: 10,
-                  background: loading ? "#a78bfa" : "linear-gradient(135deg,#7c3aed,#6d28d9)",
-                  color: "#fff", border: "none", fontWeight: 700, fontSize: 15,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  boxShadow: loading ? "none" : "0 4px 14px rgba(109,40,217,0.35)",
-                }}>
+                <button
+                  onClick={() => onStartWorking(issue._id || issue.id)}
+                  disabled={loading}
+                  style={{
+                    width: "100%", padding: "13px 0", borderRadius: 10,
+                    background: loading ? "#93c5fd" : "linear-gradient(135deg, #1d4ed8, #2563eb)",
+                    color: "#fff", border: "none", fontWeight: 700, fontSize: 15,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.75 : 1,
+                    boxShadow: loading ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+                    transition: "opacity 0.15s",
+                  }}
+                >
+                  {loading ? "Updating…" : "🔄 Start Working"}
+                </button>
+              </div>
+            )}
+
+            {/* STEP 3 — In Progress → Mark as Resolved */}
+            {isInProgress && (
+              <div>
+                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
+                  You are currently working on this. Mark it as resolved when done.
+                </p>
+                <button
+                  onClick={() => onMarkResolved(issue._id || issue.id)}
+                  disabled={loading}
+                  style={{
+                    width: "100%", padding: "13px 0", borderRadius: 10,
+                    background: loading ? "#a78bfa" : "linear-gradient(135deg, #7c3aed, #6d28d9)",
+                    color: "#fff", border: "none", fontWeight: 700, fontSize: 15,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.75 : 1,
+                    boxShadow: loading ? "none" : "0 4px 14px rgba(109,40,217,0.35)",
+                    transition: "opacity 0.15s",
+                  }}
+                >
                   {loading ? "Updating…" : "🎯 Mark as Resolved"}
                 </button>
               </div>
             )}
 
-            {/* Awaiting admin */}
+            {/* STEP 4 — Resolved — awaiting admin approval */}
             {isResolved && (
-              <div style={{ background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{
+                background: "#f5f3ff", border: "1px solid #ddd6fe",
+                borderRadius: 10, padding: "14px 16px",
+                display: "flex", alignItems: "center", gap: 10,
+              }}>
                 <span style={{ fontSize: 20 }}>⏳</span>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#6d28d9" }}>Awaiting admin approval to mark as completed</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#6d28d9" }}>
+                  Marked as resolved. Awaiting admin approval to complete.
+                </div>
               </div>
             )}
 
-            {/* Completed */}
+            {/* STEP 5 — Completed — verified by admin */}
             {isCompleted && (
-              <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{
+                background: "#f0fdf4", border: "1px solid #86efac",
+                borderRadius: 10, padding: "14px 16px",
+                display: "flex", alignItems: "center", gap: 10,
+              }}>
                 <span style={{ fontSize: 20 }}>✅</span>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#166534" }}>Issue completed and verified by admin</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#166534" }}>
+                  Issue completed and verified by admin.
+                </div>
               </div>
             )}
 
             {/* Denied */}
             {isDenied && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "14px", textAlign: "center" }}>
+              <div style={{
+                background: "#fef2f2", border: "1px solid #fecaca",
+                borderRadius: 10, padding: "14px", textAlign: "center",
+              }}>
                 <div style={{ fontSize: 26, marginBottom: 6 }}>🚫</div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#991b1b" }}>You Denied This Complaint</div>
                 <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>Admin has been notified and may reassign it.</div>
@@ -230,18 +336,27 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onMarkResolved, lo
             )}
           </div>
 
+          {/* Feedback */}
           {successMsg && (
-            <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#16a34a", fontWeight: 600, textAlign: "center", marginBottom: 10 }}>
-              ✅ {successMsg}
-            </div>
+            <div style={{
+              background: "#f0fdf4", border: "1px solid #86efac",
+              borderRadius: 10, padding: "10px 14px",
+              fontSize: 13, color: "#16a34a", fontWeight: 600, textAlign: "center", marginBottom: 10,
+            }}>✅ {successMsg}</div>
           )}
           {errorMsg && (
-            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#991b1b", fontWeight: 600, textAlign: "center", marginBottom: 10 }}>
-              ⚠️ {errorMsg}
-            </div>
+            <div style={{
+              background: "#fef2f2", border: "1px solid #fecaca",
+              borderRadius: 10, padding: "10px 14px",
+              fontSize: 13, color: "#991b1b", fontWeight: 600, textAlign: "center", marginBottom: 10,
+            }}>⚠️ {errorMsg}</div>
           )}
 
-          <button onClick={onClose} style={{ width: "100%", padding: "10px 0", borderRadius: 10, background: "#f1f5f9", color: "#64748b", border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
+          <button onClick={onClose} style={{
+            width: "100%", padding: "10px 0", borderRadius: 10,
+            background: "#f1f5f9", color: "#64748b",
+            border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer",
+          }}>
             Close
           </button>
         </div>
@@ -250,6 +365,7 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onMarkResolved, lo
   );
 }
 
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function VolunteerDashboard() {
   const { user } = useAuth();
   const userName = user?.name || "Volunteer";
@@ -267,32 +383,12 @@ export default function VolunteerDashboard() {
 
   const tabs = ["All", "Pending", "Accepted", "In Progress", "Resolved", "Completed", "Denied"];
 
-  // ── FIX 1: Use /api/complaints and filter by assigned_to ─────────────────
+  // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchIssues = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await API.get("/api/complaints");
-      const raw = Array.isArray(res.data) ? res.data : res.data?.complaints || [];
-
-      // Get volunteer's userId — try user object first, then decode JWT
-      let userId = user?._id || user?.id;
-      if (!userId) {
-        try {
-          const token = localStorage.getItem("token");
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          userId = payload.id || payload._id || payload.userId;
-        } catch {}
-      }
-
-      // Only show complaints assigned to this volunteer
-      const assigned = userId
-        ? raw.filter(c => {
-            const aid = c.assigned_to?._id || c.assigned_to;
-            return String(aid) === String(userId);
-          })
-        : [];
-
-      setIssues(assigned);
+      const res = await API.get("/api/complaints/my-assignments");
+      setIssues(res.data || []);
       setLastUpdated(new Date());
       setError("");
     } catch (err) {
@@ -300,7 +396,7 @@ export default function VolunteerDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user]); // FIX 2: [user] dependency so it re-runs after login
+  }, []);
 
   useEffect(() => { fetchIssues(false); }, [fetchIssues]);
   useEffect(() => {
@@ -308,7 +404,7 @@ export default function VolunteerDashboard() {
     return () => clearInterval(timer);
   }, [fetchIssues]);
 
-  // ── Counts ────────────────────────────────────────────────────────────────
+  // ── Counts ─────────────────────────────────────────────────────────────────
   const counts = {
     total:      issues.length,
     pending:    issues.filter(i => ["assigned", "received", "pending"].includes(i.status)).length,
@@ -337,27 +433,31 @@ export default function VolunteerDashboard() {
     };
     return (groups[activeTab] ?? true) && (
       i.title?.toLowerCase().includes(search.toLowerCase()) ||
-      (i.address || i.location || "").toLowerCase().includes(search.toLowerCase())
+      i.address?.toLowerCase().includes(search.toLowerCase())
     );
   });
 
+  // ── Feedback helper ────────────────────────────────────────────────────────
   const showFeedback = (msg, isError = false) => {
     if (isError) setErrorMsg(msg); else setSuccessMsg(msg);
     setTimeout(() => { setSuccessMsg(""); setErrorMsg(""); }, 3000);
   };
 
+  // ── Optimistic status update ───────────────────────────────────────────────
   const patchStatus = (id, newStatus) => {
     setIssues(prev => prev.map(i => String(i._id || i.id) === String(id) ? { ...i, status: newStatus } : i));
-    setSelectedIssue(prev => prev && String(prev._id || prev.id) === String(id) ? { ...prev, status: newStatus } : prev);
+    setSelectedIssue(prev =>
+      prev && String(prev._id || prev.id) === String(id) ? { ...prev, status: newStatus } : prev
+    );
   };
 
-  // ── Actions — all status values match your backend enum ──────────────────
+  // ── ACCEPT ─────────────────────────────────────────────────────────────────
   const handleAccept = async (id) => {
     try {
       setActionLoading(true);
       await API.put(`/api/complaints/status/${id}`, { status: "accepted" });
       patchStatus(id, "accepted");
-      showFeedback("Complaint accepted! Mark it resolved once fixed.");
+      showFeedback("Complaint accepted! Click 'Start Working' when you begin.");
     } catch (err) {
       showFeedback(err?.response?.data?.message || "Failed to accept. Try again.", true);
     } finally {
@@ -365,6 +465,7 @@ export default function VolunteerDashboard() {
     }
   };
 
+  // ── DENY ───────────────────────────────────────────────────────────────────
   const handleDeny = async (id) => {
     try {
       setActionLoading(true);
@@ -378,13 +479,27 @@ export default function VolunteerDashboard() {
     }
   };
 
+  // ── START WORKING ──────────────────────────────────────────────────────────
+  const handleStartWorking = async (id) => {
+    try {
+      setActionLoading(true);
+      await API.put(`/api/complaints/status/${id}`, { status: "in_progress" });
+      patchStatus(id, "in_progress");
+      showFeedback("Status updated to In Progress. Go get it done!");
+    } catch (err) {
+      showFeedback(err?.response?.data?.message || "Failed to update. Try again.", true);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── MARK RESOLVED ──────────────────────────────────────────────────────────
   const handleMarkResolved = async (id) => {
     try {
       setActionLoading(true);
       await API.put(`/api/complaints/status/${id}`, { status: "resolved" });
       patchStatus(id, "resolved");
       showFeedback("Marked as Resolved! Awaiting admin approval.");
-      await fetchIssues(true);
     } catch (err) {
       showFeedback(err?.response?.data?.message || "Failed to update status.", true);
     } finally {
@@ -399,7 +514,7 @@ export default function VolunteerDashboard() {
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
 
-        {/* Welcome Banner */}
+        {/* ── Welcome Banner ── */}
         <div style={{
           background: "linear-gradient(120deg,#1a56db 0%,#2563eb 60%,#3b82f6 100%)",
           borderRadius: 16, padding: "28px 32px", marginBottom: 28, color: "#fff",
@@ -408,7 +523,9 @@ export default function VolunteerDashboard() {
         }}>
           <div style={{ position: "absolute", right: -30, top: -30, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
           <div>
-            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: 1.2, opacity: 0.8, marginBottom: 6, textTransform: "uppercase" }}>🙋 Volunteer Dashboard</p>
+            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: 1.2, opacity: 0.8, marginBottom: 6, textTransform: "uppercase" }}>
+              🙋 Volunteer Dashboard
+            </p>
             <h2 style={{ fontSize: 26, fontWeight: 700, margin: "0 0 8px" }}>Welcome back, {userName} 👋</h2>
             <p style={{ opacity: 0.85, fontSize: 14, maxWidth: 480, lineHeight: 1.6, margin: 0 }}>
               {counts.pending > 0
@@ -418,11 +535,14 @@ export default function VolunteerDashboard() {
           </div>
           <div style={{ display: "flex", gap: 12, position: "relative" }}>
             {[
-              { label: "Pending",     value: counts.pending    },
-              { label: "Accepted",    value: counts.accepted   },
-              { label: "In Progress", value: counts.inProgress },
+              { label: "Pending",     value: counts.pending     },
+              { label: "Accepted",    value: counts.accepted    },
+              { label: "In Progress", value: counts.inProgress  },
             ].map(s => (
-              <div key={s.label} style={{ background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "14px 22px", textAlign: "center", backdropFilter: "blur(8px)" }}>
+              <div key={s.label} style={{
+                background: "rgba(255,255,255,0.15)", borderRadius: 12,
+                padding: "14px 22px", textAlign: "center", backdropFilter: "blur(8px)",
+              }}>
                 <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value}</div>
                 <div style={{ fontSize: 12, opacity: 0.85 }}>{s.label}</div>
               </div>
@@ -430,7 +550,7 @@ export default function VolunteerDashboard() {
           </div>
         </div>
 
-        {/* Stat Cards */}
+        {/* ── Stat Cards ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 14, marginBottom: 28 }}>
           {[
             { label: "Total",       value: counts.total,      icon: "📋", color: "#1a56db" },
@@ -446,7 +566,11 @@ export default function VolunteerDashboard() {
               display: "flex", alignItems: "center", gap: 12,
               borderTop: `3px solid ${s.color}`,
             }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: s.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{s.icon}</div>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10,
+                background: s.color + "18",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+              }}>{s.icon}</div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 700, color: "#1a1a2e" }}>{s.value}</div>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{s.label}</div>
@@ -455,7 +579,7 @@ export default function VolunteerDashboard() {
           ))}
         </div>
 
-        {/* Issues Panel */}
+        {/* ── Issues Panel ── */}
         <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div>
@@ -481,7 +605,9 @@ export default function VolunteerDashboard() {
                       background: activeTab === tab ? "rgba(255,255,255,0.25)" : "#e5e7eb",
                       color: activeTab === tab ? "#fff" : "#6b7280",
                       borderRadius: 9999, padding: "1px 6px", fontSize: 10, fontWeight: 700,
-                    }}>{tabCount(tab)}</span>
+                    }}>
+                      {tabCount(tab)}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -491,7 +617,10 @@ export default function VolunteerDashboard() {
                 onChange={e => setSearch(e.target.value)}
                 style={{ border: "1px solid #e5e9f2", borderRadius: 10, padding: "7px 14px", fontSize: 13, outline: "none", color: "#1a1a2e", width: 200, background: "#f9fafb" }}
               />
-              <button onClick={() => fetchIssues(false)} title="Refresh" style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b" }}>🔄</button>
+              <button onClick={() => fetchIssues(false)} title="Refresh" style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b" }}>
+                <span style={{ display: "inline-block", animation: loading ? "spin-v 0.7s linear infinite" : "none" }}>🔄</span>
+                <style>{`@keyframes spin-v { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+              </button>
             </div>
           </div>
 
@@ -524,12 +653,14 @@ export default function VolunteerDashboard() {
         </div>
       </div>
 
+      {/* ── Modal ── */}
       {selectedIssue && (
         <IssueDetailModal
           issue={selectedIssue}
           onClose={() => { setSelectedIssue(null); setSuccessMsg(""); setErrorMsg(""); }}
           onAccept={handleAccept}
           onDeny={handleDeny}
+          onStartWorking={handleStartWorking}
           onMarkResolved={handleMarkResolved}
           loading={actionLoading}
           successMsg={successMsg}

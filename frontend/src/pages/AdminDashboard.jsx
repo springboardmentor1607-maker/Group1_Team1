@@ -656,27 +656,36 @@ function AdminDashboard() {
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery]       = useState("");
   const [statusFilter, setStatusFilter]     = useState("all");
+  const [loadingComplaints, setLoadingComplaints] = useState(true);
+  const [refreshing, setRefreshing]         = useState(false);
+  const [zones, setZones]                   = useState(() => {
+    try { return JSON.parse(localStorage.getItem("cs_zones") || "[]"); } catch { return []; }
+  });
 
   const avatar = user?.name ? getInitials(user.name) : "AD";
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchComplaints(); fetchUsers(); }, []);
 
-  const fetchComplaints = async () => {
+  const fetchComplaints = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoadingComplaints(true);
     try {
       const res  = await API.get("/api/complaints");
       const data = res.data;
       const raw = Array.isArray(data) ? data : data.complaints || [];
+      const VALID = ["pending","received","assigned","accepted","in_review","in_progress","resolved","completed","denied"];
       setComplaints(raw.map(c => ({
         ...c,
         id:       c._id || c.id,
         address:  c.address || c.location || "No address",
         type:     c.type || c.issueType || "General",
         priority: c.priority || "low",
-        status:   c.status || "received",
+        status:   VALID.includes(c.status) ? c.status : "received",
         createdAt: c.created_at || c.createdAt,
       })));
     } catch (err) { console.error("Failed to fetch complaints", err); }
+    finally { setLoadingComplaints(false); setRefreshing(false); }
   };
 
   const fetchUsers = async () => {
@@ -747,6 +756,7 @@ function AdminDashboard() {
     { key: "complaints", icon: "📋", label: "Complaints"       },
     { key: "users",      icon: "👥", label: "User Management"  },
     { key: "volunteers", icon: "🤝", label: "Volunteers"       },
+    { key: "zones",      icon: "🗺️", label: "Zones"            },
     { key: "reports",    icon: "📈", label: "Reports"          },
   ];
 
@@ -809,11 +819,11 @@ function AdminDashboard() {
                 <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Monitor all civic complaints across the platform.</p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={total}    label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={pending}  label="Pending"          accent="#f59e0b" />
-                <StatCard icon="🔄" count={inProg}   label="In Progress"      accent="#8b5cf6" />
-                <StatCard icon="✅" count={resolved} label="Resolved"         accent="#22c55e" />
-                <StatCard icon="🚫" count={denied}   label="Denied"           accent="#ef4444" />
+                <StatCard icon="⚠️" count={loadingComplaints ? "…" : total}    label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={loadingComplaints ? "…" : pending}  label="Pending"          accent="#f59e0b" />
+                <StatCard icon="🔄" count={loadingComplaints ? "…" : inProg}   label="In Progress"      accent="#8b5cf6" />
+                <StatCard icon="✅" count={loadingComplaints ? "…" : resolved} label="Resolved"         accent="#22c55e" />
+                <StatCard icon="🚫" count={loadingComplaints ? "…" : denied}   label="Denied"           accent="#ef4444" />
               </div>
               <div className="cs-card">
                 <div className="cs-section-header" style={{ marginBottom: 16 }}>
@@ -823,7 +833,12 @@ function AdminDashboard() {
                   </div>
                   <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>View All →</button>
                 </div>
-                {complaints.length === 0 ? (
+                {loadingComplaints ? (
+                  <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                    <div>Loading complaints…</div>
+                  </div>
+                ) : complaints.length === 0 ? (
                   <div className="cs-empty">
                     <div className="cs-empty__icon">📭</div>
                     <div className="cs-empty__title">No complaints yet</div>
@@ -880,21 +895,22 @@ function AdminDashboard() {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)} />
                   <button
-                    onClick={() => fetchComplaints()}
+                    onClick={() => fetchComplaints(true)}
                     title="Refresh complaints"
-                    style={{
-                      background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 8,
-                      padding: "7px 11px", cursor: "pointer", fontSize: 15, color: "#6b7280",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
-                    onMouseLeave={e => e.currentTarget.style.background = "#f9fafb"}
-                  >🔄</button>
+                    style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    <style>{`@keyframes spin-a { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+                    <span style={{ display: "inline-block", animation: refreshing ? "spin-a 0.7s linear infinite" : "none" }}>🔄</span>
+                  </button>
                 </div>
               </div>
 
-              {filteredComplaints.length === 0 ? (
+              {loadingComplaints ? (
+                <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                  <div>Loading complaints…</div>
+                </div>
+              ) : filteredComplaints.length === 0 ? (
                 <div className="cs-empty">
                   <div className="cs-empty__icon">📭</div>
                   <div className="cs-empty__title">No complaints found</div>
@@ -918,7 +934,7 @@ function AdminDashboard() {
                           <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
                           <TD><StatusBadge status={c.status} /></TD>
                           <TD>
-                            {c.status === "resolved" || c.status === "completed" ? (
+                            {(c.status === "resolved" || c.status === "completed") ? (
                               <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ {c.assigned_to?.name || "—"}</div>
                             ) : c.status === "denied" ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -935,7 +951,9 @@ function AdminDashboard() {
                                     onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Reassign</button>
                                 )}
                               </div>
-                            ) : c.assigned_to && !assignSelections[c._id || c.id] ? (
+                            ) : (c.status === "accepted" || c.status === "in_review" || c.status === "in_progress") ? (
+                              <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || "—"}</div>
+                            ) : c.status === "assigned" && c.assigned_to && !assignSelections[c._id || c.id] ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || c.assigned_to}</div>
                                 <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
@@ -955,37 +973,23 @@ function AdminDashboard() {
                               {c.status === "completed" ? (
                                 <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>
                               ) : c.status === "resolved" ? (
-                                <button
-                                  onClick={() => approveComplaint(c._id || c.id)}
-                                  style={{
-                                    padding: "7px 16px", borderRadius: 8, border: "none",
-                                    background: "#16a34a", color: "#fff",
-                                    fontWeight: 700, fontSize: 13, cursor: "pointer",
-                                    display: "flex", alignItems: "center", gap: 6,
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
+                                <button onClick={() => approveComplaint(c._id || c.id)}
+                                  style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
                                   ✓ Approve
                                 </button>
                               ) : c.status === "denied" ? (
                                 <>
                                   {assignSelections[c._id || c.id]?.trim() && (
                                     <button className="cs-btn cs-btn--primary cs-btn--sm" style={{ fontSize: 11 }}
-                                      onClick={() => assignVolunteer(c._id || c.id)}>
-                                      ⚠️ Reassign
-                                    </button>
+                                      onClick={() => assignVolunteer(c._id || c.id)}>⚠️ Reassign</button>
                                   )}
                                 </>
+                              ) : (c.status === "pending" || c.status === "received" || c.status === "assigned") ? (
+                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
+                                  onClick={() => assignVolunteer(c._id || c.id)}
+                                  disabled={!assignSelections[c._id || c.id]?.trim()}>Assign</button>
                               ) : (
-                                <>
-                                  {(!c.assigned_to || assignSelections[c._id || c.id]) && (
-                                    <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
-                                      onClick={() => assignVolunteer(c._id || c.id)}
-                                      disabled={!assignSelections[c._id || c.id]?.trim()}>Assign</button>
-                                  )}
-                                  <button className="cs-btn cs-btn--primary cs-btn--sm" style={{ fontSize: 11 }}
-                                    onClick={() => markResolved(c._id || c.id)}>✓ Resolve</button>
-                                </>
+                                null
                               )}
                             </div>
                           </TD>
@@ -1101,6 +1105,11 @@ function AdminDashboard() {
             </div>
           )}
 
+          {/* ══ ZONES ══ */}
+          {activeTab === "zones" && (
+            <ZonesTab zones={zones} setZones={setZones} volunteers={volunteers} complaints={complaints} />
+          )}
+
           {/* ══ REPORTS ══ */}
           {activeTab === "reports" && (
             <ReportsTab complaints={complaints} users={users} volunteers={volunteers} />
@@ -1108,6 +1117,176 @@ function AdminDashboard() {
 
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Zones Tab ────────────────────────────────────────────────────────────────
+function ZonesTab({ zones, setZones, volunteers, complaints }) {
+  const [zoneName,     setZoneName]     = useState("");
+  const [zoneArea,     setZoneArea]     = useState("");
+  const [zoneVolunteer,setZoneVolunteer]= useState("");
+  const [editingId,    setEditingId]    = useState(null);
+  const [editName,     setEditName]     = useState("");
+  const [editArea,     setEditArea]     = useState("");
+  const [editVolunteer,setEditVolunteer]= useState("");
+
+  const saveZones = (updated) => {
+    setZones(updated);
+    localStorage.setItem("cs_zones", JSON.stringify(updated));
+  };
+
+  const addZone = () => {
+    if (!zoneName.trim() || !zoneArea.trim()) return;
+    const newZone = {
+      id:          Date.now().toString(),
+      name:        zoneName.trim(),
+      area:        zoneArea.trim(),
+      volunteerId: zoneVolunteer || null,
+      createdAt:   new Date().toISOString(),
+    };
+    saveZones([...zones, newZone]);
+    setZoneName(""); setZoneArea(""); setZoneVolunteer("");
+  };
+
+  const deleteZone = (id) => saveZones(zones.filter(z => z.id !== id));
+
+  const startEdit = (z) => {
+    setEditingId(z.id); setEditName(z.name);
+    setEditArea(z.area); setEditVolunteer(z.volunteerId || "");
+  };
+
+  const saveEdit = (id) => {
+    saveZones(zones.map(z => z.id === id
+      ? { ...z, name: editName, area: editArea, volunteerId: editVolunteer || null }
+      : z
+    ));
+    setEditingId(null);
+  };
+
+  const getVolunteerName = (id) => volunteers.find(v => String(v._id) === String(id))?.name || "Unassigned";
+  const getZoneComplaintCount = (area) =>
+    complaints.filter(c => (c.address || c.location || "").toLowerCase().includes(area.toLowerCase())).length;
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Zone Management</h1>
+        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
+          Create and manage geographic zones. Assign volunteers to handle complaints in each zone.
+        </p>
+      </div>
+
+      {/* Add Zone Form */}
+      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: 20, marginBottom: 24 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>➕ Create New Zone</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "end" }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Zone Name *</div>
+            <input value={zoneName} onChange={e => setZoneName(e.target.value)} placeholder="e.g. North District"
+              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              onFocus={e => e.target.style.borderColor = "#2563eb"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Area / Keyword *</div>
+            <input value={zoneArea} onChange={e => setZoneArea(e.target.value)} placeholder="e.g. Downtown, Elm Street"
+              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              onFocus={e => e.target.style.borderColor = "#2563eb"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Assign Volunteer</div>
+            <select value={zoneVolunteer} onChange={e => setZoneVolunteer(e.target.value)}
+              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" }}>
+              <option value="">— None —</option>
+              {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+            </select>
+          </div>
+          <button onClick={addZone} disabled={!zoneName.trim() || !zoneArea.trim()}
+            style={{ background: zoneName.trim() && zoneArea.trim() ? "#2563eb" : "#e5e7eb", color: zoneName.trim() && zoneArea.trim() ? "#fff" : "#9ca3af", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: zoneName.trim() && zoneArea.trim() ? "pointer" : "not-allowed", whiteSpace: "nowrap" }}>
+            Add Zone
+          </button>
+        </div>
+      </div>
+
+      {/* Zones List */}
+      {zones.length === 0 ? (
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "48px 20px", textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>No zones created yet</div>
+          <div style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Create your first zone above to start managing areas.</div>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+          {zones.map(z => {
+            const complaintCount = getZoneComplaintCount(z.area);
+            const isEditing = editingId === z.id;
+            return (
+              <div key={z.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+                <div style={{ background: "linear-gradient(135deg,#1e3a8a,#2563eb)", padding: "16px 20px" }}>
+                  {isEditing ? (
+                    <input value={editName} onChange={e => setEditName(e.target.value)}
+                      style={{ width: "100%", background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 6, padding: "6px 10px", fontSize: 15, fontWeight: 700, color: "#fff", outline: "none", boxSizing: "border-box" }} />
+                  ) : (
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>🗺️ {z.name}</div>
+                  )}
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
+                    Created {new Date(z.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div style={{ padding: "16px 20px" }}>
+                  {isEditing ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>AREA KEYWORD</div>
+                        <input value={editArea} onChange={e => setEditArea(e.target.value)}
+                          style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>VOLUNTEER</div>
+                        <select value={editVolunteer} onChange={e => setEditVolunteer(e.target.value)}
+                          style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", background: "#fff" }}>
+                          <option value="">— None —</option>
+                          {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => saveEdit(z.id)} style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✓ Save</button>
+                        <button onClick={() => setEditingId(null)} style={{ flex: 1, background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 7, padding: "7px", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                        <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>Area</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{z.area}</div>
+                        </div>
+                        <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>Complaints</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: "#2563eb" }}>{complaintCount}</div>
+                        </div>
+                      </div>
+                      <div style={{ background: "#f0fdf4", borderRadius: 8, padding: "10px 12px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 16 }}>🤝</span>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>Assigned Volunteer</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: z.volunteerId ? "#166534" : "#9ca3af" }}>
+                            {z.volunteerId ? getVolunteerName(z.volunteerId) : "Not assigned"}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => startEdit(z)} style={{ flex: 1, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✏️ Edit</button>
+                        <button onClick={() => deleteZone(z.id)} style={{ flex: 1, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🗑️ Delete</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
