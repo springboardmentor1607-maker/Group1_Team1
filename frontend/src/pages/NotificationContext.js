@@ -50,7 +50,7 @@ export function NotificationProvider({ children }) {
     if (!user || user.role === "admin") return;
     try {
       const endpoint = user.role === "volunteer"
-        ? "/api/complaints/assigned-to-me"
+        ? "/api/complaints/my-assignments"
         : "/api/complaints/my";
       const res = await API.get(endpoint);
       let raw = [];

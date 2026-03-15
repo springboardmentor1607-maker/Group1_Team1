@@ -131,20 +131,24 @@ export default function Signup() {
 
     try {
       setLoading(true);
-      const res = await API.post("/api/auth/register", {
-        name: form.firstName + " " + form.lastName,
+      // Send OTP first — registration completes on OTP verification
+      await API.post("/api/otp/send-register-otp", {
         email: form.email,
-        password: form.password,
-        role: form.role
+        name: form.firstName + " " + form.lastName,
       });
-      const data = res.data;
-      localStorage.setItem('token', data.token);
-      login({ ...(data.user || data), role: form.role });
       setLoading(false);
-      setSuccess(true);
+      // Navigate to OTP verification page, passing all form data
+      navigate("/verify-otp", {
+        state: {
+          email: form.email,
+          name: form.firstName + " " + form.lastName,
+          password: form.password,
+          role: form.role,
+        }
+      });
     } catch (err) {
       setLoading(false);
-      setErrors({ general: err.response?.data?.message || "Registration failed. Please try again." });
+      setErrors({ general: err.response?.data?.message || "Failed to send OTP. Please try again." });
     }
   };
 

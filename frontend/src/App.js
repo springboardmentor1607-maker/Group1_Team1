@@ -5,6 +5,9 @@ import { NotificationProvider }       from "./pages/NotificationContext";
 
 import Login              from "./pages/Login";
 import Signup             from "./pages/Signup";
+import VerifyOtp          from "./pages/VerifyOtp";
+import ForgotPassword     from "./pages/ForgotPassword";
+import ResetPassword      from "./pages/ResetPassword";
 import Dashboard          from "./pages/Dashboard";
 import Profile            from "./pages/Profile";
 import SubmitComplaint    from "./pages/SubmitComplaint";
@@ -42,8 +45,11 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login"  element={<PublicRoute><Login  /></PublicRoute>} />
-      <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+      <Route path="/login"          element={<PublicRoute><Login          /></PublicRoute>} />
+      <Route path="/signup"         element={<PublicRoute><Signup         /></PublicRoute>} />
+      <Route path="/verify-otp"     element={<PublicRoute><VerifyOtp      /></PublicRoute>} />
+      <Route path="/forgot-password"element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+      <Route path="/reset-password" element={<PublicRoute><ResetPassword  /></PublicRoute>} />
 
       {/* citizen */}
       <Route path="/dashboard"        element={<PrivateRoute roles={["user"]}><Dashboard /></PrivateRoute>} />
@@ -59,6 +65,7 @@ function AppRoutes() {
       {/* shared */}
       <Route path="/map"           element={<PrivateRoute><MapPage /></PrivateRoute>} />
       <Route path="/profile"       element={<PrivateRoute><Profile /></PrivateRoute>} />
+      <Route path="/profile/:id"    element={<PrivateRoute><Profile /></PrivateRoute>} />
       <Route path="/notifications" element={<PrivateRoute roles={["user","volunteer"]}><NotificationsPage /></PrivateRoute>} />
 
       <Route path="/"  element={<Navigate to={home} replace />} />

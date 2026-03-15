@@ -1,5 +1,5 @@
 import { useAuth } from "./AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import "../Profile.css";
 import Navbar from "./Navbar";
@@ -100,6 +100,20 @@ function timeAgo(dateStr) {
 function Profile() {
     const navigate = useNavigate();
     const { user, updateUser, logout } = useAuth();
+    const { id: profileId } = useParams(); // if /profile/:id, viewing another user
+    const isOwnProfile = !profileId;
+
+    // ── Viewed user state (when viewing someone else's profile) ───────────
+    const [viewedUser, setViewedUser] = useState(null);
+    const displayUser = isOwnProfile ? user : viewedUser;
+
+    // Fetch the other user's info if viewing by ID
+    useEffect(() => {
+        if (!profileId) return;
+        API.get(`/api/users/${profileId}`)
+            .then(res => setViewedUser(res.data))
+            .catch(() => setViewedUser(null));
+    }, [profileId]);
 
     // ── Real stats + activity fetched from complaints API ──────────────────
     const [stats, setStats]           = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
@@ -134,7 +148,7 @@ function Profile() {
                     });
                 } else {
                     const endpoint = role === "volunteer"
-                        ? "/api/complaints/assigned-to-me"
+                        ? "/api/complaints/my-assignments"
                         : "/api/complaints/my";
 
                     const res = await API.get(endpoint);

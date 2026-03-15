@@ -546,7 +546,7 @@ export default function UserDashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
             {/* Profile Card */}
-            <div className="cs-profile-card">
+            <div className="cs-profile-card" onClick={() => navigate("/profile")} style={{ cursor: "pointer" }} title="View your profile">
               <div className="cs-avatar cs-avatar--lg">{MOCK_USER.avatar}</div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, color: "#1e3a8a" }}>{MOCK_USER.name}</div>

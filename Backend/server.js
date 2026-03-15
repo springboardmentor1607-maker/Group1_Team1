@@ -1,18 +1,19 @@
-const express = require("express");
 const dotenv = require("dotenv");
+// Load env vars
+dotenv . config({ path: "./backend.env" });
+const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const dns = require("dns");
+const otpRoutes = require("./routes/otpRoutes");
 
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
-
-// Load env vars
-dotenv.config({ path: "./backend.env" });
 
 // Connect to database
 connectDB();
 
 const app = express();
+console.log("Email:", process.env.EMAIL_USER);
 
 // Middleware
 app.use(cors({
@@ -26,6 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
 // Routes
+app.use("/api/otp", otpRoutes);
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/user"));
 app.use("/api/complaints", require("./routes/complaint"));

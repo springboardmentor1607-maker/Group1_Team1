@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 // react-router-dom not needed in this component
 import { useAuth } from "./AuthContext";
 import "../Dashboard.css";
@@ -77,15 +78,15 @@ function CleanStreetLogo({ size = 44 }) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    resolved:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved"    },
-    completed:   { bg: "#d1fae5", color: "#065f46", dot: "#10b981", label: "Completed"   },
-    assigned:    { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"    },
-    accepted:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted"    },
-    pending:     { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
-    in_review:   { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
+    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
+    completed: { bg: "#d1fae5", color: "#065f46", dot: "#10b981", label: "Completed" },
+    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
+    accepted: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted" },
+    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
     in_progress: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
-    received:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
-    denied:      { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied"      },
+    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    denied: { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied" },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
   const s = map[key] || map["pending"];
@@ -106,9 +107,9 @@ function StatusBadge({ status }) {
 function PriorityBadge({ priority }) {
   const map = {
     critical: { bg: "#fee2e2", color: "#991b1b" },
-    high:     { bg: "#ffedd5", color: "#9a3412" },
-    medium:   { bg: "#fef9c3", color: "#92400e" },
-    low:      { bg: "#dcfce7", color: "#166534" },
+    high: { bg: "#ffedd5", color: "#9a3412" },
+    medium: { bg: "#fef9c3", color: "#92400e" },
+    low: { bg: "#dcfce7", color: "#166534" },
   };
   const s = map[priority?.toLowerCase()] || map["low"];
   return (
@@ -152,10 +153,10 @@ const TD = ({ children, style }) => (
 
 // ─── Reports Tab ─────────────────────────────────────────────────────────────
 function ReportsTab({ complaints, users, volunteers }) {
-  const total       = complaints.length;
-  const pending     = complaints.filter(c => c.status === "received" || c.status === "pending").length;
-  const inProgress  = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
-  const resolved    = complaints.filter(c => c.status === "resolved").length;
+  const total = complaints.length;
+  const pending = complaints.filter(c => c.status === "received" || c.status === "pending").length;
+  const inProgress = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
+  const resolved = complaints.filter(c => c.status === "resolved").length;
   const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
   const byType = complaints.reduce((acc, c) => {
@@ -171,7 +172,7 @@ function ReportsTab({ complaints, users, volunteers }) {
   }, {});
 
   const volStats = volunteers.map(v => ({
-    name:     v.name,
+    name: v.name,
     resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length,
     assigned: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length,
   })).sort((a, b) => b.resolved - a.resolved);
@@ -190,11 +191,11 @@ function ReportsTab({ complaints, users, volunteers }) {
       new Date(c.created_at || c.createdAt).toLocaleDateString(),
       new Date(c.updated_at || c.updatedAt).toLocaleDateString(),
     ]);
-    const csv  = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
     a.download = `cleanstreet_complaints_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
@@ -239,12 +240,12 @@ function ReportsTab({ complaints, users, volunteers }) {
       <div class="section">
         <div class="section-title">Complaints by Type</div>
         <table><tr>${Object.entries(byType).map(([k]) => `<th>${k}</th>`).join("")}</tr>
-        <tr>${Object.entries(byType).map(([,v]) => `<td>${v}</td>`).join("")}</tr></table>
+        <tr>${Object.entries(byType).map(([, v]) => `<td>${v}</td>`).join("")}</tr></table>
       </div>
       <div class="section">
         <div class="section-title">Complaints by Priority</div>
         <table><tr>${Object.entries(byPriority).map(([k]) => `<th>${k}</th>`).join("")}</tr>
-        <tr>${Object.entries(byPriority).map(([,v]) => `<td>${v}</td>`).join("")}</tr></table>
+        <tr>${Object.entries(byPriority).map(([, v]) => `<td>${v}</td>`).join("")}</tr></table>
       </div>
       <div class="section">
         <div class="section-title">Top Volunteers</div>
@@ -281,9 +282,9 @@ function ReportsTab({ complaints, users, volunteers }) {
   };
 
   const downloadSingleReport = (c) => {
-    const id          = String(c._id).slice(-6).toUpperCase();
+    const id = String(c._id).slice(-6).toUpperCase();
     const statusColor = c.status === "resolved" ? "#166534" : c.status === "in_review" ? "#5b21b6" : "#1d4ed8";
-    const statusBg    = c.status === "resolved" ? "#dcfce7" : c.status === "in_review" ? "#ede9fe" : "#dbeafe";
+    const statusBg = c.status === "resolved" ? "#dcfce7" : c.status === "in_review" ? "#ede9fe" : "#dbeafe";
     const html = `
       <html><head><title>Complaint #${id}</title>
       <style>
@@ -364,8 +365,8 @@ function ReportsTab({ complaints, users, volunteers }) {
   const totalPages = Math.ceil(complaints.length / PAGE_SIZE);
   const pagedComplaints = complaints.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const barMax         = Math.max(...Object.values(byType), 1);
-  const TYPE_COLORS    = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
+  const barMax = Math.max(...Object.values(byType), 1);
+  const TYPE_COLORS = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
   const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", urgent: "#ef4444", critical: "#dc2626" };
 
   return (
@@ -393,10 +394,10 @@ function ReportsTab({ complaints, users, volunteers }) {
       {/* ── Stats Row — NOW: Pending / In Progress / Resolved ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
         {[
-          { label: "Total Complaints", value: total,       icon: "📋", color: "#3b82f6" },
-          { label: "Pending",          value: pending,     icon: "📥", color: "#f59e0b" },
-          { label: "In Progress",      value: inProgress,  icon: "🔄", color: "#8b5cf6" },
-          { label: "Resolved",         value: resolved,    icon: "✅", color: "#22c55e" },
+          { label: "Total Complaints", value: total, icon: "📋", color: "#3b82f6" },
+          { label: "Pending", value: pending, icon: "📥", color: "#f59e0b" },
+          { label: "In Progress", value: inProgress, icon: "🔄", color: "#8b5cf6" },
+          { label: "Resolved", value: resolved, icon: "✅", color: "#22c55e" },
         ].map(s => (
           <div key={s.label} style={{
             background: "#fff", borderRadius: 12, padding: "18px 20px",
@@ -457,9 +458,9 @@ function ReportsTab({ complaints, users, volunteers }) {
             </div>
             <div style={{ display: "flex", gap: 20, marginTop: 16 }}>
               {[
-                { label: "Pending",     count: pending,    color: "#f59e0b" },
+                { label: "Pending", count: pending, color: "#f59e0b" },
                 { label: "In Progress", count: inProgress, color: "#8b5cf6" },
-                { label: "Resolved",    count: resolved,   color: "#22c55e" },
+                { label: "Resolved", count: resolved, color: "#22c55e" },
               ].map(s => (
                 <div key={s.label} style={{ textAlign: "center" }}>
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: s.color, margin: "0 auto 4px" }} />
@@ -571,8 +572,8 @@ function ReportsTab({ complaints, users, volunteers }) {
                     }}>
                       {c.status === "received" || c.status === "pending" ? "Pending"
                         : c.status === "in_review" || c.status === "assigned" ? "In Progress"
-                        : c.status === "resolved" ? "Resolved"
-                        : c.status?.replace("_", " ")}
+                          : c.status === "resolved" ? "Resolved"
+                            : c.status?.replace("_", " ")}
                     </span>
                   </td>
                   <td style={{ padding: "10px 12px", color: "#6b7280" }}>{c.user_id?.name || "—"}</td>
@@ -648,17 +649,18 @@ function ReportsTab({ complaints, users, volunteers }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 function AdminDashboard() {
   const { user, getInitials } = useAuth();
+  const navigate = useNavigate();
 
-  const [activeTab, setActiveTab]           = useState("overview");
-  const [complaints, setComplaints]         = useState([]);
-  const [users, setUsers]                   = useState([]);
-  const [volunteers, setVolunteers]         = useState([]);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [complaints, setComplaints] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [volunteers, setVolunteers] = useState([]);
   const [assignSelections, setAssignSelections] = useState({});
-  const [searchQuery, setSearchQuery]       = useState("");
-  const [statusFilter, setStatusFilter]     = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loadingComplaints, setLoadingComplaints] = useState(true);
-  const [refreshing, setRefreshing]         = useState(false);
-  const [zones, setZones]                   = useState(() => {
+  const [refreshing, setRefreshing] = useState(false);
+  const [zones, setZones] = useState(() => {
     try { return JSON.parse(localStorage.getItem("cs_zones") || "[]"); } catch { return []; }
   });
 
@@ -671,17 +673,17 @@ function AdminDashboard() {
     if (isRefresh) setRefreshing(true);
     else setLoadingComplaints(true);
     try {
-      const res  = await API.get("/api/complaints");
+      const res = await API.get("/api/complaints");
       const data = res.data;
       const raw = Array.isArray(data) ? data : data.complaints || [];
-      const VALID = ["pending","received","assigned","accepted","in_review","in_progress","resolved","completed","denied"];
+      const VALID = ["pending", "received", "assigned", "accepted", "in_review", "in_progress", "resolved", "completed", "denied"];
       setComplaints(raw.map(c => ({
         ...c,
-        id:       c._id || c.id,
-        address:  c.address || c.location || "No address",
-        type:     c.type || c.issueType || "General",
+        id: c._id || c.id,
+        address: c.address || c.location || "No address",
+        type: c.type || c.issueType || "General",
         priority: c.priority || "low",
-        status:   VALID.includes(c.status) ? c.status : "received",
+        status: VALID.includes(c.status) ? c.status : "received",
         createdAt: c.created_at || c.createdAt,
       })));
     } catch (err) { console.error("Failed to fetch complaints", err); }
@@ -690,7 +692,7 @@ function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const res  = await API.get("/api/users");
+      const res = await API.get("/api/users");
       const data = res.data;
       const allUsers = Array.isArray(data) ? data : data.users || [];
       setUsers(allUsers);
@@ -731,19 +733,19 @@ function AdminDashboard() {
     } catch (err) { console.error("Role change failed", err); }
   };
 
-  const total    = complaints.length;
-  const pending  = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+  const total = complaints.length;
+  const pending = complaints.filter(c => c.status === "pending" || c.status === "received").length;
   const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
-  const inProg   = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
-  const denied   = complaints.filter(c => c.status === "denied").length;
+  const inProg = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
+  const denied = complaints.filter(c => c.status === "denied").length;
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus =
-      statusFilter === "all"         ? true :
-      statusFilter === "received"    ? ["received", "pending"].includes(c.status) :
-      statusFilter === "in_review"   ? ["assigned", "accepted", "in_review", "in_progress"].includes(c.status) :
-      statusFilter === "denied"      ? c.status === "denied" :
-      c.status === statusFilter;
+      statusFilter === "all" ? true :
+        statusFilter === "received" ? ["received", "pending"].includes(c.status) :
+          statusFilter === "in_review" ? ["assigned", "accepted", "in_review", "in_progress"].includes(c.status) :
+            statusFilter === "denied" ? c.status === "denied" :
+              c.status === statusFilter;
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -752,12 +754,12 @@ function AdminDashboard() {
   });
 
   const sidebarItems = [
-    { key: "overview",   icon: "📊", label: "Overview"         },
-    { key: "complaints", icon: "📋", label: "Complaints"       },
-    { key: "users",      icon: "👥", label: "User Management"  },
-    { key: "volunteers", icon: "🤝", label: "Volunteers"       },
-    { key: "zones",      icon: "🗺️", label: "Zones"            },
-    { key: "reports",    icon: "📈", label: "Reports"          },
+    { key: "overview", icon: "📊", label: "Overview" },
+    { key: "complaints", icon: "📋", label: "Complaints" },
+    { key: "users", icon: "👥", label: "User Management" },
+    { key: "volunteers", icon: "🤝", label: "Volunteers" },
+    { key: "zones", icon: "🗺️", label: "Zones" },
+    { key: "reports", icon: "📈", label: "Reports" },
   ];
 
   return (
@@ -798,7 +800,7 @@ function AdminDashboard() {
             ))}
           </div>
           <div style={{ marginTop: "auto", padding: "16px", borderTop: "1px solid #f3f4f6" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/profile")} title="View your profile">
               <div className="cs-avatar" style={{ width: 32, height: 32, fontSize: 12 }}>{avatar}</div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{user?.name || "Admin"}</div>
@@ -819,11 +821,11 @@ function AdminDashboard() {
                 <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Monitor all civic complaints across the platform.</p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, marginBottom: 28 }}>
-                <StatCard icon="⚠️" count={loadingComplaints ? "…" : total}    label="Total Complaints" accent="#3b82f6" />
-                <StatCard icon="⏳" count={loadingComplaints ? "…" : pending}  label="Pending"          accent="#f59e0b" />
-                <StatCard icon="🔄" count={loadingComplaints ? "…" : inProg}   label="In Progress"      accent="#8b5cf6" />
-                <StatCard icon="✅" count={loadingComplaints ? "…" : resolved} label="Resolved"         accent="#22c55e" />
-                <StatCard icon="🚫" count={loadingComplaints ? "…" : denied}   label="Denied"           accent="#ef4444" />
+                <StatCard icon="⚠️" count={loadingComplaints ? "…" : total} label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={loadingComplaints ? "…" : pending} label="Pending" accent="#f59e0b" />
+                <StatCard icon="🔄" count={loadingComplaints ? "…" : inProg} label="In Progress" accent="#8b5cf6" />
+                <StatCard icon="✅" count={loadingComplaints ? "…" : resolved} label="Resolved" accent="#22c55e" />
+                <StatCard icon="🚫" count={loadingComplaints ? "…" : denied} label="Denied" accent="#ef4444" />
               </div>
               <div className="cs-card">
                 <div className="cs-section-header" style={{ marginBottom: 16 }}>
@@ -876,11 +878,11 @@ function AdminDashboard() {
               <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
                 <div className="cs-filter-tabs">
                   {[
-                    { key: "all",       label: "All",         count: total    },
-                    { key: "received",  label: "Pending",     count: pending  },
-                    { key: "in_review", label: "In Progress", count: inProg   },
-                    { key: "resolved",  label: "Resolved",    count: resolved },
-                    { key: "denied",    label: "Denied",      count: denied },
+                    { key: "all", label: "All", count: total },
+                    { key: "received", label: "Pending", count: pending },
+                    { key: "in_review", label: "In Progress", count: inProg },
+                    { key: "resolved", label: "Resolved", count: resolved },
+                    { key: "denied", label: "Denied", count: denied },
                   ].map(f => (
                     <button key={f.key}
                       className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
@@ -1123,13 +1125,13 @@ function AdminDashboard() {
 
 // ─── Zones Tab ────────────────────────────────────────────────────────────────
 function ZonesTab({ zones, setZones, volunteers, complaints }) {
-  const [zoneName,     setZoneName]     = useState("");
-  const [zoneArea,     setZoneArea]     = useState("");
-  const [zoneVolunteer,setZoneVolunteer]= useState("");
-  const [editingId,    setEditingId]    = useState(null);
-  const [editName,     setEditName]     = useState("");
-  const [editArea,     setEditArea]     = useState("");
-  const [editVolunteer,setEditVolunteer]= useState("");
+  const [zoneName, setZoneName] = useState("");
+  const [zoneArea, setZoneArea] = useState("");
+  const [zoneVolunteer, setZoneVolunteer] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editArea, setEditArea] = useState("");
+  const [editVolunteer, setEditVolunteer] = useState("");
 
   const saveZones = (updated) => {
     setZones(updated);
@@ -1139,11 +1141,11 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
   const addZone = () => {
     if (!zoneName.trim() || !zoneArea.trim()) return;
     const newZone = {
-      id:          Date.now().toString(),
-      name:        zoneName.trim(),
-      area:        zoneArea.trim(),
+      id: Date.now().toString(),
+      name: zoneName.trim(),
+      area: zoneArea.trim(),
       volunteerId: zoneVolunteer || null,
-      createdAt:   new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
     saveZones([...zones, newZone]);
     setZoneName(""); setZoneArea(""); setZoneVolunteer("");
