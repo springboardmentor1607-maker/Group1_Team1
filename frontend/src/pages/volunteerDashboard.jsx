@@ -59,7 +59,7 @@ export default function VolunteerDashboard() {
   const fetchIssues = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await API.get("/api/complaints/assigned-to-me");
+      const res = await API.get("/api/complaints/my-assignments");
       setIssues(res.data || []);
       setLastUpdated(new Date());
       setError("");
