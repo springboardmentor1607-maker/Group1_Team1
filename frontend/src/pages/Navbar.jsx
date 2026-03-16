@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import API from "../api";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
@@ -82,12 +81,10 @@ const NAV_LINKS = {
   volunteer: [
     { label: "Dashboard",        path: "/volunteer"         },
     { label: "Issue Map",        path: "/map"               },
-    { label: "View Complaints",  path: "/complaints"        },
   ],
   admin: [
     { label: "Admin Panel",      path: "/admin"             },
     { label: "Issue Map",        path: "/map"               },
-    { label: "User Dashboard",   path: "/dashboard"         },
   ],
 };
 
