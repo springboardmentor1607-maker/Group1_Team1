@@ -78,15 +78,15 @@ function CleanStreetLogo({ size = 44 }) {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
-    completed: { bg: "#d1fae5", color: "#065f46", dot: "#10b981", label: "Completed" },
-    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
-    accepted: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted" },
-    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
-    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
+    resolved:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved"    },
+    completed:   { bg: "#d1fae5", color: "#065f46", dot: "#10b981", label: "Completed"   },
+    assigned:    { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"    },
+    accepted:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted"    },
+    pending:     { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
+    in_review:   { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
     in_progress: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
-    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
-    denied: { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied" },
+    received:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
+    denied:      { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied"      },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
   const s = map[key] || map["pending"];
