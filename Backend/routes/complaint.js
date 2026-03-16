@@ -71,7 +71,26 @@ router.get("/my", protect, async (req, res) => {
 });
 
 // ============================================================
-// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS
+// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS — volunteer dashboard
+// ⚠️ Must be BEFORE "/:id"
+// ============================================================
+router.get("/assigned-to-me", protect, async (req, res) => {
+  try {
+    console.log("🔍 assigned-to-me hit, user:", req.user?._id, "role:", req.user?.role);
+    const complaints = await Complaint.find({ assigned_to: req.user._id })
+      .populate("user_id",     "name email")
+      .populate("assigned_to", "name email")
+      .sort({ created_at: -1 });
+    console.log("✅ complaints found:", complaints.length);
+    res.json(complaints);
+  } catch (error) {
+    console.error("❌ assigned-to-me error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ============================================================
+// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS (legacy)
 // ⚠️ Must be BEFORE "/:id"
 // ============================================================
 router.get("/my-assignments", protect, authorize("volunteer"), async (req, res) => {
@@ -146,17 +165,16 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
 router.put("/status/:id", protect, authorize("admin", "volunteer"), async (req, res) => {
   try {
     const { status } = req.body;
-
-    // ✅ Updated to include all statuses used in the workflow
     const allowedStatus = [
-      "received",    // default when submitted
-      "assigned",    // admin assigned to volunteer
-      "accepted",    // volunteer accepted
-      "in_review",   // volunteer working on it
-      "in_progress", // alias for in_review
-      "denied",      // volunteer denied
-      "resolved",    // volunteer marked resolved
-      "completed",   // admin approved/closed
+      "received",
+      "pending",
+      "assigned",
+      "accepted",
+      "in_review",
+      "in_progress",
+      "denied",
+      "resolved",
+      "completed",
     ];
 
     if (!allowedStatus.includes(status))

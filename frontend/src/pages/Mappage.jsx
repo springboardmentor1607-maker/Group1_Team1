@@ -154,7 +154,7 @@ export default function MapPage() {
       try {
         let endpoint = "/api/complaints";
         if (role === "user")      endpoint = "/api/complaints/my";
-        if (role === "volunteer") endpoint = "/api/complaints/my-assignments";
+        if (role === "volunteer") endpoint = "/api/complaints/assigned-to-me";
         const { data } = await API.get(endpoint);
         setComplaints(Array.isArray(data) ? data : data.complaints || []);
       } catch (err) {
@@ -303,7 +303,7 @@ export default function MapPage() {
 
       // ── Popup ───────────────────────────────────────────────────────────────
       const photoHtml = c.photo
-        ? `<img src="http://localhost:5001${c.photo}" alt=""
+        ? `<img src="http://localhost:5000${c.photo}" alt=""
             style="width:100%;height:115px;object-fit:cover;border-radius:8px;margin-bottom:10px;display:block;"
             onerror="this.style.display='none'" />`
         : "";

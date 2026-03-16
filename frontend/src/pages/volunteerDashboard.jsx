@@ -192,7 +192,7 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>📷 Photo</div>
               <img
-                src={`http://localhost:5001${issue.photo}`}
+                src={`http://localhost:5000${issue.photo}`}
                 alt="Complaint"
                 style={{ width: "100%", borderRadius: 10, maxHeight: 200, objectFit: "cover" }}
               />

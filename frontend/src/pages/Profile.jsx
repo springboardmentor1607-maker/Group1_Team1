@@ -96,7 +96,7 @@ function Profile() {
             try {
                 const isVolunteer = user?.role === "volunteer";
                 const isAdmin     = user?.role === "admin";
-                const endpoint    = isVolunteer ? "/api/complaints/my-assignments"
+                const endpoint    = isVolunteer ? "/api/complaints/assigned-to-me"
                                   : isAdmin     ? "/api/complaints"
                                   :               "/api/complaints/my";
                 const res        = await API.get(endpoint);
