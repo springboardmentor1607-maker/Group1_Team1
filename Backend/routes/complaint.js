@@ -71,26 +71,7 @@ router.get("/my", protect, async (req, res) => {
 });
 
 // ============================================================
-// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS — volunteer dashboard
-// ⚠️ Must be BEFORE "/:id"
-// ============================================================
-router.get("/assigned-to-me", protect, async (req, res) => {
-  try {
-    console.log("🔍 assigned-to-me hit, user:", req.user?._id, "role:", req.user?.role);
-    const complaints = await Complaint.find({ assigned_to: req.user._id })
-      .populate("user_id",     "name email")
-      .populate("assigned_to", "name email")
-      .sort({ created_at: -1 });
-    console.log("✅ complaints found:", complaints.length);
-    res.json(complaints);
-  } catch (error) {
-    console.error("❌ assigned-to-me error:", error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// ============================================================
-// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS (legacy)
+// ✅ GET VOLUNTEER ASSIGNED COMPLAINTS
 // ⚠️ Must be BEFORE "/:id"
 // ============================================================
 router.get("/my-assignments", protect, authorize("volunteer"), async (req, res) => {
@@ -145,7 +126,6 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
     if (!complaint) return res.status(404).json({ message: "Complaint not found" });
 
     complaint.assigned_to = volunteerId;
-    complaint.status      = "assigned"; // auto-set status when volunteer is assigned
     complaint.updated_at  = new Date();
     await complaint.save();
 
@@ -165,18 +145,7 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
 router.put("/status/:id", protect, authorize("admin", "volunteer"), async (req, res) => {
   try {
     const { status } = req.body;
-    const allowedStatus = [
-      "received",
-      "pending",
-      "assigned",
-      "accepted",
-      "in_review",
-      "in_progress",
-      "denied",
-      "resolved",
-      "completed",
-    ];
-
+    const allowedStatus = ["received", "in_review", "resolved"];
     if (!allowedStatus.includes(status))
       return res.status(400).json({ message: "Invalid status value" });
 

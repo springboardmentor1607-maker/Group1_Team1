@@ -455,8 +455,8 @@ export default function VolunteerDashboard() {
   const handleAccept = async (id) => {
     try {
       setActionLoading(true);
-      await API.put(`/api/complaints/status/${id}`, { status: "accepted" });
-      patchStatus(id, "accepted");
+      await API.put(`/api/complaints/status/${id}`, { status: "assigned" });
+      patchStatus(id, "assigned");
       showFeedback("Complaint accepted! Click 'Start Working' when you begin.");
     } catch (err) {
       showFeedback(err?.response?.data?.message || "Failed to accept. Try again.", true);
@@ -469,8 +469,8 @@ export default function VolunteerDashboard() {
   const handleDeny = async (id) => {
     try {
       setActionLoading(true);
-      await API.put(`/api/complaints/status/${id}`, { status: "denied" });
-      patchStatus(id, "denied");
+      await API.put(`/api/complaints/status/${id}`, { status: "received" });
+      patchStatus(id, "received");
       showFeedback("Complaint denied. Admin will be notified.");
     } catch (err) {
       showFeedback(err?.response?.data?.message || "Failed to deny. Try again.", true);
@@ -483,8 +483,8 @@ export default function VolunteerDashboard() {
   const handleStartWorking = async (id) => {
     try {
       setActionLoading(true);
-      await API.put(`/api/complaints/status/${id}`, { status: "in_progress" });
-      patchStatus(id, "in_progress");
+      await API.put(`/api/complaints/status/${id}`, { status: "in_review" });
+      patchStatus(id, "in_review");
       showFeedback("Status updated to In Progress. Go get it done!");
     } catch (err) {
       showFeedback(err?.response?.data?.message || "Failed to update. Try again.", true);

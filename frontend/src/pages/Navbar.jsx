@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import { useNotifications } from "./NotificationContext";
 
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 function CleanStreetLogo({ size = 44 }) {
@@ -67,6 +68,124 @@ function CleanStreetLogo({ size = 44 }) {
         <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)" />
       </g>
     </svg>
+  );
+}
+
+// ─── Time helper ─────────────────────────────────────────────────────────────
+function timeAgo(date) {
+  if (!date) return "";
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hrs  = Math.floor(diff / 3600000);
+  if (mins < 1)  return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hrs  < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+// ─── Notification Bell ────────────────────────────────────────────────────────
+function NotificationBell() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const navigate = useNavigate();
+  const notifCtx = useNotifications();
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Not inside NotificationProvider — render nothing (after all hooks)
+  if (!notifCtx) return null;
+
+  const { notifications, unreadCount, markAllRead, markRead, clearAll } = notifCtx;
+
+  const handleOpen = () => {
+    setOpen(o => !o);
+    if (unreadCount > 0) markAllRead();
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button onClick={handleOpen} title="Notifications" style={{
+        position: "relative", background: open ? "#eff6ff" : "#fff",
+        border: "1.5px solid #e5e7eb", borderRadius: 10,
+        width: 38, height: 38, cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 17, transition: "all 0.15s",
+      }}>
+        🔔
+        {unreadCount > 0 && (
+          <span style={{
+            position: "absolute", top: -5, right: -5,
+            background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 800,
+            minWidth: 18, height: 18, borderRadius: 9999, padding: "0 3px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            border: "2px solid #fff", animation: "nbPulse 1.5s infinite",
+          }}>{unreadCount > 9 ? "9+" : unreadCount}</span>
+        )}
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 10px)", right: 0,
+          width: 340, background: "#fff", borderRadius: 14,
+          boxShadow: "0 12px 40px rgba(0,0,0,0.16)", border: "1px solid #e5e7eb",
+          zIndex: 1000, overflow: "hidden",
+        }}>
+          <div style={{ padding: "13px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #f3f4f6", background: "#fafafa" }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: "#111827" }}>
+              🔔 Notifications
+              {notifications.length > 0 && (
+                <span style={{ marginLeft: 8, background: "#dbeafe", color: "#1d4ed8", fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 9999 }}>
+                  {notifications.length}
+                </span>
+              )}
+            </span>
+            {notifications.length > 0 && (
+              <button onClick={clearAll} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#9ca3af", fontFamily: "inherit" }}>Clear all</button>
+            )}
+          </div>
+
+          <div style={{ maxHeight: 380, overflowY: "auto" }}>
+            {notifications.length === 0 ? (
+              <div style={{ padding: "36px 16px", textAlign: "center", color: "#9ca3af" }}>
+                <div style={{ fontSize: 34, marginBottom: 8 }}>🔕</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>You're all caught up!</div>
+                <div style={{ fontSize: 12, marginTop: 4 }}>We'll notify you when your complaint status changes</div>
+              </div>
+            ) : notifications.map(n => (
+              <div key={n.id} onClick={() => markRead(n.id)} style={{
+                padding: "12px 16px", display: "flex", gap: 10, alignItems: "flex-start",
+                borderBottom: "1px solid #f9fafb",
+                background: n.read ? "#fff" : "#eff6ff",
+                cursor: "default", transition: "background 0.2s",
+              }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: n.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{n.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</div>
+                  <div style={{ fontSize: 12, color: n.color, fontWeight: 500, marginTop: 1 }}>{n.message}</div>
+                  <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{timeAgo(n.time)}</div>
+                </div>
+                {!n.read && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb", flexShrink: 0, marginTop: 5 }} />}
+              </div>
+            ))}
+          </div>
+
+          {notifications.length > 0 && (
+            <div style={{ borderTop: "1px solid #f3f4f6", padding: "10px 16px", textAlign: "center" }}>
+              <button onClick={() => { setOpen(false); navigate("/notifications"); }} style={{
+                background: "none", border: "none", cursor: "pointer",
+                fontSize: 13, fontWeight: 600, color: "#2563eb", fontFamily: "inherit",
+              }}>View all notifications →</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <style>{`@keyframes nbPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.2); } }`}</style>
+    </div>
   );
 }
 
@@ -140,6 +259,7 @@ export default function Navbar() {
       </div>
 
       <div className="cs-navbar__actions">
+        {user && role !== "admin" && <NotificationBell />}
         {user ? (
           <button
             className="cs-btn cs-btn--outline cs-btn--sm"

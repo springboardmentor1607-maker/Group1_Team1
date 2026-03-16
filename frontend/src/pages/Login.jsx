@@ -227,7 +227,7 @@ export default function Login() {
                 <input type="checkbox" className="auth-checkbox" name="remember" checked={form.remember} onChange={handleChange} />
                 <span className="auth-checkbox-label">Remember me</span>
               </label>
-              <button type="button" className="auth-forgot">Forgot password?</button>
+              <button type="button" className="auth-forgot" onClick={() => navigate("/forgot-password")}>Forgot password?</button>
             </div>
 
             <button className="auth-btn" type="submit" disabled={loading}>
