@@ -82,9 +82,9 @@ function StatusBadge({ status }) {
     assigned:    { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"    },
     accepted:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted"    },
     pending:     { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
-    received:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
     in_review:   { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
     in_progress: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
+    received:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
     denied:      { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied"      },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
@@ -393,7 +393,7 @@ function ReportsTab({ complaints, users, volunteers }) {
         </div>
       </div>
 
-      {/* Stats Row */}
+      {/* ── Stats Row — NOW: Pending / In Progress / Resolved ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
         {[
           { label: "Total Complaints", value: total,       icon: "📋", color: "#3b82f6" },
@@ -441,7 +441,7 @@ function ReportsTab({ complaints, users, volunteers }) {
           )}
         </div>
 
-        {/* Resolution Rate */}
+        {/* Resolution Rate — legend NOW shows Pending / In Progress / Resolved */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🎯 Resolution Rate</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: "10px 0" }}>
@@ -763,7 +763,6 @@ function AdminDashboard() {
     }
   };
 
-  // ── Stats ───────────────────────────────────────────────────────────────────
   const total    = complaints.length;
   const pending  = complaints.filter(c => ["pending", "received"].includes(c.status)).length;
   const resolved = complaints.filter(c => ["resolved", "completed"].includes(c.status)).length;

@@ -469,7 +469,7 @@ export default function ViewComplaints() {
         ...c,
         id:           c._id || c.id,
         location:     c.address || c.location || "No location",
-        image:        c.photo ? `http://localhost:5000${c.photo}` : null,
+        image:        c.photo ? `http://localhost:5001${c.photo}` : null,
         type:         c.type      || c.issueType || "General",
         priority:     c.priority  || "low",
         status:       c.status    || "received",

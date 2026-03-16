@@ -145,7 +145,7 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
     if (!complaint) return res.status(404).json({ message: "Complaint not found" });
 
     complaint.assigned_to = volunteerId;
-    complaint.status      = "assigned";
+    complaint.status      = "assigned"; // auto-set status when volunteer is assigned
     complaint.updated_at  = new Date();
     await complaint.save();
 
@@ -183,6 +183,7 @@ router.put("/status/:id", protect, authorize("admin", "volunteer"), async (req, 
     const complaint = await Complaint.findById(req.params.id);
     if (!complaint) return res.status(404).json({ message: "Complaint not found" });
 
+    // Volunteers can only update complaints assigned to them
     if (
       req.user.role === "volunteer" &&
       String(complaint.assigned_to) !== String(req.user._id)
@@ -214,7 +215,6 @@ router.post("/:id/vote", protect, async (req, res) => {
     const complaint = await Complaint.findById(req.params.id);
     if (!complaint) return res.status(404).json({ message: "Complaint not found" });
 
-    // Safely init missing fields (for old documents)
     if (!Array.isArray(complaint.voters))          complaint.voters    = [];
     if (typeof complaint.upvotes   !== "number")   complaint.upvotes   = 0;
     if (typeof complaint.downvotes !== "number")   complaint.downvotes = 0;
@@ -225,12 +225,10 @@ router.post("/:id/vote", protect, async (req, res) => {
     if (existingIdx !== -1) {
       const existing = complaint.voters[existingIdx];
       if (existing.voteType === voteType) {
-        // Same vote → remove (toggle off)
         complaint.voters.splice(existingIdx, 1);
         if (voteType === "upvote")   complaint.upvotes   = Math.max(0, complaint.upvotes - 1);
         if (voteType === "downvote") complaint.downvotes = Math.max(0, complaint.downvotes - 1);
       } else {
-        // Different vote → switch
         if (existing.voteType === "upvote")   complaint.upvotes   = Math.max(0, complaint.upvotes - 1);
         if (existing.voteType === "downvote") complaint.downvotes = Math.max(0, complaint.downvotes - 1);
         complaint.voters[existingIdx].voteType = voteType;
@@ -238,7 +236,6 @@ router.post("/:id/vote", protect, async (req, res) => {
         if (voteType === "downvote") complaint.downvotes += 1;
       }
     } else {
-      // New vote
       complaint.voters.push({ user: req.user._id, voteType });
       if (voteType === "upvote")   complaint.upvotes   += 1;
       if (voteType === "downvote") complaint.downvotes += 1;
