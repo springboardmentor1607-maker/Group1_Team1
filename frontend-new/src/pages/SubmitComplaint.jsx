@@ -74,7 +74,7 @@ function CleanStreetLogo({ size = 44 }) {
 }
 
 // ─── Leaflet Map Component ────────────────────────────────────────────────────
-function LocationMap({ onLocationSelect, selectedCoords }) {
+function LocationMap({ onLocationSelect, selectedCoords, geocodeQuery }) {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markerRef = useRef(null);
@@ -156,6 +156,35 @@ function LocationMap({ onLocationSelect, selectedCoords }) {
         map.flyTo([lat, lng], 16, { duration: 1.5 });
         placeMarker(L, map, map._greenIcon, lat, lng);
     }, [selectedCoords]);
+
+    // Forward geocode effect: when parent types in address box, move the pin
+    useEffect(() => {
+        const query = (geocodeQuery || '').trim();
+        if (!query || query.length < 4) return;
+        if (!mapInstanceRef.current || !window.L) return;
+        const L = window.L;
+        const map = mapInstanceRef.current;
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`
+                );
+                const data = await res.json();
+                if (cancelled || !data || data.length === 0) return;
+                const lat = parseFloat(data[0].lat);
+                const lng = parseFloat(data[0].lon);
+                map.flyTo([lat, lng], 15, { duration: 1.2 });
+                placeMarker(L, map, map._greenIcon, lat, lng);
+                // address: null tells parent NOT to overwrite the text the user is typing
+                onLocationSelect({ lat, lng, address: null });
+            } catch (err) {
+                console.warn('Forward geocode error', err);
+            }
+        })();
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [geocodeQuery]);
 
     const placeMarker = (L, map, icon, lat, lng) => {
         if (markerRef.current) markerRef.current.remove();
@@ -260,6 +289,8 @@ export default function SubmitComplaint() {
 
     const [submitted, setSubmitted] = useState(false);
     const [selectedCoords, setSelectedCoords] = useState(null);
+    const [geocodeQuery, setGeocodeQuery] = useState('');
+    const geocodeTimer = useRef(null);
     const [form, setForm] = useState({
         title: '',
         type: '',
@@ -294,7 +325,8 @@ export default function SubmitComplaint() {
             ...f,
             lat: lat.toFixed(6),
             lng: lng.toFixed(6),
-            address: address || f.address,
+            // address=null means it came from forward geocoding — don't overwrite what user typed
+            ...(address !== null ? { address: address || f.address } : {}),
         }));
     };
 
@@ -313,7 +345,7 @@ export default function SubmitComplaint() {
             formData.append('longitude', form.lng);
             if (form.photo) formData.append('photo', form.photo);
 
-            const res = await fetch('http://localhost:5000/api/complaints', {
+            const res = await fetch('http://localhost:5001/api/complaints', {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
                 body: formData,
@@ -458,7 +490,14 @@ export default function SubmitComplaint() {
                                             className="cs-input"
                                             name="address"
                                             value={form.address}
-                                            onChange={handleChange}
+                                            onChange={(e) => {
+                                                handleChange(e);
+                                                const val = e.target.value;
+                                                if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+                                                geocodeTimer.current = setTimeout(() => {
+                                                    setGeocodeQuery(val);
+                                                }, 800);
+                                            }}
                                             placeholder="Pin on map or type address"
                                             required
                                         />
@@ -555,6 +594,7 @@ export default function SubmitComplaint() {
                                 <LocationMap
                                     onLocationSelect={handleLocationSelect}
                                     selectedCoords={selectedCoords}
+                                    geocodeQuery={geocodeQuery}
                                 />
                             </div>
 
