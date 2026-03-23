@@ -145,7 +145,7 @@ router.put("/assign/:id", protect, authorize("admin"), async (req, res) => {
 router.put("/status/:id", protect, authorize("admin", "volunteer"), async (req, res) => {
   try {
     const { status } = req.body;
-    const allowedStatus = ["received", "in_review", "resolved"];
+     const allowedStatus = ["received", "assigned", "in_review", "resolved", "completed", "pending"];
     if (!allowedStatus.includes(status))
       return res.status(400).json({ message: "Invalid status value" });
 

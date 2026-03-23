@@ -56,7 +56,9 @@ function IssueRow({ issue, isSelected, onSelect }) {
   const ref  = "#" + id.slice(-5).toUpperCase();
   const pc   = priorityColor[issue.priority?.toLowerCase()] || priorityColor.medium;
   const date = new Date(issue.created_at || issue.createdAt || issue.reportedAt).toLocaleDateString();
-  const needsAction = ["assigned", "received", "pending"].includes(issue.status);
+
+  // ✅ FIX 1: "assigned" is no longer "needs action" — volunteer already accepted it
+  const needsAction = ["received", "pending"].includes(issue.status);
 
   return (
     <div
@@ -119,8 +121,9 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
   const date = new Date(issue.created_at || issue.createdAt || issue.reportedAt).toLocaleDateString();
   const st   = issue.status;
 
-  const isPendingAccept = ["assigned", "received", "pending"].includes(st);
-  const isAccepted      = st === "accepted";
+  // ✅ FIX 2: "assigned" = volunteer accepted → show Start Working, NOT Accept/Deny
+  const isPendingAccept = ["received", "pending"].includes(st);
+  const isAccepted      = st === "assigned";
   const isInProgress    = ["in_review", "in_progress"].includes(st);
   const isResolved      = st === "resolved";
   const isCompleted     = st === "completed";
@@ -208,7 +211,7 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
               Actions
             </div>
 
-            {/* STEP 1 — Needs Accept / Deny */}
+            {/* STEP 1 — Needs Accept / Deny (received or pending) */}
             {isPendingAccept && (
               <div>
                 <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
@@ -247,7 +250,7 @@ function IssueDetailModal({ issue, onClose, onAccept, onDeny, onStartWorking, on
               </div>
             )}
 
-            {/* STEP 2 — Accepted → Start Working */}
+            {/* STEP 2 — Assigned (accepted) → Start Working */}
             {isAccepted && (
               <div>
                 <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>
@@ -407,8 +410,9 @@ export default function VolunteerDashboard() {
   // ── Counts ─────────────────────────────────────────────────────────────────
   const counts = {
     total:      issues.length,
-    pending:    issues.filter(i => ["assigned", "received", "pending"].includes(i.status)).length,
-    accepted:   issues.filter(i => i.status === "accepted").length,
+    // ✅ FIX 3: "assigned" is now "Accepted" count, not "Pending"
+    pending:    issues.filter(i => ["received", "pending"].includes(i.status)).length,
+    accepted:   issues.filter(i => i.status === "assigned").length,
     inProgress: issues.filter(i => ["in_review", "in_progress"].includes(i.status)).length,
     resolved:   issues.filter(i => i.status === "resolved").length,
     completed:  issues.filter(i => i.status === "completed").length,
@@ -421,11 +425,12 @@ export default function VolunteerDashboard() {
     "Completed": counts.completed, "Denied": counts.denied,
   })[tab] ?? 0;
 
+  // ✅ FIX 4: Tab filter — "Accepted" tab shows "assigned" status issues
   const filtered = issues.filter(i => {
     const groups = {
       "All":         true,
-      "Pending":     ["assigned", "received", "pending"].includes(i.status),
-      "Accepted":    i.status === "accepted",
+      "Pending":     ["received", "pending"].includes(i.status),
+      "Accepted":    i.status === "assigned",
       "In Progress": ["in_review", "in_progress"].includes(i.status),
       "Resolved":    i.status === "resolved",
       "Completed":   i.status === "completed",
@@ -451,7 +456,7 @@ export default function VolunteerDashboard() {
     );
   };
 
-  // ── ACCEPT ─────────────────────────────────────────────────────────────────
+  // ── ACCEPT → sets status to "assigned" ────────────────────────────────────
   const handleAccept = async (id) => {
     try {
       setActionLoading(true);
@@ -465,7 +470,7 @@ export default function VolunteerDashboard() {
     }
   };
 
-  // ── DENY ───────────────────────────────────────────────────────────────────
+  // ── DENY → sets status back to "received" ─────────────────────────────────
   const handleDeny = async (id) => {
     try {
       setActionLoading(true);
