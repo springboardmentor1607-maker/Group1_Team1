@@ -22,19 +22,18 @@ exports.sendRegisterOtp = async (req, res) => {
 
     await Otp.create({
       email,
-      otp
+      otp,
     });
 
     await sendOtp(email, otp);
 
     res.json({
-      message: "OTP sent to email"
+      message: "OTP sent to email",
     });
-
   } catch (error) {
     console.error("OTP error:", error);
     res.status(500).json({
-      message: "Failed to send OTP"
+      message: "Failed to send OTP",
     });
   }
 };
@@ -42,7 +41,7 @@ exports.sendRegisterOtp = async (req, res) => {
 // Verify Registration OTP
 exports.verifyRegisterOtp = async (req, res) => {
   try {
-    const { email, otp, name, password } = req.body;
+    const { email, otp, name, password, role } = req.body;
 
     const record = await Otp.findOne({ email });
 
@@ -52,12 +51,11 @@ exports.verifyRegisterOtp = async (req, res) => {
     if (record.otp !== otp)
       return res.status(400).json({ message: "Invalid OTP" });
 
-    const hashed = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       name,
       email,
-      password: hashed
+      password,
+      role: role || "user"
     });
 
     await Otp.deleteMany({ email });
@@ -82,8 +80,7 @@ exports.sendResetOtp = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const otp = generateOtp();
 
@@ -91,18 +88,17 @@ exports.sendResetOtp = async (req, res) => {
 
     await Otp.create({
       email,
-      otp
+      otp,
     });
 
     await sendOtp(email, otp);
 
     res.json({
-      message: "Reset OTP sent"
+      message: "Reset OTP sent",
     });
-
   } catch (error) {
     res.status(500).json({
-      message: "Failed to send reset OTP"
+      message: "Failed to send reset OTP",
     });
   }
 };
@@ -120,12 +116,11 @@ exports.resetPassword = async (req, res) => {
     if (record.otp !== otp)
       return res.status(400).json({ message: "Invalid OTP" });
 
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const user = await User.findOne({ email });
 
-    await User.updateOne(
-      { email },
-      { password: hashed }
-    );
+    user.password = newPassword;
+
+    await user.save();
 
     await Otp.deleteMany({ email });
 
