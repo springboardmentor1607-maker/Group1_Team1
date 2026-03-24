@@ -388,6 +388,48 @@ export default function UserDashboard() {
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [searchQuery, setSearchQuery]             = useState("");
 
+  // ── Volunteer Application ─────────────────────────────────────────────────
+  const [showVolunteerModal, setShowVolunteerModal] = useState(false);
+  const [volunteerForm, setVolunteerForm] = useState({ reason: "", skills: "", availability: "" });
+  const [volunteerSubmitting, setVolunteerSubmitting] = useState(false);
+  const [volunteerApplication, setVolunteerApplication] = useState(() => {
+    try {
+      const userId = user?._id || user?.id || user?.userId;
+      return JSON.parse(localStorage.getItem(`vol_app_${userId}`)) || null;
+    } catch { return null; }
+  });
+
+  const submitVolunteerApplication = () => {
+    if (!volunteerForm.reason.trim() || !volunteerForm.skills.trim() || !volunteerForm.availability.trim()) return;
+    setVolunteerSubmitting(true);
+    const userId = user?._id || user?.id || user?.userId || user?.email;
+    if (!userId) {
+      alert("Could not get your user ID. Please log out and log in again.");
+      setVolunteerSubmitting(false);
+      return;
+    }
+    const application = {
+      userId: userId,
+      userName: user?.name,
+      userEmail: user?.email,
+      reason: volunteerForm.reason,
+      skills: volunteerForm.skills,
+      availability: volunteerForm.availability,
+      status: "pending",
+      appliedAt: new Date().toISOString(),
+    };
+    // Save to localStorage — admin reads from here
+    const allApps = JSON.parse(localStorage.getItem("vol_applications") || "[]");
+    const existing = allApps.findIndex(a => a.userId === application.userId);
+    if (existing >= 0) allApps[existing] = application; else allApps.push(application);
+    localStorage.setItem("vol_applications", JSON.stringify(allApps));
+    localStorage.setItem(`vol_app_${application.userId}`, JSON.stringify(application));
+    setVolunteerApplication(application);
+    setVolunteerSubmitting(false);
+    setShowVolunteerModal(false);
+    setVolunteerForm({ reason: "", skills: "", availability: "" });
+  };
+
   const fetchComplaints = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true); else setRefreshing(true);
@@ -599,6 +641,61 @@ export default function UserDashboard() {
               </div>
             </div>
 
+            {/* Volunteer Application Card */}
+            {MOCK_USER.role === "user" && (
+              <div className="cs-sidebar-card" style={{ border: volunteerApplication?.status === "approved" ? "1.5px solid #22c55e" : volunteerApplication?.status === "rejected" ? "1.5px solid #ef4444" : volunteerApplication ? "1.5px solid #f59e0b" : "1.5px solid #2563eb" }}>
+                <div className="cs-sidebar-card__title">🤝 Become a Volunteer</div>
+                {!volunteerApplication ? (
+                  <>
+                    <p style={{ fontSize: 12, color: "#6b7280", marginTop: 6, marginBottom: 10 }}>
+                      Help your community by becoming a CleanStreet volunteer. Apply now and make a difference!
+                    </p>
+                    <button className="cs-btn cs-btn--primary cs-btn--full" onClick={() => setShowVolunteerModal(true)}>
+                      Apply for Volunteering
+                    </button>
+                  </>
+                ) : volunteerApplication.status === "pending" ? (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#fef9c3", borderRadius: 8, padding: "10px 12px" }}>
+                      <span style={{ fontSize: 20 }}>⏳</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#92400e" }}>Application Pending</div>
+                        <div style={{ fontSize: 11, color: "#b45309" }}>Awaiting admin review</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 8 }}>
+                      Applied on {new Date(volunteerApplication.appliedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ) : volunteerApplication.status === "approved" ? (
+                  <div style={{ marginTop: 8, background: "#dcfce7", borderRadius: 8, padding: "10px 12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 20 }}>✅</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>Application Approved!</div>
+                        <div style={{ fontSize: 11, color: "#15803d" }}>You are now a volunteer. Please refresh.</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ background: "#fee2e2", borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 20 }}>❌</span>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#991b1b" }}>Application Rejected</div>
+                          <div style={{ fontSize: 11, color: "#b91c1c" }}>You can apply again</div>
+                        </div>
+                      </div>
+                    </div>
+                    <button className="cs-btn cs-btn--outline cs-btn--full" style={{ fontSize: 12 }} onClick={() => { setVolunteerApplication(null); const userId = user?._id || user?.id || user?.userId; localStorage.removeItem(`vol_app_${userId}`); }}>
+                      Reapply
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Recent Activity */}
             <div className="cs-sidebar-card">
               <div className="cs-sidebar-card__title">🕐 Recent Activity</div>
@@ -623,6 +720,81 @@ export default function UserDashboard() {
       </div>
 
       <ComplaintDetailModal complaint={selectedComplaint} onClose={() => setSelectedComplaint(null)} />
+
+      {/* ── Volunteer Application Modal ── */}
+      {showVolunteerModal && (
+        <div className="cs-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowVolunteerModal(false); }}>
+          <div className="cs-modal" style={{ maxWidth: 480 }}>
+            <button className="cs-modal__close" onClick={() => setShowVolunteerModal(false)}>×</button>
+            <div className="cs-modal__header">
+              <div>
+                <div className="cs-modal__title">🤝 Apply for Volunteering</div>
+                <div className="cs-modal__subtitle">Help your community — tell us about yourself</div>
+              </div>
+            </div>
+            <div className="cs-modal__body">
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
+                    Why do you want to volunteer? *
+                  </label>
+                  <textarea
+                    value={volunteerForm.reason}
+                    onChange={e => setVolunteerForm(f => ({ ...f, reason: e.target.value }))}
+                    placeholder="Tell us your motivation for volunteering..."
+                    rows={3}
+                    style={{ width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
+                    Skills / Experience *
+                  </label>
+                  <textarea
+                    value={volunteerForm.skills}
+                    onChange={e => setVolunteerForm(f => ({ ...f, skills: e.target.value }))}
+                    placeholder="e.g. community work, plumbing, electrical, waste management..."
+                    rows={2}
+                    style={{ width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
+                    Availability *
+                  </label>
+                  <select
+                    value={volunteerForm.availability}
+                    onChange={e => setVolunteerForm(f => ({ ...f, availability: e.target.value }))}
+                    style={{ width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", fontSize: 13, outline: "none", background: "#fff", fontFamily: "inherit", boxSizing: "border-box" }}
+                  >
+                    <option value="">Select availability</option>
+                    <option value="Weekdays">Weekdays</option>
+                    <option value="Weekends">Weekends</option>
+                    <option value="Weekdays & Weekends">Weekdays & Weekends</option>
+                    <option value="Flexible">Flexible</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                  <button
+                    onClick={() => setShowVolunteerModal(false)}
+                    style={{ flex: 1, padding: "10px", border: "1.5px solid #e5e7eb", borderRadius: 8, background: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", color: "#374151" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={submitVolunteerApplication}
+                    disabled={volunteerSubmitting || !volunteerForm.reason.trim() || !volunteerForm.skills.trim() || !volunteerForm.availability}
+                    style={{ flex: 2, padding: "10px", border: "none", borderRadius: 8, background: (!volunteerForm.reason.trim() || !volunteerForm.skills.trim() || !volunteerForm.availability) ? "#e5e7eb" : "#2563eb", color: (!volunteerForm.reason.trim() || !volunteerForm.skills.trim() || !volunteerForm.availability) ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {volunteerSubmitting ? "Submitting..." : "Submit Application"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Chatbot />
     </div>
   );
