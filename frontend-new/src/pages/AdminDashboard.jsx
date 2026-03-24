@@ -658,6 +658,7 @@ function AdminDashboard() {
   const [assignSelections, setAssignSelections] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [zoneFilter, setZoneFilter] = useState("all");
   const [loadingComplaints, setLoadingComplaints] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [zones, setZones] = useState(() => {
@@ -750,7 +751,9 @@ function AdminDashboard() {
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.address?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchStatus && matchSearch;
+    const matchZone = zoneFilter === "all" ? true :
+      (c.address || "").toLowerCase().includes(zoneFilter.toLowerCase());
+    return matchStatus && matchSearch && matchZone;
   });
 
   const sidebarItems = [
@@ -892,6 +895,23 @@ function AdminDashboard() {
                   ))}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <select
+                    value={zoneFilter}
+                    onChange={e => setZoneFilter(e.target.value)}
+                    style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 12px", fontSize: 13, color: "#374151", background: "#fff", outline: "none", cursor: "pointer" }}>
+                    <option value="all">🗺️ All Zones</option>
+                    {[
+                      "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+                      "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+                      "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+                      "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+                      "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+                      "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli",
+                      "Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+                    ].map(state => (
+                      <option key={state} value={state}>📍 {state}</option>
+                    ))}
+                  </select>
                   <input className="cs-input cs-search-input"
                     placeholder="🔍 Search complaints..."
                     value={searchQuery}
