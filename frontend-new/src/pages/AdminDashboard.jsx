@@ -806,6 +806,11 @@ function AdminDashboard() {
     finally { setLoadingComplaints(false); setRefreshing(false); }
   };
 
+  const [volSearch, setVolSearch] = useState("");
+  const [volFilter, setVolFilter] = useState("all");
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
+
   const [volApplications, setVolApplications] = useState(() => {
     try { return JSON.parse(localStorage.getItem("vol_applications") || "[]"); } catch { return []; }
   });
@@ -879,6 +884,28 @@ function AdminDashboard() {
   const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
   const inProg = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
   const denied = complaints.filter(c => c.status === "denied").length;
+
+  const filteredVolunteers = volunteers.filter(v => {
+    const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+    const matchSearch = !volSearch ||
+      v.name?.toLowerCase().includes(volSearch.toLowerCase()) ||
+      v.email?.toLowerCase().includes(volSearch.toLowerCase()) ||
+      v.location?.toLowerCase().includes(volSearch.toLowerCase());
+    const matchFilter =
+      volFilter === "all" ? true :
+      volFilter === "active" ? assigned > 0 :
+      assigned === 0;
+    return matchSearch && matchFilter;
+  });
+  
+  const filteredUsers = users.filter(u => {
+    const matchSearch = !userSearch ||
+      u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.location?.toLowerCase().includes(userSearch.toLowerCase());
+    const matchRole = userRoleFilter === "all" || u.role === userRoleFilter;
+    return matchSearch && matchRole;
+  });
 
   const filteredComplaints = complaints.filter(c => {
     const matchStatus =
@@ -1258,7 +1285,33 @@ function AdminDashboard() {
                 </div>
               )}
 
-              {users.length === 0 ? (
+{/* Search + Role Filter */}
+<div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
+  <div style={{ position: "relative", flex: 1 }}>
+    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af" }}>🔍</span>
+    <input
+      placeholder="Search by name, email or location..."
+      value={userSearch}
+      onChange={e => setUserSearch(e.target.value)}
+      style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+    />
+  </div>
+  <select
+    value={userRoleFilter}
+    onChange={e => setUserRoleFilter(e.target.value)}
+    style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#374151", background: "#fff", outline: "none", minWidth: 140 }}
+  >
+    <option value="all">All Roles</option>
+    <option value="user">User</option>
+    <option value="volunteer">Volunteer</option>
+    <option value="admin">Admin</option>
+  </select>
+  <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
+    {filteredUsers.length} of {users.length} users
+  </span>
+</div>
+
+              {filteredUsers.length === 0 ? (
                 <div className="cs-empty">
                   <div className="cs-empty__icon">👥</div>
                   <div className="cs-empty__title">No users found</div>
@@ -1267,9 +1320,9 @@ function AdminDashboard() {
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead><tr><TH>Name</TH><TH>Email</TH><TH>Current Role</TH><TH>Location</TH><TH>Joined</TH><TH>Actions</TH></tr></thead>
+                    <thead><tr><TH>Name</TH><TH>Email</TH><TH>Current Role</TH><TH>Location</TH><TH>Joined</TH></tr></thead>
                     <tbody>
-                      {users.map(u => (
+                      {filteredUsers.map(u => (
                         <tr key={u._id}
                           onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
                           onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -1289,18 +1342,6 @@ function AdminDashboard() {
                           </TD>
                           <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
                           <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
-                          <TD>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              {u.role !== "volunteer" && u.role !== "admin" && (
-                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
-                                  onClick={() => changeUserRole(u._id, "volunteer")}>Make Volunteer</button>
-                              )}
-                              {u.role === "volunteer" && (
-                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
-                                  onClick={() => changeUserRole(u._id, "user")}>Make Citizen</button>
-                              )}
-                            </div>
-                          </TD>
                         </tr>
                       ))}
                     </tbody>
@@ -1312,47 +1353,73 @@ function AdminDashboard() {
 
           {/* ══ VOLUNTEERS ══ */}
           {activeTab === "volunteers" && (
-            <div>
-              <div style={{ marginBottom: 20 }}>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
-                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
+  <div>
+    <div style={{ marginBottom: 20 }}>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
+      <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
+    </div>
+
+    {/* Search + Filter bar */}
+    <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
+      <div style={{ position: "relative", flex: 1 }}>
+        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af" }}>🔍</span>
+        <input
+          placeholder="Search by name, email or location..."
+          value={volSearch || ""}
+          onChange={e => setVolSearch(e.target.value)}
+          style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+        />
+      </div>
+      <select
+        value={volFilter || "all"}
+        onChange={e => setVolFilter(e.target.value)}
+        style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#374151", background: "#fff", outline: "none", minWidth: 160 }}
+      >
+        <option value="all">All Volunteers</option>
+        <option value="active">Has Assignments</option>
+        <option value="idle">No Assignments</option>
+      </select>
+      <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
+        {filteredVolunteers.length} of {volunteers.length} volunteers
+      </span>
+    </div>
+
+    {filteredVolunteers.length === 0 ? (
+      <div className="cs-empty">
+        <div className="cs-empty__icon">🤝</div>
+        <div className="cs-empty__title">No volunteers found</div>
+        <div className="cs-empty__desc">Promote citizens to volunteer from the User Management tab.</div>
+      </div>
+    ) : (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+        {filteredVolunteers.map(v => {
+          const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+          const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
+          return (
+            <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
+              <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
+              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
+              <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{assigned}</div>
+                  <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{volResolved}</div>
+                  <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
+                </div>
               </div>
-              {volunteers.length === 0 ? (
-                <div className="cs-empty">
-                  <div className="cs-empty__icon">🤝</div>
-                  <div className="cs-empty__title">No volunteers yet</div>
-                  <div className="cs-empty__desc">Promote citizens to volunteer from the User Management tab.</div>
-                </div>
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
-                  {volunteers.map(v => {
-                    const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
-                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
-                    return (
-                      <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
-                        <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
-                        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
-                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
-                        <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
-                          <div style={{ textAlign: "center" }}>
-                            <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{assigned}</div>
-                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
-                          </div>
-                          <div style={{ textAlign: "center" }}>
-                            <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{volResolved}</div>
-                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
-                          </div>
-                        </div>
-                        <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ marginTop: 12, width: "100%", fontSize: 12 }}
-                          onClick={() => changeUserRole(v._id, "user")}>Remove Volunteer</button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ marginTop: 12, width: "100%", fontSize: 12 }}
+                onClick={() => changeUserRole(v._id, "user")}>Remove Volunteer</button>
             </div>
-          )}
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}
 
           {/* ══ ZONES ══ */}
           {activeTab === "zones" && (
