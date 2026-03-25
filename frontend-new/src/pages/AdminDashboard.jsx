@@ -75,18 +75,137 @@ function CleanStreetLogo({ size = 44 }) {
   );
 }
 
+// ─── Zone Dropdown (custom, fixed-position) ───────────────────────────────────
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli",
+  "Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry",
+];
+
+function ZoneDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = React.useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const dropHeight = 260;
+    const top = spaceBelow < dropHeight
+      ? rect.top - dropHeight - 4   // flip upward
+      : rect.bottom + 4;
+    setDropPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
+
+  const label = value === "all" ? "All States" : value;
+
+  const allItems = [
+    { key: "all", label: "🗺️ All States" },
+    ...INDIAN_STATES.map(s => ({ key: s, label: `📍 ${s}` })),
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={handleOpen}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "7px 12px",
+          fontSize: 13,
+          color: "#374151",
+          background: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          minWidth: 155,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        🗺️ {label}
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          onWheel={e => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            overscrollBehavior: "contain",
+touchAction: "none",
+            top: dropPos.top,
+            left: dropPos.left,
+            zIndex: 99999,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+            maxHeight: 260,
+            overflowY: "auto",
+            minWidth: 210,
+          }}
+        >
+          {allItems.map(item => {
+            const active = value === item.key || (item.key === "all" && value === "all");
+            return (
+              <div
+                key={item.key}
+                onClick={() => { onChange(item.key); setOpen(false); }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: active ? "#2563eb" : "#374151",
+                  background: active ? "#eff6ff" : "transparent",
+                  fontWeight: active ? 600 : 400,
+                  userSelect: "none",
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {item.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    resolved:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved"    },
-    completed:   { bg: "#d1fae5", color: "#065f46", dot: "#10b981", label: "Completed"   },
-    assigned:    { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned"    },
-    accepted:    { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted"    },
-    pending:     { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
-    in_review:   { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
+    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
+    completed: { bg: "#d1fae5", color: "#065f46", dot: "#10b981", label: "Completed" },
+    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
+    accepted: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted" },
+    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
     in_progress: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
-    received:    { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending"     },
-    denied:      { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied"      },
+    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    denied: { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied" },
   };
   const key = status?.toLowerCase().replace(" ", "_") || "pending";
   const s = map[key] || map["pending"];
@@ -391,7 +510,7 @@ function ReportsTab({ complaints, users, volunteers }) {
         </div>
       </div>
 
-      {/* ── Stats Row — NOW: Pending / In Progress / Resolved ── */}
+      {/* Stats Row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
         {[
           { label: "Total Complaints", value: total, icon: "📋", color: "#3b82f6" },
@@ -439,7 +558,7 @@ function ReportsTab({ complaints, users, volunteers }) {
           )}
         </div>
 
-        {/* Resolution Rate — legend NOW shows Pending / In Progress / Resolved */}
+        {/* Resolution Rate */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🎯 Resolution Rate</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: "10px 0" }}>
@@ -536,7 +655,6 @@ function ReportsTab({ complaints, users, volunteers }) {
 
       {/* All Complaints Table — Paginated */}
       <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
-        {/* Table header + page info */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>📋 All Complaints</div>
           <div style={{ fontSize: 12, color: "#6b7280" }}>
@@ -593,7 +711,6 @@ function ReportsTab({ complaints, users, volunteers }) {
         {/* Pagination controls */}
         {totalPages > 1 && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, paddingTop: 16, borderTop: "1px solid #f3f4f6", marginTop: 12 }}>
-            {/* Prev */}
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
@@ -605,7 +722,6 @@ function ReportsTab({ complaints, users, volunteers }) {
                 fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
               }}>‹</button>
 
-            {/* Page numbers — show max 7 buttons with ellipsis */}
             {Array.from({ length: totalPages }, (_, i) => i)
               .filter(i => i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 2)
               .reduce((acc, i, idx, arr) => {
@@ -628,7 +744,6 @@ function ReportsTab({ complaints, users, volunteers }) {
                   }}>{item + 1}</button>
               ))}
 
-            {/* Next */}
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page === totalPages - 1}
@@ -698,9 +813,8 @@ function AdminDashboard() {
   const handleVolunteerApplication = async (app, action) => {
     try {
       const updated = { ...app, status: action === "approve" ? "approved" : "rejected" };
-      const all = volApplications.map(a => a.userId === app.userId ? updated : a);
+      const all = volApplications.map(a => a.userEmail === app.userEmail ? updated : a);
       if (action === "approve") {
-        // Find the actual MongoDB _id from users list by matching email
         const matchedUser = users.find(u => u.email === app.userEmail);
         const realUserId = matchedUser?._id || app.userId;
         if (!realUserId || realUserId === "undefined") {
@@ -711,7 +825,7 @@ function AdminDashboard() {
         await fetchUsers();
       }
       localStorage.setItem("vol_applications", JSON.stringify(all));
-      localStorage.setItem(`vol_app_${app.userId}`, JSON.stringify(updated));
+      localStorage.setItem(`vol_app_${app.userEmail}`, JSON.stringify(updated));
       setVolApplications([...all]);
     } catch (err) {
       console.error("Application action failed", err);
@@ -746,8 +860,6 @@ function AdminDashboard() {
     } catch (err) { console.error("Resolve failed", err); }
   };
 
-  // BACKEND: PUT /api/complaints/status/:id { status: "completed" }
-  // Admin approves a volunteer-resolved complaint → marks it as completed
   const approveComplaint = async (complaintId) => {
     try {
       await API.put(`/api/complaints/status/${complaintId}`, { status: "completed" });
@@ -929,23 +1041,9 @@ function AdminDashboard() {
                   ))}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <select
-                    value={zoneFilter}
-                    onChange={e => setZoneFilter(e.target.value)}
-                    style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "7px 12px", fontSize: 13, color: "#374151", background: "#fff", outline: "none", cursor: "pointer" }}>
-                    <option value="all">🗺️ All Zones</option>
-                    {[
-                      "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
-                      "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
-                      "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
-                      "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
-                      "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
-                      "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli",
-                      "Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
-                    ].map(state => (
-                      <option key={state} value={state}>📍 {state}</option>
-                    ))}
-                  </select>
+                  {/* ── Custom Zone Dropdown (replaces buggy native <select size={1}>) ── */}
+                  <ZoneDropdown value={zoneFilter} onChange={setZoneFilter} />
+
                   <input className="cs-input cs-search-input"
                     placeholder="🔍 Search complaints..."
                     value={searchQuery}
@@ -1060,15 +1158,200 @@ function AdminDashboard() {
 
           {/* ══ USER MANAGEMENT ══ */}
           {activeTab === "users" && (
-            <UserManagementSection
-              users={users}
-              volApplications={volApplications}
-              handleVolunteerApplication={handleVolunteerApplication}
-            />
+            <div>
+              <div style={{ marginBottom: 20 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>User Management</h1>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{users.length} registered users · Manage roles and access.</p>
+              </div>
+
+              {/* ── Volunteer Applications ── */}
+              {volApplications.filter(a => a.status === "pending").length > 0 && (
+                <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #f59e0b", marginBottom: 24, overflow: "hidden" }}>
+                  <div style={{ background: "linear-gradient(135deg,#fffbeb,#fef3c7)", padding: "14px 20px", borderBottom: "1px solid #fde68a", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>📋</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "#92400e" }}>Volunteer Applications</div>
+                      <div style={{ fontSize: 12, color: "#b45309" }}>{volApplications.filter(a => a.status === "pending").length} pending review</div>
+                    </div>
+                  </div>
+                  <div style={{ padding: "0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <TH>Applicant</TH><TH>Reason</TH><TH>Skills</TH><TH>Availability</TH><TH>Applied</TH><TH>Actions</TH>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {volApplications.filter(a => a.status === "pending").map((app, i) => (
+                          <tr key={i}
+                            onMouseEnter={e => e.currentTarget.style.background = "#fffbeb"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <TD>
+                              <div style={{ fontWeight: 600, color: "#111827" }}>{app.userName}</div>
+                              <div style={{ fontSize: 11, color: "#9ca3af" }}>{app.userEmail}</div>
+                            </TD>
+                            <TD style={{ maxWidth: 180 }}>
+                              <div style={{ fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.reason}</div>
+                            </TD>
+                            <TD style={{ maxWidth: 160 }}>
+                              <div style={{ fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.skills}</div>
+                            </TD>
+                            <TD>
+                              <span style={{ background: "#eff6ff", color: "#2563eb", padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 600 }}>{app.availability}</span>
+                            </TD>
+                            <TD style={{ color: "#9ca3af", fontSize: 12 }}>{new Date(app.appliedAt).toLocaleDateString()}</TD>
+                            <TD>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button
+                                  onClick={() => handleVolunteerApplication(app, "approve")}
+                                  style={{ background: "#dcfce7", color: "#166534", border: "1px solid #86efac", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                                  ✓ Approve
+                                </button>
+                                <button
+                                  onClick={() => handleVolunteerApplication(app, "reject")}
+                                  style={{ background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                                  ✕ Reject
+                                </button>
+                              </div>
+                            </TD>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* All Applications History */}
+              {volApplications.filter(a => a.status !== "pending").length > 0 && (
+                <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 24, overflow: "hidden" }}>
+                  <div style={{ padding: "12px 20px", borderBottom: "1px solid #f3f4f6" }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: "#374151" }}>Past Applications</div>
+                  </div>
+                  <div style={{ padding: "0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead><tr><TH>Applicant</TH><TH>Skills</TH><TH>Availability</TH><TH>Applied</TH><TH>Status</TH></tr></thead>
+                      <tbody>
+                        {volApplications.filter(a => a.status !== "pending").map((app, i) => (
+                          <tr key={i}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <TD>
+                              <div style={{ fontWeight: 600 }}>{app.userName}</div>
+                              <div style={{ fontSize: 11, color: "#9ca3af" }}>{app.userEmail}</div>
+                            </TD>
+                            <TD style={{ fontSize: 12, color: "#6b7280" }}>{app.skills}</TD>
+                            <TD style={{ fontSize: 12, color: "#6b7280" }}>{app.availability}</TD>
+                            <TD style={{ fontSize: 12, color: "#9ca3af" }}>{new Date(app.appliedAt).toLocaleDateString()}</TD>
+                            <TD>
+                              <span style={{
+                                background: app.status === "approved" ? "#dcfce7" : "#fee2e2",
+                                color: app.status === "approved" ? "#166534" : "#991b1b",
+                                padding: "2px 10px", borderRadius: 9999, fontSize: 12, fontWeight: 600, textTransform: "capitalize",
+                              }}>{app.status === "approved" ? "✓ Approved" : "✕ Rejected"}</span>
+                            </TD>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {users.length === 0 ? (
+                <div className="cs-empty">
+                  <div className="cs-empty__icon">👥</div>
+                  <div className="cs-empty__title">No users found</div>
+                  <div className="cs-empty__desc">Users will appear here once the backend endpoint is connected.</div>
+                </div>
+              ) : (
+                <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead><tr><TH>Name</TH><TH>Email</TH><TH>Current Role</TH><TH>Location</TH><TH>Joined</TH><TH>Actions</TH></tr></thead>
+                    <tbody>
+                      {users.map(u => (
+                        <tr key={u._id}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <TD>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div className="cs-avatar" style={{ width: 30, height: 30, fontSize: 11, flexShrink: 0 }}>{u.name?.substring(0, 2).toUpperCase() || "??"}</div>
+                              <span style={{ fontWeight: 600 }}>{u.name}</span>
+                            </div>
+                          </TD>
+                          <TD style={{ color: "#6b7280" }}>{u.email}</TD>
+                          <TD>
+                            <span style={{
+                              background: u.role === "admin" ? "#fef2f2" : u.role === "volunteer" ? "#eff6ff" : "#f0fdf4",
+                              color: u.role === "admin" ? "#dc2626" : u.role === "volunteer" ? "#2563eb" : "#16a34a",
+                              padding: "2px 10px", borderRadius: 9999, fontSize: 12, fontWeight: 600, textTransform: "capitalize",
+                            }}>{u.role || "user"}</span>
+                          </TD>
+                          <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
+                          <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
+                          <TD>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {u.role !== "volunteer" && u.role !== "admin" && (
+                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
+                                  onClick={() => changeUserRole(u._id, "volunteer")}>Make Volunteer</button>
+                              )}
+                              {u.role === "volunteer" && (
+                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
+                                  onClick={() => changeUserRole(u._id, "user")}>Make Citizen</button>
+                              )}
+                            </div>
+                          </TD>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           )}
+
           {/* ══ VOLUNTEERS ══ */}
           {activeTab === "volunteers" && (
-            <VolunteersSection volunteers={volunteers} complaints={complaints} />
+            <div>
+              <div style={{ marginBottom: 20 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
+              </div>
+              {volunteers.length === 0 ? (
+                <div className="cs-empty">
+                  <div className="cs-empty__icon">🤝</div>
+                  <div className="cs-empty__title">No volunteers yet</div>
+                  <div className="cs-empty__desc">Promote citizens to volunteer from the User Management tab.</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+                  {volunteers.map(v => {
+                    const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
+                    return (
+                      <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
+                        <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
+                        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{assigned}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{volResolved}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
+                          </div>
+                        </div>
+                        <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ marginTop: 12, width: "100%", fontSize: 12 }}
+                          onClick={() => changeUserRole(v._id, "user")}>Remove Volunteer</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           {/* ══ ZONES ══ */}
@@ -1083,322 +1366,6 @@ function AdminDashboard() {
 
         </div>
       </div>
-    </div>
-  );
-}
-
-// ─── User Management Section ──────────────────────────────────────────────────
-function UserManagementSection({ users, volApplications, handleVolunteerApplication }) {
-  const [userSearch, setUserSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-
-  const filteredUsers = users.filter(u => {
-    const matchSearch =
-      u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
-      u.location?.toLowerCase().includes(userSearch.toLowerCase());
-    const matchRole = roleFilter === "all" ? true : u.role === roleFilter;
-    return matchSearch && matchRole;
-  });
-
-  return (
-    <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>User Management</h1>
-        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{users.length} registered users · Roles are managed via volunteer applications.</p>
-      </div>
-
-      {/* ── Volunteer Applications ── */}
-      {volApplications.filter(a => a.status === "pending").length > 0 && (
-        <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #f59e0b", marginBottom: 24, overflow: "hidden" }}>
-          <div style={{ background: "linear-gradient(135deg,#fffbeb,#fef3c7)", padding: "14px 20px", borderBottom: "1px solid #fde68a", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>📋</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: "#92400e" }}>Volunteer Applications</div>
-              <div style={{ fontSize: 12, color: "#b45309" }}>{volApplications.filter(a => a.status === "pending").length} pending review</div>
-            </div>
-          </div>
-          <div style={{ padding: "0" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <TH>Applicant</TH><TH>Reason</TH><TH>Skills</TH><TH>Availability</TH><TH>Applied</TH><TH>Actions</TH>
-                </tr>
-              </thead>
-              <tbody>
-                {volApplications.filter(a => a.status === "pending").map((app, i) => (
-                  <tr key={i}
-                    onMouseEnter={e => e.currentTarget.style.background = "#fffbeb"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <TD>
-                      <div style={{ fontWeight: 600, color: "#111827" }}>{app.userName}</div>
-                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{app.userEmail}</div>
-                    </TD>
-                    <TD style={{ maxWidth: 180 }}>
-                      <div style={{ fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.reason}</div>
-                    </TD>
-                    <TD style={{ maxWidth: 160 }}>
-                      <div style={{ fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.skills}</div>
-                    </TD>
-                    <TD>
-                      <span style={{ background: "#eff6ff", color: "#2563eb", padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 600 }}>{app.availability}</span>
-                    </TD>
-                    <TD style={{ color: "#9ca3af", fontSize: 12 }}>{new Date(app.appliedAt).toLocaleDateString()}</TD>
-                    <TD>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button
-                          onClick={() => handleVolunteerApplication(app, "approve")}
-                          style={{ background: "#dcfce7", color: "#166534", border: "1px solid #86efac", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                          ✓ Approve
-                        </button>
-                        <button
-                          onClick={() => handleVolunteerApplication(app, "reject")}
-                          style={{ background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                          ✕ Reject
-                        </button>
-                      </div>
-                    </TD>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* All Applications History */}
-      {volApplications.filter(a => a.status !== "pending").length > 0 && (
-        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 24, overflow: "hidden" }}>
-          <div style={{ padding: "12px 20px", borderBottom: "1px solid #f3f4f6" }}>
-            <div style={{ fontWeight: 600, fontSize: 14, color: "#374151" }}>Past Applications</div>
-          </div>
-          <div style={{ padding: "0" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><TH>Applicant</TH><TH>Skills</TH><TH>Availability</TH><TH>Applied</TH><TH>Status</TH></tr></thead>
-              <tbody>
-                {volApplications.filter(a => a.status !== "pending").map((app, i) => (
-                  <tr key={i}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <TD>
-                      <div style={{ fontWeight: 600 }}>{app.userName}</div>
-                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{app.userEmail}</div>
-                    </TD>
-                    <TD style={{ fontSize: 12, color: "#6b7280" }}>{app.skills}</TD>
-                    <TD style={{ fontSize: 12, color: "#6b7280" }}>{app.availability}</TD>
-                    <TD style={{ fontSize: 12, color: "#9ca3af" }}>{new Date(app.appliedAt).toLocaleDateString()}</TD>
-                    <TD>
-                      <span style={{
-                        background: app.status === "approved" ? "#dcfce7" : "#fee2e2",
-                        color: app.status === "approved" ? "#166534" : "#991b1b",
-                        padding: "2px 10px", borderRadius: 9999, fontSize: 12, fontWeight: 600, textTransform: "capitalize",
-                      }}>{app.status === "approved" ? "✓ Approved" : "✕ Rejected"}</span>
-                    </TD>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Search + Filter Bar */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: "1 1 220px", minWidth: 200 }}>
-          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af", pointerEvents: "none" }}>🔍</span>
-          <input
-            value={userSearch}
-            onChange={e => setUserSearch(e.target.value)}
-            placeholder="Search by name, email or location…"
-            style={{
-              width: "100%", boxSizing: "border-box",
-              border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px 8px 32px",
-              fontSize: 13, outline: "none", background: "#fff",
-            }}
-            onFocus={e => e.target.style.borderColor = "#2563eb"}
-            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-          />
-        </div>
-        <select
-          value={roleFilter}
-          onChange={e => setRoleFilter(e.target.value)}
-          style={{
-            border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px",
-            fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", minWidth: 150,
-          }}
-        >
-          <option value="all">All Roles</option>
-          <option value="user">Citizen</option>
-          <option value="volunteer">Volunteer</option>
-          <option value="admin">Admin</option>
-        </select>
-        {(userSearch || roleFilter !== "all") && (
-          <button
-            onClick={() => { setUserSearch(""); setRoleFilter("all"); }}
-            style={{ background: "#f3f4f6", color: "#6b7280", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-            ✕ Clear
-          </button>
-        )}
-        <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: "auto" }}>
-          {filteredUsers.length} of {users.length} users
-        </span>
-      </div>
-
-      {users.length === 0 ? (
-        <div className="cs-empty">
-          <div className="cs-empty__icon">👥</div>
-          <div className="cs-empty__title">No users found</div>
-          <div className="cs-empty__desc">Users will appear here once the backend endpoint is connected.</div>
-        </div>
-      ) : filteredUsers.length === 0 ? (
-        <div className="cs-empty">
-          <div className="cs-empty__icon">🔍</div>
-          <div className="cs-empty__title">No matching users</div>
-          <div className="cs-empty__desc">Try adjusting your search or filter.</div>
-        </div>
-      ) : (
-        <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr><TH>Name</TH><TH>Email</TH><TH>Role</TH><TH>Location</TH><TH>Joined</TH></tr></thead>
-            <tbody>
-              {filteredUsers.map(u => (
-                <tr key={u._id}
-                  onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <TD>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div className="cs-avatar" style={{ width: 30, height: 30, fontSize: 11, flexShrink: 0 }}>{u.name?.substring(0, 2).toUpperCase() || "??"}</div>
-                      <span style={{ fontWeight: 600 }}>{u.name}</span>
-                    </div>
-                  </TD>
-                  <TD style={{ color: "#6b7280" }}>{u.email}</TD>
-                  <TD>
-                    <span style={{
-                      background: u.role === "admin" ? "#fef2f2" : u.role === "volunteer" ? "#eff6ff" : "#f0fdf4",
-                      color: u.role === "admin" ? "#dc2626" : u.role === "volunteer" ? "#2563eb" : "#16a34a",
-                      padding: "2px 10px", borderRadius: 9999, fontSize: 12, fontWeight: 600, textTransform: "capitalize",
-                    }}>{u.role || "user"}</span>
-                  </TD>
-                  <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
-                  <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Volunteers Section ────────────────────────────────────────────────────────
-function VolunteersSection({ volunteers, complaints }) {
-  const [volSearch, setVolSearch] = useState("");
-  const [activityFilter, setActivityFilter] = useState("all");
-
-  const enriched = volunteers.map(v => ({
-    ...v,
-    assigned: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length,
-    resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && (c.status === "resolved" || c.status === "completed")).length,
-  }));
-
-  const filtered = enriched.filter(v => {
-    const matchSearch =
-      v.name?.toLowerCase().includes(volSearch.toLowerCase()) ||
-      v.email?.toLowerCase().includes(volSearch.toLowerCase()) ||
-      v.location?.toLowerCase().includes(volSearch.toLowerCase());
-    const matchActivity =
-      activityFilter === "all" ? true :
-      activityFilter === "active" ? v.assigned > 0 :
-      activityFilter === "top" ? v.resolved >= 3 :
-      v.assigned === 0;
-    return matchSearch && matchActivity;
-  });
-
-  return (
-    <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
-        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
-      </div>
-
-      {volunteers.length > 0 && (
-        <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ position: "relative", flex: "1 1 220px", minWidth: 200 }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af", pointerEvents: "none" }}>🔍</span>
-            <input
-              value={volSearch}
-              onChange={e => setVolSearch(e.target.value)}
-              placeholder="Search by name, email or location…"
-              style={{
-                width: "100%", boxSizing: "border-box",
-                border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px 8px 32px",
-                fontSize: 13, outline: "none", background: "#fff",
-              }}
-              onFocus={e => e.target.style.borderColor = "#2563eb"}
-              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-            />
-          </div>
-          <select
-            value={activityFilter}
-            onChange={e => setActivityFilter(e.target.value)}
-            style={{
-              border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px",
-              fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", minWidth: 160,
-            }}
-          >
-            <option value="all">All Volunteers</option>
-            <option value="active">Currently Active</option>
-            <option value="top">Top Performers (3+ resolved)</option>
-            <option value="idle">Idle (0 assigned)</option>
-          </select>
-          {(volSearch || activityFilter !== "all") && (
-            <button
-              onClick={() => { setVolSearch(""); setActivityFilter("all"); }}
-              style={{ background: "#f3f4f6", color: "#6b7280", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
-              ✕ Clear
-            </button>
-          )}
-          <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: "auto" }}>
-            {filtered.length} of {volunteers.length} volunteers
-          </span>
-        </div>
-      )}
-
-      {volunteers.length === 0 ? (
-        <div className="cs-empty">
-          <div className="cs-empty__icon">🤝</div>
-          <div className="cs-empty__title">No volunteers yet</div>
-          <div className="cs-empty__desc">Volunteers are added automatically when their application is approved.</div>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="cs-empty">
-          <div className="cs-empty__icon">🔍</div>
-          <div className="cs-empty__title">No matching volunteers</div>
-          <div className="cs-empty__desc">Try adjusting your search or filter.</div>
-        </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
-          {filtered.map(v => (
-            <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
-              <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
-              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{v.assigned}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{v.resolved}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

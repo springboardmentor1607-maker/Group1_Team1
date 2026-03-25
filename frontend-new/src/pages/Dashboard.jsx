@@ -392,24 +392,28 @@ export default function UserDashboard() {
   const [showVolunteerModal, setShowVolunteerModal] = useState(false);
   const [volunteerForm, setVolunteerForm] = useState({ reason: "", skills: "", availability: "" });
   const [volunteerSubmitting, setVolunteerSubmitting] = useState(false);
+
+  // Use a unique key per user email so applications don't leak between users
+  const volAppKey = `vol_app_${user?.email}`;
   const [volunteerApplication, setVolunteerApplication] = useState(() => {
-    try {
-      const userId = user?._id || user?.id || user?.userId;
-      return JSON.parse(localStorage.getItem(`vol_app_${userId}`)) || null;
-    } catch { return null; }
+    try { return JSON.parse(localStorage.getItem(`vol_app_${user?.email}`)) || null; } catch { return null; }
   });
+
+  // Sync application status if admin approved — check if role already changed
+  useEffect(() => {
+    if (user?.role === "volunteer" && volunteerApplication?.status === "pending") {
+      const updated = { ...volunteerApplication, status: "approved" };
+      setVolunteerApplication(updated);
+      localStorage.setItem(volAppKey, JSON.stringify(updated));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role]);
 
   const submitVolunteerApplication = () => {
     if (!volunteerForm.reason.trim() || !volunteerForm.skills.trim() || !volunteerForm.availability.trim()) return;
     setVolunteerSubmitting(true);
-    const userId = user?._id || user?.id || user?.userId || user?.email;
-    if (!userId) {
-      alert("Could not get your user ID. Please log out and log in again.");
-      setVolunteerSubmitting(false);
-      return;
-    }
     const application = {
-      userId: userId,
+      userId: user?._id || user?.id || user?.email,
       userName: user?.name,
       userEmail: user?.email,
       reason: volunteerForm.reason,
@@ -418,12 +422,11 @@ export default function UserDashboard() {
       status: "pending",
       appliedAt: new Date().toISOString(),
     };
-    // Save to localStorage — admin reads from here
     const allApps = JSON.parse(localStorage.getItem("vol_applications") || "[]");
-    const existing = allApps.findIndex(a => a.userId === application.userId);
+    const existing = allApps.findIndex(a => a.userEmail === user?.email);
     if (existing >= 0) allApps[existing] = application; else allApps.push(application);
     localStorage.setItem("vol_applications", JSON.stringify(allApps));
-    localStorage.setItem(`vol_app_${application.userId}`, JSON.stringify(application));
+    localStorage.setItem(volAppKey, JSON.stringify(application));
     setVolunteerApplication(application);
     setVolunteerSubmitting(false);
     setShowVolunteerModal(false);
@@ -688,7 +691,7 @@ export default function UserDashboard() {
                         </div>
                       </div>
                     </div>
-                    <button className="cs-btn cs-btn--outline cs-btn--full" style={{ fontSize: 12 }} onClick={() => { setVolunteerApplication(null); const userId = user?._id || user?.id || user?.userId; localStorage.removeItem(`vol_app_${userId}`); }}>
+                    <button className="cs-btn cs-btn--outline cs-btn--full" style={{ fontSize: 12 }} onClick={() => { setVolunteerApplication(null); localStorage.removeItem(volAppKey); }}>
                       Reapply
                     </button>
                   </div>
