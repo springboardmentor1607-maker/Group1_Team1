@@ -90,24 +90,34 @@ function ZoneDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
   const ref = React.useRef(null);
+  const dropRef = React.useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
+    const scrollHandler = (e) => {
+      // Only close if the scroll happened outside the dropdown list itself
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", scrollHandler, true);
+    };
   }, []);
 
   const handleOpen = () => {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const dropHeight = 260;
-    const top = spaceBelow < dropHeight
-      ? rect.top - dropHeight - 4   // flip upward
-      : rect.bottom + 4;
-    setDropPos({ top, left: rect.left });
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = 260;
+      const top = spaceBelow < dropHeight
+        ? rect.top - dropHeight - 4   // flip upward
+        : rect.bottom + 4;
+      setDropPos({ top, left: rect.left });
     }
     setOpen(o => !o);
   };
@@ -126,7 +136,7 @@ function ZoneDropdown({ value, onChange }) {
         style={{
           border: "1px solid #e5e7eb",
           borderRadius: 8,
-          padding: "7px 12px",
+          padding: "7.5px 12px",
           fontSize: 13,
           color: "#374151",
           background: "#fff",
@@ -149,11 +159,12 @@ function ZoneDropdown({ value, onChange }) {
 
       {open && (
         <div
+        ref={dropRef}
           onWheel={e => e.stopPropagation()}
           style={{
             position: "fixed",
             overscrollBehavior: "contain",
-touchAction: "none",
+            touchAction: "none",
             top: dropPos.top,
             left: dropPos.left,
             zIndex: 99999,
@@ -168,6 +179,375 @@ touchAction: "none",
         >
           {allItems.map(item => {
             const active = value === item.key || (item.key === "all" && value === "all");
+            return (
+              <div
+                key={item.key}
+                onClick={() => { onChange(item.key); setOpen(false); }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: active ? "#2563eb" : "#374151",
+                  background: active ? "#eff6ff" : "transparent",
+                  fontWeight: active ? 600 : 400,
+                  userSelect: "none",
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {item.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Select Volunteer —" }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = React.useRef(null);
+  const dropRef = React.useRef(null);
+
+  useEffect(() => {
+    const el = dropRef.current;
+    if (!el) return;
+    const stop = (e) => e.preventDefault();
+    el.addEventListener("wheel", stop, { passive: false });
+    return () => el.removeEventListener("wheel", stop);
+  });
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const scrollHandler = (e) => {
+      // Only close if the scroll happened outside the dropdown list itself
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", scrollHandler, true);
+    };
+  }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = 220;
+      const top = spaceBelow < dropHeight ? rect.top - dropHeight - 4 : rect.bottom + 4;
+      setDropPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
+
+  const selected = volunteers.find(v => v._id === value);
+  const label = selected ? selected.name : placeholder;
+
+  const allItems = [
+    { key: "", label: placeholder },
+    ...volunteers.map(v => ({ key: v._id, label: `🤝 ${v.name}` })),
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={handleOpen}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "8.5px 12px",
+          fontSize: 12,
+          color: value ? "#111827" : "#9ca3af",
+          background: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          minWidth: 140,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+          fontWeight: value ? 500 : 400,
+        }}
+      >
+        {value ? `🤝 ${label}` : label}
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          ref={dropRef}
+          onWheel={e => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            overscrollBehavior: "contain",
+            touchAction: "none",
+            top: dropPos.top,
+            left: dropPos.left,
+            zIndex: 99999,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+            maxHeight: 220,
+            overflowY: "auto",
+            minWidth: 200,
+          }}
+        >
+          {allItems.map(item => {
+            const active = value === item.key;
+            return (
+              <div
+                key={item.key || "__none__"}
+                onClick={() => { onChange(item.key); setOpen(false); }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: active ? "#2563eb" : item.key === "" ? "#9ca3af" : "#374151",
+                  background: active ? "#eff6ff" : "transparent",
+                  fontWeight: active ? 600 : 400,
+                  userSelect: "none",
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {item.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LocationDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = React.useRef(null);
+  const dropRef = React.useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const scrollHandler = (e) => {
+      // Only close if the scroll happened outside the dropdown list itself
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", scrollHandler, true);
+    };
+  }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = 260;
+      const top = spaceBelow < dropHeight
+        ? rect.top - dropHeight - 4
+        : rect.bottom + 4;
+      setDropPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
+
+  const label = value === "all" ? "All Locations" : value;
+
+  const allItems = [
+    { key: "all", label: "📍 All Locations" },
+    ...INDIAN_STATES.map(s => ({ key: s, label: `📍 ${s}` })),
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={handleOpen}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "6.5px 12px",
+          fontSize: 13,
+          color: "#374151",
+          background: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          minWidth: 155,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        📍 {label}
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+        ref={dropRef}
+          onWheel={e => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            overscrollBehavior: "contain",
+            touchAction: "none",
+            top: dropPos.top,
+            left: dropPos.left,
+            zIndex: 99999,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+            maxHeight: 260,
+            overflowY: "auto",
+            minWidth: 210,
+          }}
+        >
+          {allItems.map(item => {
+            const active = value === item.key;
+            return (
+              <div
+                key={item.key}
+                onClick={() => { onChange(item.key); setOpen(false); }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: active ? "#2563eb" : "#374151",
+                  background: active ? "#eff6ff" : "transparent",
+                  fontWeight: active ? 600 : 400,
+                  userSelect: "none",
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {item.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomDropdown({ value, onChange, options, icon = "" }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = React.useRef(null);
+  const dropRef = React.useRef(null);
+
+  useEffect(() => {
+    const el = dropRef.current;
+    if (!el) return;
+    const stop = (e) => e.preventDefault();
+    el.addEventListener("wheel", stop, { passive: false });
+    return () => el.removeEventListener("wheel", stop);
+  });
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const scrollHandler = (e) => {
+      // Only close if the scroll happened outside the dropdown list itself
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", scrollHandler, true);
+    };
+  }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = 260;
+      const top = spaceBelow < dropHeight
+        ? rect.top - dropHeight - 4
+        : rect.bottom + 4;
+      setDropPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
+
+  const selectedLabel = options.find(o => o.key === value)?.label || options[0]?.label;
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={handleOpen}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "6.5px 12px",
+          fontSize: 13,
+          color: "#374151",
+          background: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          minWidth: 155,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        {icon && <span>{icon}</span>}
+        {selectedLabel}
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+        ref={dropRef} 
+          onWheel={e => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            overscrollBehavior: "contain",
+            touchAction: "none",
+            top: dropPos.top,
+            left: dropPos.left,
+            zIndex: 99999,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+            maxHeight: 260,
+            overflowY: "auto",
+            minWidth: 210,
+          }}
+        >
+          {options.map(item => {
+            const active = value === item.key;
             return (
               <div
                 key={item.key}
@@ -808,6 +1188,7 @@ function AdminDashboard() {
 
   const [volSearch, setVolSearch] = useState("");
   const [volFilter, setVolFilter] = useState("all");
+  const [volLocation, setVolLocation] = useState("all");
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
 
@@ -865,6 +1246,289 @@ function AdminDashboard() {
     } catch (err) { console.error("Resolve failed", err); }
   };
 
+  const downloadFilteredCSV = () => {
+    const headers = ["ID", "Title", "Type", "Priority", "Status", "Address", "Reported By", "Assigned To", "Created At"];
+    const rows = filteredComplaints.map(c => [
+      String(c._id).slice(-6).toUpperCase(),
+      `"${(c.title || "").replace(/"/g, "'")}"`,
+      c.type || "other",
+      c.priority || "medium",
+      c.status || "received",
+      `"${(c.address || "").replace(/"/g, "'")}"`,
+      `"${c.user_id?.name || "—"}"`,
+      `"${c.assigned_to?.name || "Not assigned"}"`,
+      new Date(c.created_at || c.createdAt).toLocaleDateString(),
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `complaints_${statusFilter}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  const downloadFilteredPDF = () => {
+    const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", critical: "#dc2626" };
+    const html = `
+      <html><head><title>Complaints Export</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
+        h1 { color: #1d4ed8; font-size: 20px; margin-bottom: 2px; }
+        .meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+        .summary { display: flex; gap: 16px; margin-bottom: 24px; }
+        .stat { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 18px; text-align: center; }
+        .stat-num { font-size: 24px; font-weight: 800; color: #1d4ed8; }
+        .stat-label { font-size: 11px; color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <h1>📋 Complaints Export</h1>
+      <div class="meta">
+        Filter: <strong>${statusFilter === "all" ? "All" : statusFilter}</strong> · 
+        Zone: <strong>${zoneFilter === "all" ? "All Zones" : zoneFilter}</strong> · 
+        ${searchQuery ? `Search: <strong>"${searchQuery}"</strong> · ` : ""}
+        Generated: ${new Date().toLocaleString()}
+      </div>
+      <div class="summary">
+        <div class="stat"><div class="stat-num">${filteredComplaints.length}</div><div class="stat-label">Showing</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c=>c.status==="resolved").length}</div><div class="stat-label">Resolved</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c=>["pending","received"].includes(c.status)).length}</div><div class="stat-label">Pending</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c=>["in_review","in_progress","assigned","accepted"].includes(c.status)).length}</div><div class="stat-label">In Progress</div></div>
+      </div>
+      <table>
+        <tr><th>ID</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Reported By</th><th>Assigned To</th><th>Date</th></tr>
+        ${filteredComplaints.map(c => `<tr>
+          <td style="font-family:monospace;color:#9ca3af">#${String(c._id).slice(-6).toUpperCase()}</td>
+          <td style="font-weight:600">${c.title || "—"}</td>
+          <td style="text-transform:capitalize">${c.type || "other"}</td>
+          <td><span class="badge" style="background:${(PRIORITY_COLORS[c.priority]||"#6b7280")}20;color:${PRIORITY_COLORS[c.priority]||"#6b7280"}">${c.priority||"medium"}</span></td>
+          <td><span class="badge" style="background:${c.status==="resolved"?"#dcfce7":c.status==="in_review"||c.status==="assigned"?"#ede9fe":"#dbeafe"};color:${c.status==="resolved"?"#166534":c.status==="in_review"||c.status==="assigned"?"#5b21b6":"#1d4ed8"}">${c.status?.replace("_"," ")}</span></td>
+          <td>${c.user_id?.name||"—"}</td>
+          <td>${c.assigned_to?.name||"Not assigned"}</td>
+          <td>${new Date(c.created_at||c.createdAt).toLocaleDateString()}</td>
+        </tr>`).join("")}
+      </table>
+      </body></html>`;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 1000); }, 500);
+  };
+
+  const downloadUsersCSV = () => {
+    const headers = ["Name", "Email", "Role", "Location", "Joined"];
+    const rows = filteredUsers.map(u => [
+      `"${u.name || "—"}"`,
+      `"${u.email || "—"}"`,
+      u.role || "user",
+      `"${u.location || "—"}"`,
+      u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—",
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users_${userRoleFilter}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadUsersPDF = () => {
+    const roleColor = (role) =>
+      role === "admin" ? { bg: "#fef2f2", color: "#dc2626" } :
+      role === "volunteer" ? { bg: "#eff6ff", color: "#2563eb" } :
+      { bg: "#f0fdf4", color: "#16a34a" };
+  
+    const admins = filteredUsers.filter(u => u.role === "admin").length;
+    const vols = filteredUsers.filter(u => u.role === "volunteer").length;
+    const regular = filteredUsers.filter(u => !u.role || u.role === "user").length;
+  
+    const html = `
+      <html><head><title>User List Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
+        h1 { color: #1d4ed8; font-size: 20px; margin-bottom: 2px; }
+        .meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+        .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+        .stat { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 24px; font-weight: 800; color: #1d4ed8; }
+        .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 10px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        tr:hover td { background: #f9fafb; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+        .avatar { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: 700; margin-right: 8px; vertical-align: middle; }
+        .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 32px; border-top: 1px solid #f3f4f6; padding-top: 16px; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <h1>👥 User List Report</h1>
+      <div class="meta">
+        Filter: <strong>${userRoleFilter === "all" ? "All Roles" : userRoleFilter}</strong> ·
+        ${userSearch ? `Search: <strong>"${userSearch}"</strong> · ` : ""}
+        Generated: ${new Date().toLocaleString()}
+      </div>
+  
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num">${filteredUsers.length}</div>
+          <div class="stat-label">Total Shown</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#dc2626">${admins}</div>
+          <div class="stat-label">Admins</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#2563eb">${vols}</div>
+          <div class="stat-label">Volunteers</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#16a34a">${regular}</div>
+          <div class="stat-label">Regular Users</div>
+        </div>
+      </div>
+  
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Location</th>
+          <th>Joined</th>
+          <th>Complaints Filed</th>
+        </tr>
+        ${filteredUsers.map(u => {
+          const rc = roleColor(u.role);
+          const initials = (u.name || "??").substring(0, 2).toUpperCase();
+          const complaintsFiled = complaints.filter(c =>
+            String(c.user_id?._id || c.user_id) === String(u._id)).length;
+          return `<tr>
+            <td>
+              <span class="avatar">${initials}</span>
+              <span style="font-weight:600">${u.name || "—"}</span>
+            </td>
+            <td style="color:#6b7280">${u.email || "—"}</td>
+            <td>
+              <span class="badge" style="background:${rc.bg};color:${rc.color}">
+                ${u.role === "admin" ? "🛡️" : u.role === "volunteer" ? "🤝" : "🧑‍💼"} ${u.role || "user"}
+              </span>
+            </td>
+            <td style="color:#6b7280">${u.location || "Not specified"}</td>
+            <td style="color:#9ca3af">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</td>
+            <td style="font-weight:700;color:#2563eb;text-align:center">${complaintsFiled}</td>
+          </tr>`;
+        }).join("")}
+      </table>
+  
+      <div class="footer">
+        CleanStreet · User List Report · ${filteredUsers.length} users · ${new Date().toLocaleDateString()}
+      </div>
+      </body></html>`;
+  
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 500);
+  };
+
+  const downloadVolunteersCSV = () => {
+    const headers = ["Name", "Email", "Location", "Assigned", "In Progress", "Resolved", "Resolution Rate %"];
+    const rows = volunteers.map(v => {
+      const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id));
+      const resolvedCount = assigned.filter(c => c.status === "resolved" || c.status === "completed").length;
+      const inProgressCount = assigned.filter(c => ["in_review","in_progress","accepted"].includes(c.status)).length;
+      const rate = assigned.length > 0 ? Math.round((resolvedCount / assigned.length) * 100) : 0;
+      return [
+        `"${v.name}"`, `"${v.email}"`, `"${v.location || "—"}"`,
+        assigned.length, inProgressCount, resolvedCount, `${rate}%`,
+      ];
+    });
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `volunteers_performance_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  const downloadVolunteersPDF = () => {
+    const volData = volunteers.map(v => {
+      const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id));
+      const resolvedCount = assigned.filter(c => c.status === "resolved" || c.status === "completed").length;
+      const inProgress = assigned.filter(c => ["in_review","in_progress","accepted"].includes(c.status)).length;
+      const rate = assigned.length > 0 ? Math.round((resolvedCount / assigned.length) * 100) : 0;
+      return { ...v, assigned: assigned.length, resolved: resolvedCount, inProgress, rate };
+    }).sort((a, b) => b.resolved - a.resolved);
+  
+    const html = `
+      <html><head><title>Volunteer Performance Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
+        h1 { color: #1d4ed8; font-size: 20px; margin-bottom: 2px; }
+        .meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+        .summary { display: flex; gap: 16px; margin-bottom: 24px; }
+        .stat { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 18px; text-align: center; }
+        .stat-num { font-size: 24px; font-weight: 800; color: #1d4ed8; }
+        .stat-label { font-size: 11px; color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        td { padding: 10px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .rate-bar { height: 6px; background: #f3f4f6; border-radius: 99px; width: 80px; display: inline-block; overflow: hidden; }
+        .rate-fill { height: 100%; border-radius: 99px; background: #22c55e; }
+        .medal { font-size: 16px; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <h1>🤝 Volunteer Performance Report</h1>
+      <div class="meta">Generated: ${new Date().toLocaleString()} · ${volunteers.length} volunteers</div>
+      <div class="summary">
+        <div class="stat"><div class="stat-num">${volunteers.length}</div><div class="stat-label">Total Volunteers</div></div>
+        <div class="stat"><div class="stat-num">${volData.filter(v=>v.assigned>0).length}</div><div class="stat-label">Active</div></div>
+        <div class="stat"><div class="stat-num">${volData.reduce((s,v)=>s+v.resolved,0)}</div><div class="stat-label">Total Resolved</div></div>
+        <div class="stat"><div class="stat-num">${volData.length > 0 ? Math.round(volData.reduce((s,v)=>s+v.rate,0)/volData.length) : 0}%</div><div class="stat-label">Avg Resolution Rate</div></div>
+      </div>
+      <table>
+        <tr><th>#</th><th>Name</th><th>Email</th><th>Location</th><th>Assigned</th><th>In Progress</th><th>Resolved</th><th>Rate</th></tr>
+        ${volData.map((v, i) => `<tr>
+          <td><span class="medal">${i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</span></td>
+          <td style="font-weight:600">${v.name}</td>
+          <td style="color:#6b7280">${v.email}</td>
+          <td style="color:#6b7280">${v.location||"—"}</td>
+          <td style="font-weight:700;color:#2563eb">${v.assigned}</td>
+          <td style="color:#8b5cf6">${v.inProgress}</td>
+          <td style="font-weight:700;color:#22c55e">${v.resolved}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="rate-bar"><div class="rate-fill" style="width:${v.rate}%;background:${v.rate>=80?"#22c55e":v.rate>=50?"#f59e0b":"#ef4444"}"></div></div>
+              <span style="font-weight:700;color:${v.rate>=80?"#166534":v.rate>=50?"#92400e":"#991b1b"}">${v.rate}%</span>
+            </div>
+          </td>
+        </tr>`).join("")}
+      </table>
+      </body></html>`;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 1000); }, 500);
+  };
+
   const approveComplaint = async (complaintId) => {
     try {
       await API.put(`/api/complaints/status/${complaintId}`, { status: "completed" });
@@ -886,18 +1550,38 @@ function AdminDashboard() {
   const denied = complaints.filter(c => c.status === "denied").length;
 
   const filteredVolunteers = volunteers.filter(v => {
-    const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+    const assignedList = complaints.filter(c =>
+      String(c.assigned_to?._id || c.assigned_to) === String(v._id));
+    const assigned = assignedList.length;
+    const volResolved = assignedList.filter(c => c.status === "resolved" || c.status === "completed").length;
+    const inProgress = assignedList.filter(c =>
+      ["in_review", "in_progress", "accepted"].includes(c.status)).length;
+    const hasPending = assignedList.some(c =>
+      c.status === "pending" || c.status === "received" || c.status === "assigned");
+    const resolutionRate = assigned > 0 ? (volResolved / assigned) * 100 : 0;
+
     const matchSearch = !volSearch ||
       v.name?.toLowerCase().includes(volSearch.toLowerCase()) ||
       v.email?.toLowerCase().includes(volSearch.toLowerCase()) ||
       v.location?.toLowerCase().includes(volSearch.toLowerCase());
+
     const matchFilter =
       volFilter === "all" ? true :
-      volFilter === "active" ? assigned > 0 :
-      assigned === 0;
-    return matchSearch && matchFilter;
+        volFilter === "active" ? assigned > 0 :
+          volFilter === "idle" ? assigned === 0 :
+            volFilter === "top_resolver" ? volResolved >= 3 :
+              volFilter === "in_progress" ? inProgress > 0 :
+                volFilter === "pending" ? hasPending :
+                  volFilter === "perfect" ? assigned > 0 && resolutionRate === 100 :
+                    volFilter === "new" ? assigned > 0 && volResolved === 0 :
+                      true;
+
+    const matchLocation = volLocation === "all" ||
+      (v.location || "").toLowerCase().includes(volLocation.toLowerCase());
+
+    return matchSearch && matchFilter && matchLocation;
   });
-  
+
   const filteredUsers = users.filter(u => {
     const matchSearch = !userSearch ||
       u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -1083,6 +1767,14 @@ function AdminDashboard() {
                     <style>{`@keyframes spin-a { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
                     <span style={{ display: "inline-block", animation: refreshing ? "spin-a 0.7s linear infinite" : "none" }}>🔄</span>
                   </button>
+                  <button onClick={downloadFilteredCSV} title="Export filtered as CSV"
+  style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#2563eb", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+  📥 CSV
+</button>
+<button onClick={downloadFilteredPDF} title="Export filtered as PDF"
+  style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#374151", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+  📄 PDF
+</button>
                 </div>
               </div>
 
@@ -1121,12 +1813,12 @@ function AdminDashboard() {
                               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>🚫 Denied by {c.assigned_to?.name || "volunteer"}</div>
                                 {assignSelections[c._id || c.id] ? (
-                                  <select className="cs-input" style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
-                                    value={assignSelections[c._id || c.id] || ""}
-                                    onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}>
-                                    <option value="">— Reassign Volunteer —</option>
-                                    {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                                  </select>
+                                  <VolunteerDropdown
+                                  value={assignSelections[c._id || c.id] || ""}
+                                  onChange={val => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: val }))}
+                                  volunteers={volunteers}
+                                  placeholder="— Reassign Volunteer —"
+                                />
                                 ) : (
                                   <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11, color: "#dc2626", borderColor: "#fca5a5" }}
                                     onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Reassign</button>
@@ -1141,12 +1833,12 @@ function AdminDashboard() {
                                   onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Change</button>
                               </div>
                             ) : (
-                              <select className="cs-input" style={{ padding: "5px 8px", fontSize: 12, minWidth: 140 }}
-                                value={assignSelections[c._id || c.id] || ""}
-                                onChange={e => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: e.target.value }))}>
-                                <option value="">— Select Volunteer —</option>
-                                {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                              </select>
+                              <VolunteerDropdown
+  value={assignSelections[c._id || c.id] || ""}
+  onChange={val => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: val }))}
+  volunteers={volunteers}
+  placeholder="— Select Volunteer —"
+/>
                             )}
                           </TD>
                           <TD>
@@ -1186,10 +1878,24 @@ function AdminDashboard() {
           {/* ══ USER MANAGEMENT ══ */}
           {activeTab === "users" && (
             <div>
-              <div style={{ marginBottom: 20 }}>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>User Management</h1>
-                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{users.length} registered users · Manage roles and access.</p>
-              </div>
+              <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+  <div>
+    <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>User Management</h1>
+    <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{users.length} registered users · Manage roles and access.</p>
+  </div>
+  <div style={{ display: "flex", gap: 10 }}>
+    <button onClick={downloadUsersCSV} style={{
+      display: "flex", alignItems: "center", gap: 6,
+      background: "#2563eb", color: "#fff", border: "none",
+      borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+    }}>📥 Export CSV</button>
+    <button onClick={downloadUsersPDF} style={{
+      display: "flex", alignItems: "center", gap: 6,
+      background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
+      borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+    }}>📄 User PDF</button>
+  </div>
+</div>
 
               {/* ── Volunteer Applications ── */}
               {volApplications.filter(a => a.status === "pending").length > 0 && (
@@ -1285,31 +1991,31 @@ function AdminDashboard() {
                 </div>
               )}
 
-{/* Search + Role Filter */}
-<div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
-  <div style={{ position: "relative", flex: 1 }}>
-    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af" }}>🔍</span>
-    <input
-      placeholder="Search by name, email or location..."
-      value={userSearch}
-      onChange={e => setUserSearch(e.target.value)}
-      style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
-    />
-  </div>
-  <select
-    value={userRoleFilter}
-    onChange={e => setUserRoleFilter(e.target.value)}
-    style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#374151", background: "#fff", outline: "none", minWidth: 140 }}
-  >
-    <option value="all">All Roles</option>
-    <option value="user">User</option>
-    <option value="volunteer">Volunteer</option>
-    <option value="admin">Admin</option>
-  </select>
-  <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
-    {filteredUsers.length} of {users.length} users
-  </span>
-</div>
+              {/* Search + Role Filter */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af" }}>🔍</span>
+                  <input
+                    placeholder="Search by name, email or location..."
+                    value={userSearch}
+                    onChange={e => setUserSearch(e.target.value)}
+                    style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                <CustomDropdown
+                  value={userRoleFilter}
+                  onChange={setUserRoleFilter}
+                  options={[
+                    { key: "all", label: "👥 All Roles" },
+                    { key: "user", label: "🧑‍💼 User" },
+                    { key: "volunteer", label: "🤝 Volunteer" },
+                    { key: "admin", label: "🛡️ Admin" },
+                  ]}
+                />
+                <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
+                  {filteredUsers.length} of {users.length} users
+                </span>
+              </div>
 
               {filteredUsers.length === 0 ? (
                 <div className="cs-empty">
@@ -1353,73 +2059,96 @@ function AdminDashboard() {
 
           {/* ══ VOLUNTEERS ══ */}
           {activeTab === "volunteers" && (
+            <div>
+              <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
   <div>
-    <div style={{ marginBottom: 20 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
-      <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
-    </div>
-
-    {/* Search + Filter bar */}
-    <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
-      <div style={{ position: "relative", flex: 1 }}>
-        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af" }}>🔍</span>
-        <input
-          placeholder="Search by name, email or location..."
-          value={volSearch || ""}
-          onChange={e => setVolSearch(e.target.value)}
-          style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
-        />
-      </div>
-      <select
-        value={volFilter || "all"}
-        onChange={e => setVolFilter(e.target.value)}
-        style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#374151", background: "#fff", outline: "none", minWidth: 160 }}
-      >
-        <option value="all">All Volunteers</option>
-        <option value="active">Has Assignments</option>
-        <option value="idle">No Assignments</option>
-      </select>
-      <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
-        {filteredVolunteers.length} of {volunteers.length} volunteers
-      </span>
-    </div>
-
-    {filteredVolunteers.length === 0 ? (
-      <div className="cs-empty">
-        <div className="cs-empty__icon">🤝</div>
-        <div className="cs-empty__title">No volunteers found</div>
-        <div className="cs-empty__desc">Promote citizens to volunteer from the User Management tab.</div>
-      </div>
-    ) : (
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
-        {filteredVolunteers.map(v => {
-          const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
-          const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
-          return (
-            <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
-              <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
-              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
-              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{assigned}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{volResolved}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
-                </div>
-              </div>
-              <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ marginTop: 12, width: "100%", fontSize: 12 }}
-                onClick={() => changeUserRole(v._id, "user")}>Remove Volunteer</button>
-            </div>
-          );
-        })}
-      </div>
-    )}
+    <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
+    <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
   </div>
-)}
+  <div style={{ display: "flex", gap: 10 }}>
+    <button onClick={downloadVolunteersCSV} style={{
+      display: "flex", alignItems: "center", gap: 6,
+      background: "#2563eb", color: "#fff", border: "none",
+      borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+    }}>📥 Export CSV</button>
+    <button onClick={downloadVolunteersPDF} style={{
+      display: "flex", alignItems: "center", gap: 6,
+      background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
+      borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+    }}>📄 Performance PDF</button>
+  </div>
+</div>
+
+              {/* Search + Filter bar */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
+                  <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af" }}>🔍</span>
+                  <input
+                    placeholder="Search by name, email or location..."
+                    value={volSearch}
+                    onChange={e => setVolSearch(e.target.value)}
+                    style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+
+                <CustomDropdown
+                  value={volFilter}
+                  onChange={setVolFilter}
+                  options={[
+                    { key: "all", label: "🤝 All Volunteers" },
+                    { key: "active", label: "🔥 Most Active" },
+                    { key: "idle", label: "💤 No Assignments" },
+                    { key: "top_resolver", label: "🏆 Top Resolvers" },
+                    { key: "in_progress", label: "🔄 Currently Working" },
+                    { key: "pending", label: "⏳ Has Pending Tasks" },
+                    { key: "perfect", label: "⭐ 100% Resolution" },
+                    { key: "new", label: "🆕 No Resolved Yet" },
+                  ]}
+                />
+
+                <LocationDropdown value={volLocation} onChange={setVolLocation} />
+
+                <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
+                  {filteredVolunteers.length} of {volunteers.length} volunteers
+                </span>
+              </div>
+
+              {filteredVolunteers.length === 0 ? (
+                <div className="cs-empty">
+                  <div className="cs-empty__icon">🤝</div>
+                  <div className="cs-empty__title">No volunteers found</div>
+                  <div className="cs-empty__desc">Promote citizens to volunteer from the User Management tab.</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+                  {filteredVolunteers.map(v => {
+                    const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
+                    return (
+                      <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
+                        <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
+                        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{assigned}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{volResolved}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
+                          </div>
+                        </div>
+                        <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ marginTop: 12, width: "100%", fontSize: 12 }}
+                          onClick={() => changeUserRole(v._id, "user")}>Remove Volunteer</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ══ ZONES ══ */}
           {activeTab === "zones" && (
@@ -1484,6 +2213,79 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
   const getZoneComplaintCount = (area) =>
     complaints.filter(c => (c.address || c.location || "").toLowerCase().includes(area.toLowerCase())).length;
 
+  const downloadZoneReport = (z) => {
+    const zoneComplaints = complaints.filter(c =>
+      (c.address || c.location || "").toLowerCase().includes(z.area.toLowerCase()));
+    const resolvedCount = zoneComplaints.filter(c => c.status === "resolved" || c.status === "completed").length;
+    const pendingCount = zoneComplaints.filter(c => ["pending","received"].includes(c.status)).length;
+    const inProgressCount = zoneComplaints.filter(c => ["in_review","in_progress","assigned","accepted"].includes(c.status)).length;
+    const volunteerName = volunteers.find(v => String(v._id) === String(z.volunteerId))?.name || "Not assigned";
+    const rate = zoneComplaints.length > 0 ? Math.round((resolvedCount / zoneComplaints.length) * 100) : 0;
+  
+    const html = `
+      <html><head><title>Zone Report — ${z.name}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111827; max-width: 700px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg,#1e3a8a,#2563eb); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; }
+        .header h1 { margin: 0 0 4px; font-size: 22px; }
+        .header .meta { font-size: 12px; opacity: 0.7; }
+        .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+        .stat { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 24px; font-weight: 800; }
+        .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .section { background: #f8fafc; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; }
+        .section-title { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 7px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+        .badge { display:inline-block; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600; }
+        .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 28px; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <div class="header">
+        <div class="meta">CleanStreet Zone Report · Generated ${new Date().toLocaleString()}</div>
+        <h1>🗺️ ${z.name}</h1>
+        <div class="meta">Area: ${z.area} · Created ${new Date(z.createdAt).toLocaleDateString()}</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-num" style="color:#3b82f6">${zoneComplaints.length}</div><div class="stat-label">Total</div></div>
+        <div class="stat"><div class="stat-num" style="color:#f59e0b">${pendingCount}</div><div class="stat-label">Pending</div></div>
+        <div class="stat"><div class="stat-num" style="color:#8b5cf6">${inProgressCount}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat"><div class="stat-num" style="color:#22c55e">${resolvedCount}</div><div class="stat-label">Resolved</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Zone Details</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px">Assigned Volunteer</div>
+          <div style="font-size:14px;font-weight:600;color:${z.volunteerId?"#166534":"#9ca3af"}">${volunteerName}</div></div>
+          <div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px">Resolution Rate</div>
+          <div style="font-size:14px;font-weight:800;color:${rate>=80?"#166534":rate>=50?"#92400e":"#991b1b"}">${rate}%</div></div>
+        </div>
+      </div>
+      ${zoneComplaints.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Complaints in this Zone</div>
+        <table>
+          <tr><th>ID</th><th>Title</th><th>Priority</th><th>Status</th><th>Date</th></tr>
+          ${zoneComplaints.map(c => `<tr>
+            <td style="font-family:monospace;color:#9ca3af">#${String(c._id).slice(-6).toUpperCase()}</td>
+            <td style="font-weight:500">${c.title||"—"}</td>
+            <td style="text-transform:capitalize">${c.priority||"medium"}</td>
+            <td><span class="badge" style="background:${c.status==="resolved"?"#dcfce7":c.status==="in_review"||c.status==="assigned"?"#ede9fe":"#dbeafe"};color:${c.status==="resolved"?"#166534":c.status==="in_review"||c.status==="assigned"?"#5b21b6":"#1d4ed8"}">${c.status?.replace("_"," ")}</span></td>
+            <td style="color:#9ca3af">${new Date(c.created_at||c.createdAt).toLocaleDateString()}</td>
+          </tr>`).join("")}
+        </table>
+      </div>` : `<div class="section"><div style="color:#9ca3af;font-size:13px;text-align:center">No complaints recorded in this zone yet.</div></div>`}
+      <div class="footer">CleanStreet · Zone Report · ${z.name}</div>
+      </body></html>`;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 1000); }, 500);
+  };
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -1511,11 +2313,12 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
           </div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Assign Volunteer</div>
-            <select value={zoneVolunteer} onChange={e => setZoneVolunteer(e.target.value)}
-              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", background: "#fff", boxSizing: "border-box" }}>
-              <option value="">— None —</option>
-              {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-            </select>
+            <VolunteerDropdown
+  value={zoneVolunteer}
+  onChange={setZoneVolunteer}
+  volunteers={volunteers}
+  placeholder="— None —"
+/>
           </div>
           <button onClick={addZone} disabled={!zoneName.trim() || !zoneArea.trim()}
             style={{ background: zoneName.trim() && zoneArea.trim() ? "#2563eb" : "#e5e7eb", color: zoneName.trim() && zoneArea.trim() ? "#fff" : "#9ca3af", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: zoneName.trim() && zoneArea.trim() ? "pointer" : "not-allowed", whiteSpace: "nowrap" }}>
@@ -1559,11 +2362,12 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
                       </div>
                       <div>
                         <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>VOLUNTEER</div>
-                        <select value={editVolunteer} onChange={e => setEditVolunteer(e.target.value)}
-                          style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", background: "#fff" }}>
-                          <option value="">— None —</option>
-                          {volunteers.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
-                        </select>
+                        <VolunteerDropdown
+  value={editVolunteer}
+  onChange={setEditVolunteer}
+  volunteers={volunteers}
+  placeholder="— None —"
+/>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => saveEdit(z.id)} style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✓ Save</button>
@@ -1594,6 +2398,10 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => startEdit(z)} style={{ flex: 1, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✏️ Edit</button>
                         <button onClick={() => deleteZone(z.id)} style={{ flex: 1, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🗑️ Delete</button>
+                        <button onClick={() => downloadZoneReport(z)}
+  style={{ flex: 1, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+  📄 Report
+</button>
                       </div>
                     </>
                   )}
