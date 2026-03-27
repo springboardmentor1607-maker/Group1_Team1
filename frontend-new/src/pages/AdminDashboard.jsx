@@ -159,7 +159,7 @@ function ZoneDropdown({ value, onChange }) {
 
       {open && (
         <div
-        ref={dropRef}
+          ref={dropRef}
           onWheel={e => e.stopPropagation()}
           style={{
             position: "fixed",
@@ -212,28 +212,20 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
   const dropRef = React.useRef(null);
 
   useEffect(() => {
-    const el = dropRef.current;
-    if (!el) return;
-    const stop = (e) => e.preventDefault();
-    el.addEventListener("wheel", stop, { passive: false });
-    return () => el.removeEventListener("wheel", stop);
-  });
-
-  useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
     const scrollHandler = (e) => {
-      // Only close if the scroll happened outside the dropdown list itself
       if (dropRef.current && dropRef.current.contains(e.target)) return;
       setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
     window.addEventListener("scroll", scrollHandler, true);
-    return () => {
-      document.removeEventListener("mousedown", handler);
-      window.removeEventListener("scroll", scrollHandler, true);
-    };
+    return () => window.removeEventListener("scroll", scrollHandler, true);
   }, []);
 
   const handleOpen = () => {
@@ -247,12 +239,19 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
     setOpen(o => !o);
   };
 
-  const selected = volunteers.find(v => v._id === value);
+  const selected = (Array.isArray(volunteers) ? volunteers : []).find(
+    v => String(v._id) === String(value)
+  );
   const label = selected ? selected.name : placeholder;
 
   const allItems = [
     { key: "", label: placeholder },
-    ...volunteers.map(v => ({ key: v._id, label: `🤝 ${v.name}` })),
+    ...(Array.isArray(volunteers) ? volunteers : []).map(v => ({
+      key: String(v._id),
+      label: v.location
+      ? `🤝 ${v.name} — 📍 ${v.location}`
+      : `🤝 ${v.name}`,
+    })),
   ];
 
   return (
@@ -278,7 +277,11 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
           fontWeight: value ? 500 : 400,
         }}
       >
-        {value ? `🤝 ${label}` : label}
+        {value
+  ? selected?.location
+    ? `🤝 ${label} — 📍 ${selected.location}`
+    : `🤝 ${label}`
+  : label}
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
           {open ? "▲" : "▼"}
         </span>
@@ -287,7 +290,6 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
       {open && (
         <div
           ref={dropRef}
-          onWheel={e => e.stopPropagation()}
           style={{
             position: "fixed",
             overscrollBehavior: "contain",
@@ -299,30 +301,30 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
             border: "1px solid #e5e7eb",
             borderRadius: 10,
             boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
-            maxHeight: 220,
-            overflowY: "auto",
-            minWidth: 200,
+            maxHeight: 300,
+            overflowY: "scroll",
+            minWidth: 220,
           }}
         >
-          {allItems.map(item => {
-            const active = value === item.key;
+          {allItems.map((volItem, idx) => {
+            const isActive = String(value) === String(volItem.key);
             return (
               <div
-                key={item.key || "__none__"}
-                onClick={() => { onChange(item.key); setOpen(false); }}
+                key={volItem.key === "" ? `__placeholder__${idx}` : volItem.key}
+                onClick={() => { onChange(volItem.key); setOpen(false); }}
                 style={{
                   padding: "8px 14px",
                   fontSize: 13,
                   cursor: "pointer",
-                  color: active ? "#2563eb" : item.key === "" ? "#9ca3af" : "#374151",
-                  background: active ? "#eff6ff" : "transparent",
-                  fontWeight: active ? 600 : 400,
+                  color: isActive ? "#2563eb" : volItem.key === "" ? "#9ca3af" : "#374151",
+                  background: isActive ? "#eff6ff" : "transparent",
+                  fontWeight: isActive ? 600 : 400,
                   userSelect: "none",
                 }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
               >
-                {item.label}
+                {volItem.label}
               </div>
             );
           })}
@@ -405,7 +407,7 @@ function LocationDropdown({ value, onChange }) {
 
       {open && (
         <div
-        ref={dropRef}
+          ref={dropRef}
           onWheel={e => e.stopPropagation()}
           style={{
             position: "fixed",
@@ -418,7 +420,7 @@ function LocationDropdown({ value, onChange }) {
             border: "1px solid #e5e7eb",
             borderRadius: 10,
             boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
-            maxHeight: 260,
+            maxHeight: 283,
             overflowY: "auto",
             minWidth: 210,
           }}
@@ -528,8 +530,7 @@ function CustomDropdown({ value, onChange, options, icon = "" }) {
 
       {open && (
         <div
-        ref={dropRef} 
-          onWheel={e => e.stopPropagation()}
+          ref={dropRef}
           style={{
             position: "fixed",
             overscrollBehavior: "contain",
@@ -541,8 +542,8 @@ function CustomDropdown({ value, onChange, options, icon = "" }) {
             border: "1px solid #e5e7eb",
             borderRadius: 10,
             boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
-            maxHeight: 260,
-            overflowY: "auto",
+            maxHeight: 300,
+            overflowY: "scroll",
             minWidth: 210,
           }}
         >
@@ -1264,11 +1265,11 @@ function AdminDashboard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `complaints_${statusFilter}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `complaints_${statusFilter}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
-  
+
   const downloadFilteredPDF = () => {
     const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", critical: "#dc2626" };
     const html = `
@@ -1296,9 +1297,9 @@ function AdminDashboard() {
       </div>
       <div class="summary">
         <div class="stat"><div class="stat-num">${filteredComplaints.length}</div><div class="stat-label">Showing</div></div>
-        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c=>c.status==="resolved").length}</div><div class="stat-label">Resolved</div></div>
-        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c=>["pending","received"].includes(c.status)).length}</div><div class="stat-label">Pending</div></div>
-        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c=>["in_review","in_progress","assigned","accepted"].includes(c.status)).length}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => c.status === "resolved").length}</div><div class="stat-label">Resolved</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => ["pending", "received"].includes(c.status)).length}</div><div class="stat-label">Pending</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length}</div><div class="stat-label">In Progress</div></div>
       </div>
       <table>
         <tr><th>ID</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Reported By</th><th>Assigned To</th><th>Date</th></tr>
@@ -1306,11 +1307,11 @@ function AdminDashboard() {
           <td style="font-family:monospace;color:#9ca3af">#${String(c._id).slice(-6).toUpperCase()}</td>
           <td style="font-weight:600">${c.title || "—"}</td>
           <td style="text-transform:capitalize">${c.type || "other"}</td>
-          <td><span class="badge" style="background:${(PRIORITY_COLORS[c.priority]||"#6b7280")}20;color:${PRIORITY_COLORS[c.priority]||"#6b7280"}">${c.priority||"medium"}</span></td>
-          <td><span class="badge" style="background:${c.status==="resolved"?"#dcfce7":c.status==="in_review"||c.status==="assigned"?"#ede9fe":"#dbeafe"};color:${c.status==="resolved"?"#166534":c.status==="in_review"||c.status==="assigned"?"#5b21b6":"#1d4ed8"}">${c.status?.replace("_"," ")}</span></td>
-          <td>${c.user_id?.name||"—"}</td>
-          <td>${c.assigned_to?.name||"Not assigned"}</td>
-          <td>${new Date(c.created_at||c.createdAt).toLocaleDateString()}</td>
+          <td><span class="badge" style="background:${(PRIORITY_COLORS[c.priority] || "#6b7280")}20;color:${PRIORITY_COLORS[c.priority] || "#6b7280"}">${c.priority || "medium"}</span></td>
+          <td><span class="badge" style="background:${c.status === "resolved" ? "#dcfce7" : c.status === "in_review" || c.status === "assigned" ? "#ede9fe" : "#dbeafe"};color:${c.status === "resolved" ? "#166534" : c.status === "in_review" || c.status === "assigned" ? "#5b21b6" : "#1d4ed8"}">${c.status?.replace("_", " ")}</span></td>
+          <td>${c.user_id?.name || "—"}</td>
+          <td>${c.assigned_to?.name || "Not assigned"}</td>
+          <td>${new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
         </tr>`).join("")}
       </table>
       </body></html>`;
@@ -1336,7 +1337,7 @@ function AdminDashboard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `users_${userRoleFilter}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `users_${userRoleFilter}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1344,13 +1345,13 @@ function AdminDashboard() {
   const downloadUsersPDF = () => {
     const roleColor = (role) =>
       role === "admin" ? { bg: "#fef2f2", color: "#dc2626" } :
-      role === "volunteer" ? { bg: "#eff6ff", color: "#2563eb" } :
-      { bg: "#f0fdf4", color: "#16a34a" };
-  
+        role === "volunteer" ? { bg: "#eff6ff", color: "#2563eb" } :
+          { bg: "#f0fdf4", color: "#16a34a" };
+
     const admins = filteredUsers.filter(u => u.role === "admin").length;
     const vols = filteredUsers.filter(u => u.role === "volunteer").length;
     const regular = filteredUsers.filter(u => !u.role || u.role === "user").length;
-  
+
     const html = `
       <html><head><title>User List Report</title>
       <style>
@@ -1406,11 +1407,11 @@ function AdminDashboard() {
           <th>Complaints Filed</th>
         </tr>
         ${filteredUsers.map(u => {
-          const rc = roleColor(u.role);
-          const initials = (u.name || "??").substring(0, 2).toUpperCase();
-          const complaintsFiled = complaints.filter(c =>
-            String(c.user_id?._id || c.user_id) === String(u._id)).length;
-          return `<tr>
+      const rc = roleColor(u.role);
+      const initials = (u.name || "??").substring(0, 2).toUpperCase();
+      const complaintsFiled = complaints.filter(c =>
+        String(c.user_id?._id || c.user_id) === String(u._id)).length;
+      return `<tr>
             <td>
               <span class="avatar">${initials}</span>
               <span style="font-weight:600">${u.name || "—"}</span>
@@ -1425,14 +1426,14 @@ function AdminDashboard() {
             <td style="color:#9ca3af">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</td>
             <td style="font-weight:700;color:#2563eb;text-align:center">${complaintsFiled}</td>
           </tr>`;
-        }).join("")}
+    }).join("")}
       </table>
   
       <div class="footer">
         CleanStreet · User List Report · ${filteredUsers.length} users · ${new Date().toLocaleDateString()}
       </div>
       </body></html>`;
-  
+
     const iframe = document.createElement("iframe");
     iframe.style.display = "none";
     document.body.appendChild(iframe);
@@ -1450,7 +1451,7 @@ function AdminDashboard() {
     const rows = volunteers.map(v => {
       const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id));
       const resolvedCount = assigned.filter(c => c.status === "resolved" || c.status === "completed").length;
-      const inProgressCount = assigned.filter(c => ["in_review","in_progress","accepted"].includes(c.status)).length;
+      const inProgressCount = assigned.filter(c => ["in_review", "in_progress", "accepted"].includes(c.status)).length;
       const rate = assigned.length > 0 ? Math.round((resolvedCount / assigned.length) * 100) : 0;
       return [
         `"${v.name}"`, `"${v.email}"`, `"${v.location || "—"}"`,
@@ -1462,20 +1463,20 @@ function AdminDashboard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `volunteers_performance_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `volunteers_performance_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
-  
+
   const downloadVolunteersPDF = () => {
     const volData = volunteers.map(v => {
       const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id));
       const resolvedCount = assigned.filter(c => c.status === "resolved" || c.status === "completed").length;
-      const inProgress = assigned.filter(c => ["in_review","in_progress","accepted"].includes(c.status)).length;
+      const inProgress = assigned.filter(c => ["in_review", "in_progress", "accepted"].includes(c.status)).length;
       const rate = assigned.length > 0 ? Math.round((resolvedCount / assigned.length) * 100) : 0;
       return { ...v, assigned: assigned.length, resolved: resolvedCount, inProgress, rate };
     }).sort((a, b) => b.resolved - a.resolved);
-  
+
     const html = `
       <html><head><title>Volunteer Performance Report</title>
       <style>
@@ -1498,24 +1499,24 @@ function AdminDashboard() {
       <div class="meta">Generated: ${new Date().toLocaleString()} · ${volunteers.length} volunteers</div>
       <div class="summary">
         <div class="stat"><div class="stat-num">${volunteers.length}</div><div class="stat-label">Total Volunteers</div></div>
-        <div class="stat"><div class="stat-num">${volData.filter(v=>v.assigned>0).length}</div><div class="stat-label">Active</div></div>
-        <div class="stat"><div class="stat-num">${volData.reduce((s,v)=>s+v.resolved,0)}</div><div class="stat-label">Total Resolved</div></div>
-        <div class="stat"><div class="stat-num">${volData.length > 0 ? Math.round(volData.reduce((s,v)=>s+v.rate,0)/volData.length) : 0}%</div><div class="stat-label">Avg Resolution Rate</div></div>
+        <div class="stat"><div class="stat-num">${volData.filter(v => v.assigned > 0).length}</div><div class="stat-label">Active</div></div>
+        <div class="stat"><div class="stat-num">${volData.reduce((s, v) => s + v.resolved, 0)}</div><div class="stat-label">Total Resolved</div></div>
+        <div class="stat"><div class="stat-num">${volData.length > 0 ? Math.round(volData.reduce((s, v) => s + v.rate, 0) / volData.length) : 0}%</div><div class="stat-label">Avg Resolution Rate</div></div>
       </div>
       <table>
         <tr><th>#</th><th>Name</th><th>Email</th><th>Location</th><th>Assigned</th><th>In Progress</th><th>Resolved</th><th>Rate</th></tr>
         ${volData.map((v, i) => `<tr>
-          <td><span class="medal">${i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</span></td>
+          <td><span class="medal">${i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</span></td>
           <td style="font-weight:600">${v.name}</td>
           <td style="color:#6b7280">${v.email}</td>
-          <td style="color:#6b7280">${v.location||"—"}</td>
+          <td style="color:#6b7280">${v.location || "—"}</td>
           <td style="font-weight:700;color:#2563eb">${v.assigned}</td>
           <td style="color:#8b5cf6">${v.inProgress}</td>
           <td style="font-weight:700;color:#22c55e">${v.resolved}</td>
           <td>
             <div style="display:flex;align-items:center;gap:6px">
-              <div class="rate-bar"><div class="rate-fill" style="width:${v.rate}%;background:${v.rate>=80?"#22c55e":v.rate>=50?"#f59e0b":"#ef4444"}"></div></div>
-              <span style="font-weight:700;color:${v.rate>=80?"#166534":v.rate>=50?"#92400e":"#991b1b"}">${v.rate}%</span>
+              <div class="rate-bar"><div class="rate-fill" style="width:${v.rate}%;background:${v.rate >= 80 ? "#22c55e" : v.rate >= 50 ? "#f59e0b" : "#ef4444"}"></div></div>
+              <span style="font-weight:700;color:${v.rate >= 80 ? "#166534" : v.rate >= 50 ? "#92400e" : "#991b1b"}">${v.rate}%</span>
             </div>
           </td>
         </tr>`).join("")}
@@ -1768,13 +1769,13 @@ function AdminDashboard() {
                     <span style={{ display: "inline-block", animation: refreshing ? "spin-a 0.7s linear infinite" : "none" }}>🔄</span>
                   </button>
                   <button onClick={downloadFilteredCSV} title="Export filtered as CSV"
-  style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#2563eb", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
-  📥 CSV
-</button>
-<button onClick={downloadFilteredPDF} title="Export filtered as PDF"
-  style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#374151", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
-  📄 PDF
-</button>
+                    style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#2563eb", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                    📥 CSV
+                  </button>
+                  <button onClick={downloadFilteredPDF} title="Export filtered as PDF"
+                    style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#374151", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                    📄 PDF
+                  </button>
                 </div>
               </div>
 
@@ -1814,11 +1815,11 @@ function AdminDashboard() {
                                 <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>🚫 Denied by {c.assigned_to?.name || "volunteer"}</div>
                                 {assignSelections[c._id || c.id] ? (
                                   <VolunteerDropdown
-                                  value={assignSelections[c._id || c.id] || ""}
-                                  onChange={val => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: val }))}
-                                  volunteers={volunteers}
-                                  placeholder="— Reassign Volunteer —"
-                                />
+                                    value={assignSelections[c._id || c.id] || ""}
+                                    onChange={val => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: val }))}
+                                    volunteers={volunteers}
+                                    placeholder="— Reassign Volunteer —"
+                                  />
                                 ) : (
                                   <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11, color: "#dc2626", borderColor: "#fca5a5" }}
                                     onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Reassign</button>
@@ -1834,11 +1835,11 @@ function AdminDashboard() {
                               </div>
                             ) : (
                               <VolunteerDropdown
-  value={assignSelections[c._id || c.id] || ""}
-  onChange={val => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: val }))}
-  volunteers={volunteers}
-  placeholder="— Select Volunteer —"
-/>
+                                value={assignSelections[c._id || c.id] || ""}
+                                onChange={val => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: val }))}
+                                volunteers={volunteers}
+                                placeholder="— Select Volunteer —"
+                              />
                             )}
                           </TD>
                           <TD>
@@ -1879,23 +1880,23 @@ function AdminDashboard() {
           {activeTab === "users" && (
             <div>
               <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-  <div>
-    <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>User Management</h1>
-    <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{users.length} registered users · Manage roles and access.</p>
-  </div>
-  <div style={{ display: "flex", gap: 10 }}>
-    <button onClick={downloadUsersCSV} style={{
-      display: "flex", alignItems: "center", gap: 6,
-      background: "#2563eb", color: "#fff", border: "none",
-      borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
-    }}>📥 Export CSV</button>
-    <button onClick={downloadUsersPDF} style={{
-      display: "flex", alignItems: "center", gap: 6,
-      background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
-      borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
-    }}>📄 User PDF</button>
-  </div>
-</div>
+                <div>
+                  <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>User Management</h1>
+                  <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{users.length} registered users · Manage roles and access.</p>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={downloadUsersCSV} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#2563eb", color: "#fff", border: "none",
+                    borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>📥 Export CSV</button>
+                  <button onClick={downloadUsersPDF} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
+                    borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>📄 User PDF</button>
+                </div>
+              </div>
 
               {/* ── Volunteer Applications ── */}
               {volApplications.filter(a => a.status === "pending").length > 0 && (
@@ -2061,23 +2062,23 @@ function AdminDashboard() {
           {activeTab === "volunteers" && (
             <div>
               <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-  <div>
-    <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
-    <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
-  </div>
-  <div style={{ display: "flex", gap: 10 }}>
-    <button onClick={downloadVolunteersCSV} style={{
-      display: "flex", alignItems: "center", gap: 6,
-      background: "#2563eb", color: "#fff", border: "none",
-      borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
-    }}>📥 Export CSV</button>
-    <button onClick={downloadVolunteersPDF} style={{
-      display: "flex", alignItems: "center", gap: 6,
-      background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
-      borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
-    }}>📄 Performance PDF</button>
-  </div>
-</div>
+                <div>
+                  <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
+                  <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={downloadVolunteersCSV} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#2563eb", color: "#fff", border: "none",
+                    borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>📥 Export CSV</button>
+                  <button onClick={downloadVolunteersPDF} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
+                    borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>📄 Performance PDF</button>
+                </div>
+              </div>
 
               {/* Search + Filter bar */}
               <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
@@ -2217,11 +2218,11 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
     const zoneComplaints = complaints.filter(c =>
       (c.address || c.location || "").toLowerCase().includes(z.area.toLowerCase()));
     const resolvedCount = zoneComplaints.filter(c => c.status === "resolved" || c.status === "completed").length;
-    const pendingCount = zoneComplaints.filter(c => ["pending","received"].includes(c.status)).length;
-    const inProgressCount = zoneComplaints.filter(c => ["in_review","in_progress","assigned","accepted"].includes(c.status)).length;
+    const pendingCount = zoneComplaints.filter(c => ["pending", "received"].includes(c.status)).length;
+    const inProgressCount = zoneComplaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
     const volunteerName = volunteers.find(v => String(v._id) === String(z.volunteerId))?.name || "Not assigned";
     const rate = zoneComplaints.length > 0 ? Math.round((resolvedCount / zoneComplaints.length) * 100) : 0;
-  
+
     const html = `
       <html><head><title>Zone Report — ${z.name}</title>
       <style>
@@ -2257,9 +2258,9 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
         <div class="section-title">Zone Details</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px">Assigned Volunteer</div>
-          <div style="font-size:14px;font-weight:600;color:${z.volunteerId?"#166534":"#9ca3af"}">${volunteerName}</div></div>
+          <div style="font-size:14px;font-weight:600;color:${z.volunteerId ? "#166534" : "#9ca3af"}">${volunteerName}</div></div>
           <div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px">Resolution Rate</div>
-          <div style="font-size:14px;font-weight:800;color:${rate>=80?"#166534":rate>=50?"#92400e":"#991b1b"}">${rate}%</div></div>
+          <div style="font-size:14px;font-weight:800;color:${rate >= 80 ? "#166534" : rate >= 50 ? "#92400e" : "#991b1b"}">${rate}%</div></div>
         </div>
       </div>
       ${zoneComplaints.length > 0 ? `
@@ -2269,10 +2270,10 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
           <tr><th>ID</th><th>Title</th><th>Priority</th><th>Status</th><th>Date</th></tr>
           ${zoneComplaints.map(c => `<tr>
             <td style="font-family:monospace;color:#9ca3af">#${String(c._id).slice(-6).toUpperCase()}</td>
-            <td style="font-weight:500">${c.title||"—"}</td>
-            <td style="text-transform:capitalize">${c.priority||"medium"}</td>
-            <td><span class="badge" style="background:${c.status==="resolved"?"#dcfce7":c.status==="in_review"||c.status==="assigned"?"#ede9fe":"#dbeafe"};color:${c.status==="resolved"?"#166534":c.status==="in_review"||c.status==="assigned"?"#5b21b6":"#1d4ed8"}">${c.status?.replace("_"," ")}</span></td>
-            <td style="color:#9ca3af">${new Date(c.created_at||c.createdAt).toLocaleDateString()}</td>
+            <td style="font-weight:500">${c.title || "—"}</td>
+            <td style="text-transform:capitalize">${c.priority || "medium"}</td>
+            <td><span class="badge" style="background:${c.status === "resolved" ? "#dcfce7" : c.status === "in_review" || c.status === "assigned" ? "#ede9fe" : "#dbeafe"};color:${c.status === "resolved" ? "#166534" : c.status === "in_review" || c.status === "assigned" ? "#5b21b6" : "#1d4ed8"}">${c.status?.replace("_", " ")}</span></td>
+            <td style="color:#9ca3af">${new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
           </tr>`).join("")}
         </table>
       </div>` : `<div class="section"><div style="color:#9ca3af;font-size:13px;text-align:center">No complaints recorded in this zone yet.</div></div>`}
@@ -2285,6 +2286,20 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
     iframe.contentDocument.close();
     setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 1000); }, 500);
   };
+
+  const filteredZoneVolunteers = zoneArea.trim()
+  ? volunteers.filter(v =>
+      (v.location || "").toLowerCase().includes(zoneArea.trim().toLowerCase()) ||
+      zoneArea.trim().toLowerCase().includes((v.location || "").toLowerCase())
+    )
+  : volunteers;
+
+const filteredEditVolunteers = editArea.trim()
+  ? volunteers.filter(v =>
+      (v.location || "").toLowerCase().includes(editArea.trim().toLowerCase()) ||
+      editArea.trim().toLowerCase().includes((v.location || "").toLowerCase())
+    )
+  : volunteers;
 
   return (
     <div>
@@ -2307,18 +2322,21 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
           </div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Area / Keyword *</div>
-            <input value={zoneArea} onChange={e => setZoneArea(e.target.value)} placeholder="e.g. Downtown, Elm Street"
+            <input value={zoneArea} onChange={e => {setZoneArea(e.target.value);setZoneVolunteer(""); }} placeholder="e.g. Downtown, Elm Street"
               style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
               onFocus={e => e.target.style.borderColor = "#2563eb"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
           </div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Assign Volunteer</div>
             <VolunteerDropdown
-  value={zoneVolunteer}
-  onChange={setZoneVolunteer}
-  volunteers={volunteers}
-  placeholder="— None —"
-/>
+              value={zoneVolunteer}
+              onChange={setZoneVolunteer}
+              volunteers={volunteers}
+              volunteers={filteredZoneVolunteers}
+  placeholder={zoneArea.trim() && filteredZoneVolunteers.length === 0
+    ? "— No volunteers in this area —"
+    : "— None —"}
+            />
           </div>
           <button onClick={addZone} disabled={!zoneName.trim() || !zoneArea.trim()}
             style={{ background: zoneName.trim() && zoneArea.trim() ? "#2563eb" : "#e5e7eb", color: zoneName.trim() && zoneArea.trim() ? "#fff" : "#9ca3af", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: zoneName.trim() && zoneArea.trim() ? "pointer" : "not-allowed", whiteSpace: "nowrap" }}>
@@ -2357,17 +2375,20 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <div>
                         <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>AREA KEYWORD</div>
-                        <input value={editArea} onChange={e => setEditArea(e.target.value)}
+                        <input value={editArea} onChange={e => {setEditArea(e.target.value); setEditVolunteer(""); }}
                           style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                       </div>
                       <div>
                         <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>VOLUNTEER</div>
                         <VolunteerDropdown
-  value={editVolunteer}
-  onChange={setEditVolunteer}
-  volunteers={volunteers}
-  placeholder="— None —"
-/>
+                          value={editVolunteer}
+                          onChange={setEditVolunteer}
+                          volunteers={volunteers}
+                          volunteers={filteredEditVolunteers}
+  placeholder={editArea.trim() && filteredEditVolunteers.length === 0
+    ? "— No volunteers in this area —"
+    : "— None —"}
+                        />
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => saveEdit(z.id)} style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✓ Save</button>
@@ -2399,9 +2420,9 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
                         <button onClick={() => startEdit(z)} style={{ flex: 1, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✏️ Edit</button>
                         <button onClick={() => deleteZone(z.id)} style={{ flex: 1, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🗑️ Delete</button>
                         <button onClick={() => downloadZoneReport(z)}
-  style={{ flex: 1, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-  📄 Report
-</button>
+                          style={{ flex: 1, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                          📄 Report
+                        </button>
                       </div>
                     </>
                   )}
