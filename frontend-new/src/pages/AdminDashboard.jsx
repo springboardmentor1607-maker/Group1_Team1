@@ -420,7 +420,7 @@ function LocationDropdown({ value, onChange }) {
             border: "1px solid #e5e7eb",
             borderRadius: 10,
             boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
-            maxHeight: 260,
+            maxHeight: 283,
             overflowY: "auto",
             minWidth: 210,
           }}
