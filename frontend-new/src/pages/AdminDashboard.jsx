@@ -531,7 +531,6 @@ function CustomDropdown({ value, onChange, options, icon = "" }) {
       {open && (
         <div
           ref={dropRef}
-          onWheel={e => e.stopPropagation()}
           style={{
             position: "fixed",
             overscrollBehavior: "contain",
@@ -543,8 +542,8 @@ function CustomDropdown({ value, onChange, options, icon = "" }) {
             border: "1px solid #e5e7eb",
             borderRadius: 10,
             boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
-            maxHeight: 260,
-            overflowY: "auto",
+            maxHeight: 300,
+            overflowY: "scroll",
             minWidth: 210,
           }}
         >
