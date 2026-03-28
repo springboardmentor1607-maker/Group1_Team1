@@ -12,12 +12,3 @@ Authentication (OTP/Login).
 Frontend: React.js
 Backend: Node.js, Express.js
 Database: MongoDB
-
-🔄 How It Works
-User registrations/login.
-User submits a complaint with image & location.
-Data is sent to backend via API.
-Complaint stored in MongoDB.
-Admin reviews and updates status.
-Users track updates in real-time.
-Community interacts via voting & comments.
