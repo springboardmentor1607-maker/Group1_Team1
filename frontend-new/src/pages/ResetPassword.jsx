@@ -37,10 +37,7 @@ export default function ResetPassword() {
   const inputRefs = useRef([]);
 
   const strength = getStrength(newPassword);
-
-  useEffect(() => {
-    if (!email) navigate("/forgot-password");
-  }, [email, navigate]);
+  const isNavigatingAway = useRef(false);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -88,7 +85,13 @@ export default function ResetPassword() {
         newPassword,
       });
       setSuccess(true);
-      setTimeout(() => navigate("/login"), 2500);
+      setTimeout(() => {
+        isNavigatingAway.current = true;
+        navigate("/");
+        setTimeout(() => {
+          window.dispatchEvent(new Event("openLoginModal"));
+        }, 300);
+      }, 2500);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to reset password. Please try again.");
       setOtp(["", "", "", "", "", ""]);
@@ -162,7 +165,13 @@ export default function ResetPassword() {
       <div className="auth-form-side">
         <div className="auth-card">
           <div className="auth-card__header">
-            <button className="auth-card__back" onClick={() => navigate("/forgot-password")}>← Back</button>
+            <button className="auth-card__back" onClick={() => {
+              isNavigatingAway.current = true;
+              navigate("/");
+              setTimeout(() => {
+                window.dispatchEvent(new Event("openLoginModal"));
+              }, 300);
+            }}>← Back</button>
             <h2 className="auth-card__title">Set new password 🔑</h2>
             <p className="auth-card__subtitle">
               Code sent to <strong>{email}</strong>
@@ -233,7 +242,7 @@ export default function ResetPassword() {
               {newPassword && (
                 <div className="auth-strength">
                   <div className="auth-strength__bar">
-                    {[1,2,3,4].map(i => (
+                    {[1, 2, 3, 4].map(i => (
                       <div key={i} className={`auth-strength__seg${strength.score >= i ? ` auth-strength__seg--${strength.color}` : ""}`} />
                     ))}
                   </div>
