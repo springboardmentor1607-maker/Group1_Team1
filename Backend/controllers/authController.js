@@ -2,7 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcryptjs");
 
-// 🔐 Generate Token (NOW INCLUDES ROLE)
+// 🔐 Generate Token
 const generateToken = (id, role) => {
   return jwt.sign(
     { id, role },
@@ -14,7 +14,7 @@ const generateToken = (id, role) => {
 // ================= REGISTER =================
 const register = async (req, res) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone, role, location } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Please fill all required fields" });
@@ -30,7 +30,9 @@ const register = async (req, res) => {
       email,
       password,
       phone: phone || "",
-      role: role || "user", // default role
+      role: role || "user",
+      location: location || "",
+      zone: location || ""   // ✅ IMPORTANT
     });
 
     const token = generateToken(user._id, user.role);
@@ -53,10 +55,6 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: "Please enter email and password" });
-    }
 
     const user = await User.findOne({
       email: email.toLowerCase().trim()
@@ -84,20 +82,14 @@ const login = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
 // ================= GET CURRENT USER =================
 const getMe = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password');
-    res.json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
+  const user = await User.findById(req.user.id).select('-password');
+  res.json(user);
 };
 
 module.exports = { register, login, getMe };

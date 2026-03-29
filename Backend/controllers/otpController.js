@@ -41,7 +41,7 @@ exports.sendRegisterOtp = async (req, res) => {
 // Verify Registration OTP
 exports.verifyRegisterOtp = async (req, res) => {
   try {
-    const { email, otp, name, password, role } = req.body;
+    const { email, otp, name, password, role, location } = req.body;
 
     const record = await Otp.findOne({ email });
 
@@ -55,7 +55,9 @@ exports.verifyRegisterOtp = async (req, res) => {
       name,
       email,
       password,
-      role: role || "user"
+      role: role || "user",
+      location: location || "",
+      zone: location ? location.toLowerCase() : ""
     });
 
     await Otp.deleteMany({ email });
@@ -110,8 +112,7 @@ exports.resetPassword = async (req, res) => {
 
     const record = await Otp.findOne({ email });
 
-    if (!record)
-      return res.status(400).json({ message: "OTP expired" });
+    if (!record) return res.status(400).json({ message: "OTP expired" });
 
     if (record.otp !== otp)
       return res.status(400).json({ message: "Invalid OTP" });
@@ -125,12 +126,11 @@ exports.resetPassword = async (req, res) => {
     await Otp.deleteMany({ email });
 
     res.json({
-      message: "Password reset successful"
+      message: "Password reset successful",
     });
-
   } catch (error) {
     res.status(500).json({
-      message: "Password reset failed"
+      message: "Password reset failed",
     });
   }
 };

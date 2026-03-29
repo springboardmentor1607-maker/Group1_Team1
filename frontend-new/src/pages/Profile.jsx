@@ -189,7 +189,7 @@ function Profile() {
         email: user?.email || "",
         fullName: user?.name || "",
         phone: user?.phone || "",
-        location: user?.location || "",
+        location: user?.location || user?.address || "",
         bio: user?.bio || "",
     };
 
@@ -229,11 +229,12 @@ function Profile() {
         updateUser({
             name: formData.fullName, username: formData.username,
             email: formData.email,   phone: formData.phone,
-            location: formData.location, bio: formData.bio,
+            address: formData.location, bio: formData.bio,
         });
         setEditMode(false);
         setMessage("Profile updated successfully ✅");
     };
+
     const handleLogout  = () => { logout(); navigate("/login"); };
 
     const fields = [
