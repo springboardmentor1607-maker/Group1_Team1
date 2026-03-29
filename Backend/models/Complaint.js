@@ -52,6 +52,11 @@ const complaintSchema = new mongoose.Schema(
       required: true,
     },
 
+    zone: {
+      type: String,
+      default: "",
+    },
+    
     landmark: {
       type: String,
       default: "",
@@ -65,7 +70,14 @@ const complaintSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["received", "in_review", "resolved", "assigned", "completed", "pending"],
+      enum: [
+        "received",
+        "in_review",
+        "resolved",
+        "assigned",
+        "completed",
+        "pending",
+      ],
       default: "received",
     },
 
@@ -106,7 +118,7 @@ const complaintSchema = new mongoose.Schema(
       createdAt: "created_at",
       updatedAt: "updated_at",
     },
-  }
+  },
 );
 
 // ✅ Required for geo queries

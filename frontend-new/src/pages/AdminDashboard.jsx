@@ -249,8 +249,8 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
     ...(Array.isArray(volunteers) ? volunteers : []).map(v => ({
       key: String(v._id),
       label: v.location
-      ? `🤝 ${v.name} — 📍 ${v.location}`
-      : `🤝 ${v.name}`,
+        ? `🤝 ${v.name} — 📍 ${v.location}`
+        : `🤝 ${v.name}`,
     })),
   ];
 
@@ -278,10 +278,10 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
         }}
       >
         {value
-  ? selected?.location
-    ? `🤝 ${label} — 📍 ${selected.location}`
-    : `🤝 ${label}`
-  : label}
+          ? selected?.location
+            ? `🤝 ${label} — 📍 ${selected.location}`
+            : `🤝 ${label}`
+          : label}
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
           {open ? "▲" : "▼"}
         </span>
@@ -1230,14 +1230,85 @@ function AdminDashboard() {
     } catch (err) { console.error("Failed to fetch users", err); }
   };
 
-  const assignVolunteer = async (complaintId) => {
-    const volunteerId = assignSelections[complaintId];
-    if (!volunteerId?.trim()) return;
+  const [assigning, setAssigning] = useState({});
+  // manualAssignModal: { complaintId, complaintTitle, volunteers: [] } | null
+  const [manualAssignModal, setManualAssignModal] = useState(null);
+  const [manualSelection, setManualSelection] = useState("");
+
+  // Tokenise an address or location string into lowercase words
+  const tokenise = (str) =>
+    (str || "").toLowerCase().replace(/[,.\-]/g, " ").split(/\s+/).filter(Boolean);
+
+  // Returns the best matching volunteer for a complaint by comparing
+  // the complaint address tokens against each volunteer's location tokens.
+  // Checks both the localStorage zones AND direct volunteer.location fields.
+  const getZoneVolunteerForComplaint = (complaint) => {
+    const addrTokens = tokenise(complaint.address);
+    if (addrTokens.length === 0) return null;
+
+    // 1️⃣ Check localStorage zones first (admin-configured mappings)
+    if (zones && zones.length > 0) {
+      const matchedZone = zones.find(z =>
+        z.area && tokenise(z.area).some(t => addrTokens.includes(t))
+      );
+      if (matchedZone?.volunteerId) {
+        const v = volunteers.find(v => String(v._id) === String(matchedZone.volunteerId));
+        if (v) return v;
+      }
+    }
+
+    // 2️⃣ Fallback — match directly against volunteer.location field
+    // Score each volunteer by how many location tokens overlap with the complaint address
+    let best = null;
+    let bestScore = 0;
+    for (const v of volunteers) {
+      const locTokens = tokenise(v.location);
+      if (locTokens.length === 0) continue;
+      const score = locTokens.filter(t => addrTokens.includes(t)).length;
+      if (score > bestScore) { bestScore = score; best = v; }
+    }
+    return bestScore > 0 ? best : null;
+  };
+
+  // Smart assign — matches on the frontend first.
+  // If a volunteer location matches → auto-assign directly via backend.
+  // If no match → open manual modal with full volunteer list.
+  const smartAssignVolunteer = async (complaint) => {
+    const complaintId = complaint._id || complaint.id;
+    const matchedVol = getZoneVolunteerForComplaint(complaint);
+
+    if (matchedVol) {
+      // Auto path — location matched, send volunteerId straight to backend
+      setAssigning(prev => ({ ...prev, [complaintId]: true }));
+      try {
+        await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId: matchedVol._id });
+        await fetchComplaints();
+      } catch (err) { console.error("Auto-assign failed", err); }
+      finally { setAssigning(prev => ({ ...prev, [complaintId]: false })); }
+    } else {
+      // Manual path — no location match, open modal with all volunteers
+      setManualAssignModal({
+        complaintId,
+        complaintTitle: complaint.title,
+        complaintAddress: complaint.address,
+        volunteers,
+      });
+      setManualSelection("");
+    }
+  };
+
+  // Confirms the manual volunteer selection from the modal
+  const confirmManualAssign = async () => {
+    if (!manualAssignModal || !manualSelection) return;
+    const { complaintId } = manualAssignModal;
+    setAssigning(prev => ({ ...prev, [complaintId]: true }));
     try {
-      await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId });
-      setAssignSelections(prev => { const u = { ...prev }; delete u[complaintId]; return u; });
+      await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId: manualSelection });
+      setManualAssignModal(null);
+      setManualSelection("");
       await fetchComplaints();
-    } catch (err) { console.error("Assign failed", err); }
+    } catch (err) { console.error("Manual assign failed", err); }
+    finally { setAssigning(prev => ({ ...prev, [complaintId]: false })); }
   };
 
   const markResolved = async (complaintId) => {
@@ -1808,63 +1879,83 @@ function AdminDashboard() {
                           <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
                           <TD><StatusBadge status={c.status} /></TD>
                           <TD>
-                            {(c.status === "resolved" || c.status === "completed") ? (
-                              <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ {c.assigned_to?.name || "—"}</div>
-                            ) : c.status === "denied" ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>🚫 Denied by {c.assigned_to?.name || "volunteer"}</div>
-                                {assignSelections[c._id || c.id] ? (
-                                  <VolunteerDropdown
-                                    value={assignSelections[c._id || c.id] || ""}
-                                    onChange={val => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: val }))}
-                                    volunteers={volunteers}
-                                    placeholder="— Reassign Volunteer —"
-                                  />
-                                ) : (
-                                  <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11, color: "#dc2626", borderColor: "#fca5a5" }}
-                                    onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Reassign</button>
-                                )}
-                              </div>
-                            ) : (c.status === "accepted" || c.status === "in_review" || c.status === "in_progress") ? (
-                              <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || "—"}</div>
-                            ) : c.status === "assigned" && c.assigned_to && !assignSelections[c._id || c.id] ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || c.assigned_to}</div>
-                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
-                                  onClick={() => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: " " }))}>🔄 Change</button>
-                              </div>
-                            ) : (
-                              <VolunteerDropdown
-                                value={assignSelections[c._id || c.id] || ""}
-                                onChange={val => setAssignSelections(prev => ({ ...prev, [c._id || c.id]: val }))}
-                                volunteers={volunteers}
-                                placeholder="— Select Volunteer —"
-                              />
-                            )}
+                            {(() => {
+                              const cid = c._id || c.id;
+                              const zoneVol = getZoneVolunteerForComplaint(c);
+                              const hasZoneMatch = !!zoneVol;
+                              if (c.status === "resolved" || c.status === "completed") {
+                                return <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ {c.assigned_to?.name || "—"}</div>;
+                              }
+                              if (c.status === "accepted" || c.status === "in_review" || c.status === "in_progress") {
+                                return <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || "—"}</div>;
+                              }
+                              if (c.status === "assigned" && c.assigned_to) {
+                                return <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 600 }}>👤 {c.assigned_to?.name || "—"}</div>;
+                              }
+                              if (c.status === "denied") {
+                                return (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                    <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>🚫 Denied by {c.assigned_to?.name || "volunteer"}</div>
+                                    {hasZoneMatch
+                                      ? <div style={{ fontSize: 11, color: "#16a34a" }}>⚡ Zone match: {zoneVol.name}</div>
+                                      : <div style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ No zone match — click Reassign</div>
+                                    }
+                                  </div>
+                                );
+                              }
+                              // pending / received
+                              if (hasZoneMatch) {
+                                return (
+                                  <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                                    ⚡ {zoneVol.name}
+                                    <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>Zone matched — auto</div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div style={{ fontSize: 11, color: "#f59e0b", fontWeight: 500 }}>
+                                  ⚠️ No zone match
+                                  <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>Click Assign to select manually</div>
+                                </div>
+                              );
+                            })()}
                           </TD>
                           <TD>
                             <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
-                              {c.status === "completed" ? (
-                                <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>
-                              ) : c.status === "resolved" ? (
-                                <button onClick={() => approveComplaint(c._id || c.id)}
-                                  style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
-                                  ✓ Approve
-                                </button>
-                              ) : c.status === "denied" ? (
-                                <>
-                                  {assignSelections[c._id || c.id]?.trim() && (
-                                    <button className="cs-btn cs-btn--primary cs-btn--sm" style={{ fontSize: 11 }}
-                                      onClick={() => assignVolunteer(c._id || c.id)}>⚠️ Reassign</button>
-                                  )}
-                                </>
-                              ) : (c.status === "pending" || c.status === "received" || c.status === "assigned") ? (
-                                <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ fontSize: 11 }}
-                                  onClick={() => assignVolunteer(c._id || c.id)}
-                                  disabled={!assignSelections[c._id || c.id]?.trim()}>Assign</button>
-                              ) : (
-                                null
-                              )}
+                              {(() => {
+                                const cid = c._id || c.id;
+                                const zoneVol = getZoneVolunteerForComplaint(c);
+                                const hasZoneMatch = !!zoneVol;
+                                const isWorking = assigning[cid];
+                                if (c.status === "completed") {
+                                  return <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>;
+                                }
+                                if (c.status === "resolved") {
+                                  return (
+                                    <button onClick={() => approveComplaint(cid)}
+                                      style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                      ✓ Approve
+                                    </button>
+                                  );
+                                }
+                                if (c.status === "denied") {
+                                  return (
+                                    <button onClick={() => smartAssignVolunteer(c)} disabled={isWorking}
+                                      style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: isWorking ? "#f3f4f6" : "#dc2626", color: isWorking ? "#9ca3af" : "#fff", fontWeight: 600, fontSize: 12, cursor: isWorking ? "not-allowed" : "pointer" }}>
+                                      {isWorking ? "Assigning…" : "⚠️ Reassign"}
+                                    </button>
+                                  );
+                                }
+                                if (c.status === "pending" || c.status === "received") {
+                                  return (
+                                    <button onClick={() => smartAssignVolunteer(c)} disabled={isWorking}
+                                      style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: isWorking ? "#f3f4f6" : "#2563eb", color: isWorking ? "#9ca3af" : "#fff", fontWeight: 600, fontSize: 12, cursor: isWorking ? "not-allowed" : "pointer" }}>
+                                      {isWorking ? "Assigning…" : hasZoneMatch ? "⚡ Auto Assign" : "👤 Assign"}
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           </TD>
                         </tr>
@@ -2163,6 +2254,114 @@ function AdminDashboard() {
 
         </div>
       </div>
+
+      {/* ══ MANUAL ASSIGN MODAL ══ */}
+      {manualAssignModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99999,
+          background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 20,
+        }}
+          onClick={e => { if (e.target === e.currentTarget) setManualAssignModal(null); }}
+        >
+          <div style={{
+            background: "#fff", borderRadius: 16, width: "100%", maxWidth: 480,
+            boxShadow: "0 20px 60px rgba(0,0,0,0.18)", overflow: "hidden",
+          }}>
+            <div style={{ background: "linear-gradient(135deg,#1e3a8a,#2563eb)", padding: "20px 24px", position: "relative" }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>👤 Manual Assignment</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 3 }}>No zone match found — select a volunteer manually</div>
+              <button onClick={() => setManualAssignModal(null)} style={{
+                position: "absolute", top: 14, right: 16, background: "rgba(255,255,255,0.15)",
+                border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer",
+                color: "#fff", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>✕</button>
+            </div>
+            <div style={{ padding: "16px 24px", background: "#f8fafc", borderBottom: "1px solid #e5e7eb" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", marginBottom: 4 }}>Complaint</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{manualAssignModal.complaintTitle}</div>
+              {manualAssignModal.complaintAddress && (
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>📍 {manualAssignModal.complaintAddress}</div>
+              )}
+              <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 6, padding: "4px 10px" }}>
+                <span style={{ fontSize: 13 }}>⚠️</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#92400e" }}>No volunteer's zone matches this complaint's location</span>
+              </div>
+            </div>
+            <div style={{ padding: "16px 24px" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 12 }}>
+                Select a volunteer ({manualAssignModal.volunteers.length} available):
+              </div>
+              {manualAssignModal.volunteers.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "24px 0", color: "#9ca3af", fontSize: 13 }}>
+                  😔 No volunteers available at the moment.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto" }}>
+                  {manualAssignModal.volunteers.map(v => {
+                    const isSelected = manualSelection === String(v._id);
+                    const vAssigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+                    const vResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && (c.status === "resolved" || c.status === "completed")).length;
+                    return (
+                      <div key={v._id}
+                        onClick={() => setManualSelection(String(v._id))}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                          borderRadius: 10, border: `2px solid ${isSelected ? "#2563eb" : "#e5e7eb"}`,
+                          background: isSelected ? "#eff6ff" : "#fff", cursor: "pointer",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        <div style={{
+                          width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                          background: isSelected ? "#2563eb" : "#e5e7eb",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 13, fontWeight: 700, color: isSelected ? "#fff" : "#6b7280",
+                        }}>
+                          {(v.name || "?").substring(0, 2).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: isSelected ? "#1d4ed8" : "#111827" }}>{v.name}</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 1 }}>{v.email}</div>
+                          {v.location && <div style={{ fontSize: 11, color: "#6b7280" }}>📍 {v.location}</div>}
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 11, color: "#6b7280" }}>{vAssigned} assigned</div>
+                          <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 600 }}>{vResolved} resolved</div>
+                        </div>
+                        {isSelected && (
+                          <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div style={{ padding: "16px 24px", borderTop: "1px solid #e5e7eb", display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setManualAssignModal(null)}
+                style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button
+                onClick={confirmManualAssign}
+                disabled={!manualSelection || assigning[manualAssignModal.complaintId]}
+                style={{
+                  padding: "9px 24px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700,
+                  cursor: manualSelection ? "pointer" : "not-allowed",
+                  background: manualSelection ? "#2563eb" : "#e5e7eb",
+                  color: manualSelection ? "#fff" : "#9ca3af",
+                  transition: "all 0.15s",
+                }}>
+                {assigning[manualAssignModal.complaintId] ? "Assigning…" : "✓ Confirm Assignment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2288,18 +2487,18 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
   };
 
   const filteredZoneVolunteers = zoneArea.trim()
-  ? volunteers.filter(v =>
+    ? volunteers.filter(v =>
       (v.location || "").toLowerCase().includes(zoneArea.trim().toLowerCase()) ||
       zoneArea.trim().toLowerCase().includes((v.location || "").toLowerCase())
     )
-  : volunteers;
+    : volunteers;
 
-const filteredEditVolunteers = editArea.trim()
-  ? volunteers.filter(v =>
+  const filteredEditVolunteers = editArea.trim()
+    ? volunteers.filter(v =>
       (v.location || "").toLowerCase().includes(editArea.trim().toLowerCase()) ||
       editArea.trim().toLowerCase().includes((v.location || "").toLowerCase())
     )
-  : volunteers;
+    : volunteers;
 
   return (
     <div>
@@ -2322,7 +2521,7 @@ const filteredEditVolunteers = editArea.trim()
           </div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Area / Keyword *</div>
-            <input value={zoneArea} onChange={e => {setZoneArea(e.target.value);setZoneVolunteer(""); }} placeholder="e.g. Downtown, Elm Street"
+            <input value={zoneArea} onChange={e => { setZoneArea(e.target.value); setZoneVolunteer(""); }} placeholder="e.g. Downtown, Elm Street"
               style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
               onFocus={e => e.target.style.borderColor = "#2563eb"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
           </div>
@@ -2333,9 +2532,9 @@ const filteredEditVolunteers = editArea.trim()
               onChange={setZoneVolunteer}
               volunteers={volunteers}
               volunteers={filteredZoneVolunteers}
-  placeholder={zoneArea.trim() && filteredZoneVolunteers.length === 0
-    ? "— No volunteers in this area —"
-    : "— None —"}
+              placeholder={zoneArea.trim() && filteredZoneVolunteers.length === 0
+                ? "— No volunteers in this area —"
+                : "— None —"}
             />
           </div>
           <button onClick={addZone} disabled={!zoneName.trim() || !zoneArea.trim()}
@@ -2375,7 +2574,7 @@ const filteredEditVolunteers = editArea.trim()
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <div>
                         <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>AREA KEYWORD</div>
-                        <input value={editArea} onChange={e => {setEditArea(e.target.value); setEditVolunteer(""); }}
+                        <input value={editArea} onChange={e => { setEditArea(e.target.value); setEditVolunteer(""); }}
                           style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                       </div>
                       <div>
@@ -2385,9 +2584,9 @@ const filteredEditVolunteers = editArea.trim()
                           onChange={setEditVolunteer}
                           volunteers={volunteers}
                           volunteers={filteredEditVolunteers}
-  placeholder={editArea.trim() && filteredEditVolunteers.length === 0
-    ? "— No volunteers in this area —"
-    : "— None —"}
+                          placeholder={editArea.trim() && filteredEditVolunteers.length === 0
+                            ? "— No volunteers in this area —"
+                            : "— None —"}
                         />
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>

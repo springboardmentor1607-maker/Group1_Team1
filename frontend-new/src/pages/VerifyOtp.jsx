@@ -10,7 +10,7 @@ export default function VerifyOtp() {
   const { login } = useAuth();
 
   // Data passed from Signup page
-  const { email, name, password, role } = location.state || {};
+  const { email, name, password, role, location: userLocation} = location.state || {};
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -67,6 +67,7 @@ export default function VerifyOtp() {
         name,
         password,
         role,
+        location: userLocation
       });
       // Show success screen first, then do a fresh login with credentials
       setSuccess(true);

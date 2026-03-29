@@ -24,10 +24,19 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+
+  // ✅ LOCATION (important)
   location: {
     type: String,
     default: "",
   },
+
+  // ✅ ZONE (used for assignment)
+  zone: {
+    type: String,
+    default: "",
+  },
+
   role: {
     type: String,
     enum: ["user", "volunteer", "admin"],
@@ -44,9 +53,8 @@ const UserSchema = new mongoose.Schema({
 });
 
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    next();
-  }
+  if (!this.isModified("password")) return next();
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
