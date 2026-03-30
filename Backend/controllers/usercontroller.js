@@ -8,7 +8,7 @@ const updateProfile = async (req, res) => {
       user.name = req.body.name || user.name;
       user.email = req.body.email || user.email;
       user.phone = req.body.phone || user.phone;
-      user.location = req.body.location || user.location;
+      user.address = req.body.address || user.address;
       user.profilePhoto = req.body.profilePhoto || user.profilePhoto;
 
       const updatedUser = await user.save();
@@ -18,7 +18,7 @@ const updateProfile = async (req, res) => {
         name: updatedUser.name,
         email: updatedUser.email,
         phone: updatedUser.phone,
-        location: updatedUser.location,
+        location: updatedUser.address,
         role: updatedUser.role,
         profilePhoto: updatedUser.profilePhoto
       });
