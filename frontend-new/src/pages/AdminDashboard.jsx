@@ -1637,6 +1637,21 @@ function AdminDashboard() {
     } catch (err) { console.error("Role change failed", err); }
   };
 
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null); // { userId, userName, userRole }
+
+  const deleteUser = async () => {
+    if (!deleteConfirmModal) return;
+    try {
+      await API.delete(`/api/users/${deleteConfirmModal.userId}`);
+      setDeleteConfirmModal(null);
+      await fetchUsers();
+      await fetchComplaints(); // refresh so orphaned complaints update
+    } catch (err) {
+      console.error("Delete user failed", err);
+      alert("Failed to delete user: " + (err?.response?.data?.message || err.message));
+    }
+  };
+
   const total = complaints.length;
   const pending = complaints.filter(c => c.status === "pending" || c.status === "received").length;
   const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
@@ -2160,7 +2175,7 @@ function AdminDashboard() {
               ) : (
                 <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead><tr><TH>Name</TH><TH>Email</TH><TH>Current Role</TH><TH>Location</TH><TH>Joined</TH></tr></thead>
+                    <thead><tr><TH>Name</TH><TH>Email</TH><TH>Current Role</TH><TH>Location</TH><TH>Joined</TH><TH>Actions</TH></tr></thead>
                     <tbody>
                       {filteredUsers.map(u => (
                         <tr key={u._id}
@@ -2182,6 +2197,17 @@ function AdminDashboard() {
                           </TD>
                           <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
                           <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
+                          <TD>
+                            {u.role === "admin" ? (
+                              <span style={{ fontSize: 11, color: "#9ca3af" }}>—</span>
+                            ) : (
+                              <button
+                                onClick={() => setDeleteConfirmModal({ userId: u._id, userName: u.name, userRole: u.role })}
+                                style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                🗑️ Remove
+                              </button>
+                            )}
+                          </TD>
                         </tr>
                       ))}
                     </tbody>
@@ -2296,6 +2322,62 @@ function AdminDashboard() {
 
         </div>
       </div>
+
+      {/* ══ DELETE USER CONFIRM MODAL ══ */}
+      {deleteConfirmModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99999,
+          background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }}
+          onClick={e => { if (e.target === e.currentTarget) setDeleteConfirmModal(null); }}
+        >
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.18)", overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg,#7f1d1d,#dc2626)", padding: "20px 24px", position: "relative" }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>🗑️ Remove User</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 3 }}>This action cannot be undone</div>
+              <button onClick={() => setDeleteConfirmModal(null)} style={{
+                position: "absolute", top: 14, right: 16, background: "rgba(255,255,255,0.15)",
+                border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer",
+                color: "#fff", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>✕</button>
+            </div>
+            <div style={{ padding: "24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#dc2626", flexShrink: 0 }}>
+                  {(deleteConfirmModal.userName || "?").substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{deleteConfirmModal.userName}</div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 9999,
+                    background: deleteConfirmModal.userRole === "volunteer" ? "#eff6ff" : "#f0fdf4",
+                    color: deleteConfirmModal.userRole === "volunteer" ? "#2563eb" : "#16a34a",
+                  }}>{deleteConfirmModal.userRole || "user"}</span>
+                </div>
+              </div>
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "14px 16px", marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#991b1b", marginBottom: 6 }}>⚠️ This will permanently:</div>
+                <div style={{ fontSize: 12, color: "#dc2626", lineHeight: 1.8 }}>
+                  • Delete this user's account<br />
+                  {deleteConfirmModal.userRole === "volunteer" && "• All their assigned complaints will need reassignment\n"}
+                  • Remove all associated data
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setDeleteConfirmModal(null)}
+                  style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  Cancel
+                </button>
+                <button onClick={deleteUser}
+                  style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#dc2626", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  🗑️ Yes, Remove User
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ MANUAL ASSIGN MODAL ══ */}
       {manualAssignModal && (
