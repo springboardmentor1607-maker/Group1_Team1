@@ -52,6 +52,11 @@ const complaintSchema = new mongoose.Schema(
       required: true,
     },
 
+    zone: {
+      type: String,
+      default: "",
+    },
+    
     landmark: {
       type: String,
       default: "",
@@ -65,7 +70,14 @@ const complaintSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["received", "in_review", "resolved", "assigned", "completed", "pending"],
+      enum: [
+        "received",
+        "in_review",
+        "resolved",
+        "assigned",
+        "completed",
+        "pending",
+      ],
       default: "received",
     },
 
@@ -82,7 +94,7 @@ const complaintSchema = new mongoose.Schema(
 
     voters: [
       {
-        user:     { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         voteType: { type: String, enum: ["upvote", "downvote"] },
       },
     ],
@@ -95,8 +107,8 @@ const complaintSchema = new mongoose.Schema(
 
     commentsList: [
       {
-        user_id:   { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        content:   { type: String, required: true },
+        user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        content: { type: String, required: true },
         timestamp: { type: Date, default: Date.now },
       },
     ],
@@ -106,7 +118,7 @@ const complaintSchema = new mongoose.Schema(
       createdAt: "created_at",
       updatedAt: "updated_at",
     },
-  }
+  },
 );
 
 // ✅ Required for geo queries
