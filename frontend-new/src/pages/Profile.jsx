@@ -85,207 +85,16 @@ function StatMini({ icon, value, label, colorClass }) {
 // ─── Time helper ─────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
     if (!dateStr) return "—";
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
+    const diff  = Date.now() - new Date(dateStr).getTime();
+    const mins  = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    if (mins < 1) return "Just now";
-    if (mins < 60) return `${mins}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days === 1) return "Yesterday";
+    const days  = Math.floor(diff / 86400000);
+    if (mins  < 1)   return "Just now";
+    if (mins  < 60)  return `${mins}m ago`;
+    if (hours < 24)  return `${hours}h ago`;
+    if (days  === 1) return "Yesterday";
     return `${days}d ago`;
 }
-
-function ChangePasswordSection({ user }) {
-    const [step, setStep] = useState("idle"); // idle | sending | otp | resetting | done | error
-    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [showPass, setShowPass] = useState(false);
-    const [message, setMessage] = useState("");
-    const [countdown, setCountdown] = useState(0);
-    const inputRefs = React.useRef([]);
-  
-    useEffect(() => {
-      if (countdown <= 0) return;
-      const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-      return () => clearTimeout(t);
-    }, [countdown]);
-  
-    const sendOtp = async () => {
-      setStep("sending");
-      setMessage("");
-      try {
-        await API.post("/api/otp/send-reset-otp", { email: user?.email });
-        setStep("otp");
-        setCountdown(60);
-      } catch (err) {
-        setMessage(err.response?.data?.message || "Failed to send OTP.");
-        setStep("error");
-      }
-    };
-  
-    const handleOtpChange = (index, value) => {
-      if (!/^\d*$/.test(value)) return;
-      const newOtp = [...otp];
-      newOtp[index] = value.slice(-1);
-      setOtp(newOtp);
-      if (value && index < 5) inputRefs.current[index + 1]?.focus();
-    };
-  
-    const handleKeyDown = (index, e) => {
-      if (e.key === "Backspace" && !otp[index] && index > 0)
-        inputRefs.current[index - 1]?.focus();
-    };
-  
-    const handleReset = async () => {
-      const code = otp.join("");
-      if (code.length < 6) { setMessage("Enter the complete 6-digit OTP."); return; }
-      if (!newPassword) { setMessage("Enter a new password."); return; }
-      if (newPassword.length < 8) { setMessage("Password must be at least 8 characters."); return; }
-      if (newPassword !== confirmPassword) { setMessage("Passwords do not match."); return; }
-      setStep("resetting");
-      try {
-        await API.post("/api/otp/reset-password", { email: user?.email, otp: code, newPassword });
-        setStep("done");
-        setMessage("Password changed successfully ✅");
-        setOtp(["", "", "", "", "", ""]);
-        setNewPassword("");
-        setConfirmPassword("");
-      } catch (err) {
-        setMessage(err.response?.data?.message || "Failed to reset password.");
-        setStep("otp");
-      }
-    };
-  
-    const inputStyle = {
-      width: "100%", padding: "10px 12px", border: "1.5px solid #e5e7eb",
-      borderRadius: 8, fontSize: 13, outline: "none", fontFamily: "inherit",
-      boxSizing: "border-box",
-    };
-  
-    return (
-      <div style={{ padding: "4px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid #f3f4f6" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 22 }}>🔑</span>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>Password</div>
-              <div style={{ fontSize: 12, color: "#6b7280" }}>Change your account password via OTP verification</div>
-            </div>
-          </div>
-          {step === "idle" || step === "error" ? (
-            <button className="pf-btn pf-btn--outline" onClick={sendOtp}>
-              Change Password
-            </button>
-          ) : step === "sending" ? (
-            <button className="pf-btn pf-btn--outline" disabled>Sending OTP…</button>
-          ) : step === "done" ? (
-            <button className="pf-btn pf-btn--outline" onClick={() => { setStep("idle"); setMessage(""); }}>
-              Change Again
-            </button>
-          ) : null}
-        </div>
-  
-        {/* OTP + new password form */}
-        {(step === "otp" || step === "resetting") && (
-          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-            {message && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626" }}>
-                ⚠️ {message}
-              </div>
-            )}
-  
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 8 }}>
-                Verification Code
-                <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 400, marginLeft: 8 }}>
-                  Sent to {user?.email}
-                </span>
-              </label>
-              <div style={{ display: "flex", gap: 8 }}>
-                {otp.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={el => inputRefs.current[i] = el}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={e => handleOtpChange(i, e.target.value)}
-                    onKeyDown={e => handleKeyDown(i, e)}
-                    style={{
-                      width: 44, height: 48, textAlign: "center", fontSize: 20,
-                      fontWeight: 700, borderRadius: 8,
-                      border: `2px solid ${digit ? "#2563eb" : "#e5e7eb"}`,
-                      outline: "none", background: digit ? "#eff6ff" : "#fff",
-                    }}
-                  />
-                ))}
-                <div style={{ marginLeft: 8, display: "flex", alignItems: "center", fontSize: 12, color: "#6b7280" }}>
-                  {countdown > 0 ? (
-                    `Resend in ${countdown}s`
-                  ) : (
-                    <button type="button" onClick={sendOtp}
-                      style={{ background: "none", border: "none", color: "#2563eb", fontWeight: 600, cursor: "pointer", padding: 0, fontSize: 12 }}>
-                      Resend OTP
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-  
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>New Password</label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    style={inputStyle}
-                    type={showPass ? "text" : "password"}
-                    placeholder="Min. 8 characters"
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                  />
-                  <button type="button" onClick={() => setShowPass(s => !s)}
-                    style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>
-                    {showPass ? "🙈" : "👁️"}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Confirm Password</label>
-                <input
-                  style={{ ...inputStyle, borderColor: confirmPassword && newPassword !== confirmPassword ? "#fca5a5" : "#e5e7eb" }}
-                  type="password"
-                  placeholder="Repeat password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                />
-                {confirmPassword && newPassword !== confirmPassword && (
-                  <div style={{ fontSize: 11, color: "#dc2626", marginTop: 3 }}>⚠️ Passwords do not match</div>
-                )}
-              </div>
-            </div>
-  
-            <div style={{ display: "flex", gap: 10 }}>
-              <button className="pf-btn pf-btn--primary" onClick={handleReset} disabled={step === "resetting"}>
-                {step === "resetting" ? "Resetting…" : "Reset Password →"}
-              </button>
-              <button className="pf-btn pf-btn--outline" onClick={() => { setStep("idle"); setMessage(""); setOtp(["","","","","",""]); setNewPassword(""); setConfirmPassword(""); }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-  
-        {step === "done" && (
-          <div style={{ marginTop: 12, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#166534" }}>
-            ✅ {message}
-          </div>
-        )}
-      </div>
-    );
-  }
 
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function Profile() {
@@ -307,7 +116,7 @@ function Profile() {
     }, [profileId]);
 
     // ── Real stats + activity fetched from complaints API ──────────────────
-    const [stats, setStats] = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
+    const [stats, setStats]           = useState({ reports: 0, resolved: 0, votes: 0, badges: 0 });
     const [complaints, setComplaints] = useState([]);
     const [activityLoading, setActivityLoading] = useState(true);
 
@@ -326,14 +135,14 @@ function Profile() {
 
                 if (role === "admin") {
                     const res = await API.get("/api/complaints");
-                    if (Array.isArray(res.data)) raw = res.data;
+                    if (Array.isArray(res.data))                  raw = res.data;
                     else if (Array.isArray(res.data?.complaints)) raw = res.data.complaints;
-                    else if (Array.isArray(res.data?.data)) raw = res.data.data;
+                    else if (Array.isArray(res.data?.data))       raw = res.data.data;
 
                     setComplaints(raw);
                     setStats({
-                        reports: raw.length,
-                        resolved: raw.filter(c => ["resolved", "completed"].includes(c.status)).length,
+                        reports:  raw.length,
+                        resolved: raw.filter(c => ["resolved","completed"].includes(c.status)).length,
                         votes: 0,
                         badges: 0,
                     });
@@ -343,22 +152,22 @@ function Profile() {
                         : "/api/complaints/my";
 
                     const res = await API.get(endpoint);
-                    if (Array.isArray(res.data)) raw = res.data;
+                    if (Array.isArray(res.data))                  raw = res.data;
                     else if (Array.isArray(res.data?.complaints)) raw = res.data.complaints;
-                    else if (Array.isArray(res.data?.data)) raw = res.data.data;
+                    else if (Array.isArray(res.data?.data))       raw = res.data.data;
 
                     setComplaints(raw);
 
-                    const reports = raw.length;
-                    const resolved = raw.filter(c => ["resolved", "completed"].includes(c.status)).length;
-                    const votes = raw.reduce((sum, c) => sum + (Number(c.upvotes) || 0), 0);
+                    const reports  = raw.length;
+                    const resolved = raw.filter(c => ["resolved","completed"].includes(c.status)).length;
+                    const votes    = raw.reduce((sum, c) => sum + (Number(c.upvotes) || 0), 0);
                     let badges = 0;
                     if (role === "volunteer") {
-                        if (reports >= 1) badges += 1;
+                        if (reports >= 1)  badges += 1;
                         if (resolved >= 5) badges += 1;
                     } else {
-                        if (reports >= 1) badges += 1;
-                        if (votes >= 10) badges += 1;
+                        if (reports >= 1)  badges += 1;
+                        if (votes >= 10)   badges += 1;
                         if (resolved >= 5) badges += 1;
                     }
                     setStats({ reports, resolved, votes, badges });
@@ -371,7 +180,7 @@ function Profile() {
         };
 
         fetchStats();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Dynamic data from AuthContext with fallbacks
@@ -384,12 +193,12 @@ function Profile() {
         bio: user?.bio || "",
     };
 
-    const [formData, setFormData] = useState(initialData);
+    const [formData, setFormData]   = useState(initialData);
     const [savedData, setSavedData] = useState(initialData);
-    const [editMode, setEditMode] = useState(false);
-    const [message, setMessage] = useState("");
+    const [editMode, setEditMode]   = useState(false);
+    const [message, setMessage]     = useState("");
     const [activeTab, setActiveTab] = useState("info");
-    const [locating, setLocating] = useState(false);
+    const [locating, setLocating]   = useState(false);
 
     const handleUseCurrentLocation = () => {
         if (!navigator.geolocation) return setMessage("Geolocation not supported by your browser ❌");
@@ -412,27 +221,27 @@ function Profile() {
         );
     };
 
-    const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
-    const handleEdit = () => { setEditMode(true); setMessage(""); };
-    const handleCancel = () => { setFormData(savedData); setEditMode(false); setMessage(""); };
-    const handleSave = () => {
+    const handleChange  = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
+    const handleEdit    = () => { setEditMode(true); setMessage(""); };
+    const handleCancel  = () => { setFormData(savedData); setEditMode(false); setMessage(""); };
+    const handleSave    = () => {
         setSavedData(formData);
         updateUser({
             name: formData.fullName, username: formData.username,
-            email: formData.email, phone: formData.phone,
+            email: formData.email,   phone: formData.phone,
             address: formData.location, bio: formData.bio,
         });
         setEditMode(false);
         setMessage("Profile updated successfully ✅");
     };
 
-    const handleLogout = () => { logout(); navigate("/login"); };
+    const handleLogout  = () => { logout(); navigate("/login"); };
 
     const fields = [
-        { name: "username", label: "Username", icon: "👤", type: "text" },
-        { name: "email", label: "Email", icon: "✉️", type: "email" },
-        { name: "fullName", label: "Full Name", icon: "🪪", type: "text" },
-        { name: "phone", label: "Phone Number", icon: "📞", type: "tel" },
+        { name: "username", label: "Username",     icon: "👤", type: "text"  },
+        { name: "email",    label: "Email",         icon: "✉️", type: "email" },
+        { name: "fullName", label: "Full Name",     icon: "🪪", type: "text"  },
+        { name: "phone",    label: "Phone Number",  icon: "📞", type: "tel"   },
     ];
 
     const tabs = ["info", "activity", "security"];
@@ -466,14 +275,14 @@ function Profile() {
 
                     {/* ── Live stats from API — hidden for admin ── */}
                     {user?.role !== "admin" && (
-                        <div className="pf-hero__stats">
-                            <StatMini icon="⚠️" value={stats.reports} label="Reports" colorClass="pf-stat--blue" />
-                            <StatMini icon="✅" value={stats.resolved} label="Resolved" colorClass="pf-stat--green" />
-                            {user?.role !== "volunteer" && (
-                                <StatMini icon="👍" value={stats.votes} label="Votes" colorClass="pf-stat--purple" />
-                            )}
-                            <StatMini icon="🏅" value={stats.badges} label="Badges" colorClass="pf-stat--yellow" />
-                        </div>
+                    <div className="pf-hero__stats">
+                        <StatMini icon="⚠️" value={stats.reports}  label="Reports"  colorClass="pf-stat--blue"   />
+                        <StatMini icon="✅" value={stats.resolved} label="Resolved" colorClass="pf-stat--green"  />
+                        {user?.role !== "volunteer" && (
+                            <StatMini icon="👍" value={stats.votes} label="Votes" colorClass="pf-stat--purple" />
+                        )}
+                        <StatMini icon="🏅" value={stats.badges}   label="Badges"   colorClass="pf-stat--yellow" />
+                    </div>
                     )}
                 </div>
 
@@ -515,17 +324,17 @@ function Profile() {
                                     </div>
                                 </div>
                                 {user?.role !== "volunteer" && (
-                                    <div className={`pf-badge-item${stats.votes < 10 ? " pf-badge-item--locked" : ""}`}>
-                                        <span className="pf-badge-item__icon">{stats.votes >= 10 ? "🤝" : "🔒"}</span>
-                                        <div>
-                                            <div className="pf-badge-item__name">Community Helper</div>
-                                            <div className="pf-badge-item__desc">
-                                                {stats.votes >= 10
-                                                    ? "Voted on 10+ community issues"
-                                                    : `${stats.votes}/10 votes to unlock`}
-                                            </div>
+                                <div className={`pf-badge-item${stats.votes < 10 ? " pf-badge-item--locked" : ""}`}>
+                                    <span className="pf-badge-item__icon">{stats.votes >= 10 ? "🤝" : "🔒"}</span>
+                                    <div>
+                                        <div className="pf-badge-item__name">Community Helper</div>
+                                        <div className="pf-badge-item__desc">
+                                            {stats.votes >= 10
+                                                ? "Voted on 10+ community issues"
+                                                : `${stats.votes}/10 votes to unlock`}
                                         </div>
                                     </div>
+                                </div>
                                 )}
                                 <div className={`pf-badge-item${stats.resolved < 5 ? " pf-badge-item--locked" : ""}`}>
                                     <span className="pf-badge-item__icon">{stats.resolved >= 5 ? "🏆" : "🔒"}</span>
@@ -554,7 +363,7 @@ function Profile() {
                                     className={`pf-tab${activeTab === tab ? " pf-tab--active" : ""}`}
                                     onClick={() => setActiveTab(tab)}
                                 >
-                                    {tab === "info" && "📋 Account Info"}
+                                    {tab === "info"     && "📋 Account Info"}
                                     {tab === "activity" && "🕐 Activity"}
                                     {tab === "security" && "🔒 Security"}
                                 </button>
@@ -667,20 +476,20 @@ function Profile() {
                                             .sort((a, b) => new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt) - new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt))
                                             .slice(0, 10)
                                             .map((c, i) => {
-                                                const status = c.status || "received";
+                                                const status  = c.status || "received";
                                                 const dateStr = c.updated_at || c.updatedAt || c.created_at || c.createdAt;
 
                                                 // Icon + color + text based on status — matching Dashboard.jsx logic
                                                 const STATUS_DISPLAY = {
-                                                    completed: { icon: "🏆", color: "#10b981", verb: "completed" },
-                                                    resolved: { icon: "🎉", color: "#22c55e", verb: "resolved" },
-                                                    denied: { icon: "🚫", color: "#ef4444", verb: "denied" },
-                                                    accepted: { icon: "✅", color: "#16a34a", verb: "accepted" },
+                                                    completed:   { icon: "🏆", color: "#10b981", verb: "completed"   },
+                                                    resolved:    { icon: "🎉", color: "#22c55e", verb: "resolved"    },
+                                                    denied:      { icon: "🚫", color: "#ef4444", verb: "denied"      },
+                                                    accepted:    { icon: "✅", color: "#16a34a", verb: "accepted"    },
                                                     in_progress: { icon: "🔄", color: "#8b5cf6", verb: "in progress" },
-                                                    in_review: { icon: "🔄", color: "#8b5cf6", verb: "in review" },
-                                                    assigned: { icon: "👤", color: "#f59e0b", verb: "assigned" },
-                                                    received: { icon: "➕", color: "#3b82f6", verb: "submitted" },
-                                                    pending: { icon: "➕", color: "#3b82f6", verb: "submitted" },
+                                                    in_review:   { icon: "🔄", color: "#8b5cf6", verb: "in review"  },
+                                                    assigned:    { icon: "👤", color: "#f59e0b", verb: "assigned"    },
+                                                    received:    { icon: "➕", color: "#3b82f6", verb: "submitted"   },
+                                                    pending:     { icon: "➕", color: "#3b82f6", verb: "submitted"   },
                                                 };
                                                 const disp = STATUS_DISPLAY[status] || STATUS_DISPLAY.received;
 
@@ -718,37 +527,45 @@ function Profile() {
 
                         {/* ── Tab: Security ── */}
                         {activeTab === "security" && (
-  <div className="pf-anim">
-    <div className="pf-card" style={{ marginBottom: 16 }}>
-      <div className="pf-card__header">
-        <div>
-          <h2 className="pf-card__title">Security Settings</h2>
-          <p className="pf-card__sub">Manage your password and account security</p>
-        </div>
-      </div>
+                            <div className="pf-anim">
+                                <div className="pf-card" style={{ marginBottom: 16 }}>
+                                    <div className="pf-card__header">
+                                        <div>
+                                            <h2 className="pf-card__title">Security Settings</h2>
+                                            <p className="pf-card__sub">Manage your password and privacy</p>
+                                        </div>
+                                    </div>
+                                    <div className="pf-security-list">
+                                        {[
+                                            { icon: "🔑", title: "Password",                  sub: "Last changed 30 days ago",          btn: "Change Password" },
+                                            { icon: "📱", title: "Two-Factor Authentication", sub: "Add an extra layer of security",     btn: "Enable 2FA"      },
+                                            { icon: "🛡️", title: "Privacy Settings",          sub: "Control who sees your activity",    btn: "Manage"          },
+                                            { icon: "🔔", title: "Notifications",             sub: "Email and push preferences",        btn: "Configure"       },
+                                        ].map((item, i) => (
+                                            <div key={i} className="pf-security-item">
+                                                <div className="pf-security-item__left">
+                                                    <span className="pf-security-item__icon">{item.icon}</span>
+                                                    <div>
+                                                        <div className="pf-security-item__title">{item.title}</div>
+                                                        <div className="pf-security-item__sub">{item.sub}</div>
+                                                    </div>
+                                                </div>
+                                                <button className="pf-btn pf-btn--outline">{item.btn}</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
 
-      {/* ── Change Password ── */}
-      <ChangePasswordSection user={user} />
-    </div>
-
-    {/* ── Danger Zone ── */}
-    <div className="pf-danger-card">
-      <h3 className="pf-danger-card__title">⚠️ Danger Zone</h3>
-      <p className="pf-danger-card__sub">These actions are permanent and cannot be undone.</p>
-      <div className="pf-danger-card__actions">
-        <button
-          className="pf-btn pf-btn--danger"
-          onClick={() => {
-            if (window.confirm("Are you sure you want to log out of all devices?")) {
-              logout();
-              navigate("/");
-            }
-          }}
-        >🚪 Log Out</button>
-      </div>
-    </div>
-  </div>
-)}
+                                <div className="pf-danger-card">
+                                    <h3 className="pf-danger-card__title">⚠️ Danger Zone</h3>
+                                    <p className="pf-danger-card__sub">These actions are permanent and cannot be undone.</p>
+                                    <div className="pf-danger-card__actions">
+                                        <button className="pf-btn pf-btn--danger-outline">Deactivate Account</button>
+                                        <button className="pf-btn pf-btn--danger">Delete Account</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                     </div>
                 </div>

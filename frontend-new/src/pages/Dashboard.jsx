@@ -91,7 +91,7 @@ function ComplaintCard({ complaint, onView }) {
     >
       {complaint.photo && (
         <div className="cs-complaint-card__img-wrap">
-          <img src={`http://localhost:5001${complaint.photo}`} alt={complaint.type} className="cs-complaint-card__img" />
+          <img src={`http://localhost:5000${complaint.photo}`} alt={complaint.type} className="cs-complaint-card__img" />
           <div className="cs-complaint-card__img-overlay" />
         </div>
       )}
@@ -132,7 +132,7 @@ function ComplaintDetailModal({ complaint, onClose }) {
 
         {complaint.photo && (
           <div className="cs-modal__img-wrap">
-            <img src={`http://localhost:5001${complaint.photo}`} alt={complaint.type} className="cs-modal__img" />
+            <img src={`http://localhost:5000${complaint.photo}`} alt={complaint.type} className="cs-modal__img" />
             <div className="cs-modal__img-overlay" />
             <div className="cs-modal__img-badge"><StatusBadge status={complaint.status} /></div>
           </div>
