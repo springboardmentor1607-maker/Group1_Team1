@@ -249,8 +249,8 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
     ...(Array.isArray(volunteers) ? volunteers : []).map(v => ({
       key: String(v._id),
       label: v.location
-      ? `🤝 ${v.name} — 📍 ${v.location}`
-      : `🤝 ${v.name}`,
+        ? `🤝 ${v.name} — 📍 ${v.location}`
+        : `🤝 ${v.name}`,
     })),
   ];
 
@@ -278,10 +278,10 @@ function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Sel
         }}
       >
         {value
-  ? selected?.location
-    ? `🤝 ${label} — 📍 ${selected.location}`
-    : `🤝 ${label}`
-  : label}
+          ? selected?.location
+            ? `🤝 ${label} — 📍 ${selected.location}`
+            : `🤝 ${label}`
+          : label}
         <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
           {open ? "▲" : "▼"}
         </span>
@@ -2613,18 +2613,18 @@ function ZonesTab({ zones, setZones, volunteers, complaints }) {
   };
 
   const filteredZoneVolunteers = zoneArea.trim()
-  ? volunteers.filter(v =>
+    ? volunteers.filter(v =>
       (v.location || "").toLowerCase().includes(zoneArea.trim().toLowerCase()) ||
       zoneArea.trim().toLowerCase().includes((v.location || "").toLowerCase())
     )
-  : volunteers;
+    : volunteers;
 
-const filteredEditVolunteers = editArea.trim()
-  ? volunteers.filter(v =>
+  const filteredEditVolunteers = editArea.trim()
+    ? volunteers.filter(v =>
       (v.location || "").toLowerCase().includes(editArea.trim().toLowerCase()) ||
       editArea.trim().toLowerCase().includes((v.location || "").toLowerCase())
     )
-  : volunteers;
+    : volunteers;
 
   return (
     <div>
@@ -2647,7 +2647,7 @@ const filteredEditVolunteers = editArea.trim()
           </div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Area / Keyword *</div>
-            <input value={zoneArea} onChange={e => {setZoneArea(e.target.value);setZoneVolunteer(""); }} placeholder="e.g. Downtown, Elm Street"
+            <input value={zoneArea} onChange={e => { setZoneArea(e.target.value); setZoneVolunteer(""); }} placeholder="e.g. Downtown, Elm Street"
               style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
               onFocus={e => e.target.style.borderColor = "#2563eb"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
           </div>
@@ -2658,9 +2658,9 @@ const filteredEditVolunteers = editArea.trim()
               onChange={setZoneVolunteer}
               volunteers={volunteers}
               volunteers={filteredZoneVolunteers}
-  placeholder={zoneArea.trim() && filteredZoneVolunteers.length === 0
-    ? "— No volunteers in this area —"
-    : "— None —"}
+              placeholder={zoneArea.trim() && filteredZoneVolunteers.length === 0
+                ? "— No volunteers in this area —"
+                : "— None —"}
             />
           </div>
           <button onClick={addZone} disabled={!zoneName.trim() || !zoneArea.trim()}
@@ -2700,7 +2700,7 @@ const filteredEditVolunteers = editArea.trim()
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <div>
                         <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>AREA KEYWORD</div>
-                        <input value={editArea} onChange={e => {setEditArea(e.target.value); setEditVolunteer(""); }}
+                        <input value={editArea} onChange={e => { setEditArea(e.target.value); setEditVolunteer(""); }}
                           style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                       </div>
                       <div>
@@ -2710,9 +2710,9 @@ const filteredEditVolunteers = editArea.trim()
                           onChange={setEditVolunteer}
                           volunteers={volunteers}
                           volunteers={filteredEditVolunteers}
-  placeholder={editArea.trim() && filteredEditVolunteers.length === 0
-    ? "— No volunteers in this area —"
-    : "— None —"}
+                          placeholder={editArea.trim() && filteredEditVolunteers.length === 0
+                            ? "— No volunteers in this area —"
+                            : "— None —"}
                         />
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
