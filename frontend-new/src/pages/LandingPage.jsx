@@ -102,13 +102,32 @@ function timeAgo(date) {
   return `${days}d ago`;
 }
 
-// ─── Modal styles ─────────────────────────────────────────────────────────────
+// ─── GPS reverse-geocode helper (same logic as Maps page) ─────────────────────
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    const a = data.address || {};
+    // Build "City, State" string — mirrors what Signup.jsx expects
+    const city  = a.city || a.town || a.village || a.county || "";
+    const state = a.state || "";
+    return city && state ? `${city}, ${state}` : city || state || data.display_name || "";
+  } catch {
+    return "";
+  }
+}
+
+// ─── Modal shared styles ──────────────────────────────────────────────────────
 const MS = {
   overlay: { position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: "lpFadeIn 0.2s ease" },
   card: { background: "#fff", borderRadius: 20, padding: "36px 32px", width: "100%", maxWidth: 440, position: "relative", boxShadow: "0 24px 60px rgba(0,0,0,0.2)", animation: "lpSlideUp 0.25s ease" },
   close: { position: "absolute", top: 14, right: 14, background: "#f3f4f6", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 13, color: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center" },
   title: { fontSize: 22, fontWeight: 800, color: "#111827", margin: "10px 0 4px" },
   sub: { fontSize: 13, color: "#6b7280", margin: 0 },
+  // ── "Sign up free" / "Sign in" links inside modals navigate to the full page ──
   lBtn: { background: "none", border: "none", color: "#2563eb", fontWeight: 700, cursor: "pointer", padding: 0, fontSize: "inherit", fontFamily: "inherit" },
   sRow: { display: "flex", gap: 10, marginBottom: 14 },
   sBtn: { flex: 1, padding: "9px 10px", border: "1.5px solid #e5e7eb", borderRadius: 10, background: "#fff", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "inherit" },
@@ -128,6 +147,8 @@ const MS = {
 };
 
 // ─── Login Modal ──────────────────────────────────────────────────────────────
+// Syncs with Login.jsx: same API call, same role-based redirect.
+// "Sign up free" link → navigates to /signup (the full Signup.jsx page)
 function LoginModal({ onClose, onSwitchToSignup }) {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -164,7 +185,12 @@ function LoginModal({ onClose, onSwitchToSignup }) {
         <div style={{ textAlign: "center", marginBottom: 22 }}>
           <CleanStreetLogo size={64} />
           <h2 style={MS.title}>Welcome back 👋</h2>
-          <p style={MS.sub}>No account? <button onClick={onSwitchToSignup} style={MS.lBtn}>Sign up free</button></p>
+          <p style={MS.sub}>
+            No account?{" "}
+            <button onClick={onSwitchToSignup} style={MS.lBtn}>
+              Sign up free
+            </button>
+          </p>
         </div>
         <div style={MS.sRow}>
           <button style={MS.sBtn}>🌐 Google</button>
@@ -174,43 +200,89 @@ function LoginModal({ onClose, onSwitchToSignup }) {
         {error && <div style={MS.err}>⚠️ {error}</div>}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 13 }}>
           <div>
-            <label style={MS.lbl}>Email address</label>
+            <label style={MS.lbl}>Email address <span style={{ color: "#ef4444" }}>*</span></label>
             <div style={MS.iW}><span style={MS.iI}>✉️</span>
               <input style={MS.inp} type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
             </div>
           </div>
           <div>
-            <label style={MS.lbl}>Password</label>
+            <label style={MS.lbl}>Password <span style={{ color: "#ef4444" }}>*</span></label>
             <div style={MS.iW}><span style={MS.iI}>🔒</span>
               <input style={MS.inp} type={showPass ? "text" : "password"} name="password" placeholder="Your password" value={form.password} onChange={handleChange} />
               <button type="button" style={MS.tog} onClick={() => setShowPass(s => !s)}>{showPass ? "🙈" : "👁️"}</button>
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button type="button" style={MS.fg} onClick={() => { 
-  onClose(); 
-  navigate("/forgot-password", { state: { returnToLogin: true } }); 
-}}>Forgot password?</button>
+            <button type="button" style={MS.fg} onClick={() => { onClose(); navigate("/forgot-password"); }}>Forgot password?</button>
           </div>
           <button style={{ ...MS.sub2, opacity: loading ? 0.75 : 1 }} type="submit" disabled={loading}>
             {loading ? "Signing in…" : "Sign In →"}
           </button>
         </form>
+        <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 14 }}>
+          Want the full experience?{" "}
+          <button onClick={() => { onClose(); navigate("/login"); }} style={{ ...MS.fg, fontSize: 12 }}>
+            Open full login page →
+          </button>
+        </p>
       </div>
     </div>
   );
 }
 
 // ─── Signup Modal ─────────────────────────────────────────────────────────────
-function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
+// Syncs with Signup.jsx: same API call (/api/otp/send-register-otp),
+// same navigate("/verify-otp") with identical state shape including location.
+// Adds GPS "Use my location" button — reverse-geocodes via Nominatim.
+function SignupModal({ onClose, onSwitchToLogin }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "defaultRole" });
+
+  // ── FIX: was `role: "defaultRole"` (a string literal bug) ──
+  const [form, setForm] = useState({
+    firstName: "", lastName: "", email: "",
+    password: "", location: "", role: "user",   // ← correct default
+  });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  // GPS state
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState("");
+
   const strength = getStrength(form.password);
 
-  const handleChange = e => { setForm(f => ({ ...f, [e.target.name]: e.target.value })); setErrors(er => ({ ...er, [e.target.name]: "" })); };
+  const handleChange = e => {
+    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+    setErrors(er => ({ ...er, [e.target.name]: "" }));
+  };
+
+  // ── GPS: detect current location and reverse-geocode to city string ──
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) { setGpsError("GPS not supported by your browser."); return; }
+    setGpsLoading(true);
+    setGpsError("");
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const city = await reverseGeocode(coords.latitude, coords.longitude);
+        if (city) {
+          setForm(f => ({ ...f, location: city }));
+          setErrors(er => ({ ...er, location: "" }));
+        } else {
+          setGpsError("Couldn't detect location. Please type it manually.");
+        }
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsError(
+          err.code === 1
+            ? "Location access denied. Please allow it or type manually."
+            : "Couldn't get location. Please type it manually."
+        );
+        setGpsLoading(false);
+      },
+      { timeout: 10000 }
+    );
+  };
 
   const validate = () => {
     const e = {};
@@ -220,6 +292,7 @@ function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email";
     if (!form.password) e.password = "Required";
     else if (form.password.length < 8) e.password = "Min. 8 characters";
+    if (!form.location.trim()) e.location = "Required";
     return e;
   };
 
@@ -229,18 +302,30 @@ function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
     if (Object.keys(ve).length > 0) { setErrors(ve); return; }
     setLoading(true);
     try {
-      await API.post("/api/otp/send-register-otp", { email: form.email, name: form.firstName + " " + form.lastName });
+      await API.post("/api/otp/send-register-otp", {
+        email: form.email,
+        name: form.firstName + " " + form.lastName,
+      });
       onClose();
-      navigate("/verify-otp", { state: { email: form.email, name: form.firstName + " " + form.lastName, password: form.password, role: form.role } });
+      // ── Exact same state shape as Signup.jsx ──
+      navigate("/verify-otp", {
+        state: {
+          email: form.email,
+          name: form.firstName + " " + form.lastName,
+          password: form.password,
+          location: form.location,   // ← stored by VerifyOtp → backend
+          role: form.role,
+        },
+      });
     } catch (err) {
       setErrors({ general: err.response?.data?.message || "Failed to send OTP." });
     } finally { setLoading(false); }
   };
 
   const roles = [
-    { key: "user", icon: "🧑‍💼", label: "Citizen" },
-    { key: "volunteer", icon: "🤝", label: "Volunteer" },
-    { key: "admin", icon: "🛡️", label: "Admin" },
+    { key: "user",      icon: "🧑‍💼", label: "Citizen"   },
+    { key: "volunteer", icon: "🤝",   label: "Volunteer" },
+    { key: "admin",     icon: "🛡️",   label: "Admin"     },
   ];
 
   return (
@@ -250,31 +335,42 @@ function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <CleanStreetLogo size={56} />
           <h2 style={MS.title}>Create your account 🌿</h2>
-          <p style={MS.sub}>Have an account? <button onClick={onSwitchToLogin} style={MS.lBtn}>Sign in</button></p>
+          <p style={MS.sub}>
+            Have an account?{" "}
+            <button onClick={onSwitchToLogin} style={MS.lBtn}>
+              Sign in
+            </button>
+          </p>
         </div>
         {errors.general && <div style={MS.err}>⚠️ {errors.general}</div>}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+
+          {/* Name row */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={MS.lbl}>First Name</label>
+              <label style={MS.lbl}>First Name <span style={{ color: "#ef4444" }}>*</span></label>
               <input style={{ ...MS.inpP, borderColor: errors.firstName ? "#fca5a5" : "#e5e7eb" }} name="firstName" placeholder="John" value={form.firstName} onChange={handleChange} />
               {errors.firstName && <div style={MS.fE}>{errors.firstName}</div>}
             </div>
             <div>
-              <label style={MS.lbl}>Last Name</label>
+              <label style={MS.lbl}>Last Name <span style={{ color: "#ef4444" }}>*</span></label>
               <input style={{ ...MS.inpP, borderColor: errors.lastName ? "#fca5a5" : "#e5e7eb" }} name="lastName" placeholder="Doe" value={form.lastName} onChange={handleChange} />
               {errors.lastName && <div style={MS.fE}>{errors.lastName}</div>}
             </div>
           </div>
+
+          {/* Email */}
           <div>
-            <label style={MS.lbl}>Email address</label>
+            <label style={MS.lbl}>Email address <span style={{ color: "#ef4444" }}>*</span></label>
             <div style={MS.iW}><span style={MS.iI}>✉️</span>
               <input style={{ ...MS.inp, borderColor: errors.email ? "#fca5a5" : "#e5e7eb" }} type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} />
             </div>
             {errors.email && <div style={MS.fE}>{errors.email}</div>}
           </div>
+
+          {/* Password */}
           <div>
-            <label style={MS.lbl}>Password</label>
+            <label style={MS.lbl}>Password <span style={{ color: "#ef4444" }}>*</span></label>
             <div style={MS.iW}><span style={MS.iI}>🔒</span>
               <input style={{ ...MS.inp, borderColor: errors.password ? "#fca5a5" : "#e5e7eb" }} type={showPass ? "text" : "password"} name="password" placeholder="Min. 8 characters" value={form.password} onChange={handleChange} />
               <button type="button" style={MS.tog} onClick={() => setShowPass(s => !s)}>{showPass ? "🙈" : "👁️"}</button>
@@ -289,6 +385,73 @@ function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
             )}
             {errors.password && <div style={MS.fE}>{errors.password}</div>}
           </div>
+
+          {/* ── Location with GPS button ── */}
+          <div>
+            <label style={MS.lbl}>
+              Location
+            </label>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <div style={{ ...MS.iW, flex: 1 }}>
+                <span style={MS.iI}>📍</span>
+                <input
+                  style={{ ...MS.inp, borderColor: errors.location ? "#fca5a5" : "#e5e7eb" }}
+                  name="location"
+                  placeholder="e.g. Kanpur, Uttar Pradesh"
+                  value={form.location}
+                  onChange={handleChange}
+                  autoComplete="address-level2"
+                />
+              </div>
+              {/* GPS button — same icon/behaviour as Maps page */}
+              <button
+                type="button"
+                onClick={handleUseLocation}
+                disabled={gpsLoading}
+                title="Detect my current location"
+                style={{
+                  flexShrink: 0,
+                  height: 42,
+                  padding: "0 12px",
+                  border: "1.5px solid #2563eb",
+                  borderRadius: 10,
+                  background: gpsLoading ? "#eff6ff" : "#2563eb",
+                  color: gpsLoading ? "#2563eb" : "#fff",
+                  fontSize: 18,
+                  cursor: gpsLoading ? "wait" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.15s",
+                }}
+              >
+                {gpsLoading ? (
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>…</span>
+                ) : (
+                  "🎯"
+                )}
+              </button>
+            </div>
+            {/* GPS status messages */}
+            {gpsLoading && (
+              <div style={{ fontSize: 11, color: "#2563eb", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ animation: "lpPulse 1s infinite", display: "inline-block" }}>📡</span>
+                Detecting your location…
+              </div>
+            )}
+            {gpsError && !gpsLoading && (
+              <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>⚠️ {gpsError}</div>
+            )}
+            {!gpsError && !gpsLoading && form.location && (
+              <div style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>✓ Location set</div>
+            )}
+            {errors.location && <div style={MS.fE}>{errors.location}</div>}
+            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+              Your city or district — used to match you with nearby complaints
+            </div>
+          </div>
+
+          {/* Role selector */}
           <div>
             <label style={MS.lbl}>I am joining as</label>
             <div style={{ display: "flex", gap: 8 }}>
@@ -300,11 +463,20 @@ function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
               ))}
             </div>
           </div>
+
           <button style={{ ...MS.sub2, opacity: loading ? 0.75 : 1 }} type="submit" disabled={loading}>
             {loading ? "Sending OTP…" : "Create Account →"}
           </button>
           <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", margin: 0 }}>By signing up you agree to our Terms &amp; Privacy Policy.</p>
         </form>
+
+        {/* Link to full Signup page */}
+        <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 14 }}>
+          Want the full experience?{" "}
+          <button onClick={() => { onClose(); navigate("/signup"); }} style={{ ...MS.fg, fontSize: 12 }}>
+            Open full signup page →
+          </button>
+        </p>
       </div>
     </div>
   );
@@ -314,23 +486,19 @@ function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
 function ComplaintJourney() {
   const [activeStep, setActiveStep] = useState(0);
   const steps = [
-    { icon: "📸", label: "Submitted", color: "#3b82f6", bg: "#dbeafe", desc: "Citizen reports issue with photo & location" },
-    { icon: "👤", label: "Assigned", color: "#f59e0b", bg: "#fef9c3", desc: "Admin assigns a local volunteer" },
-    { icon: "✅", label: "Accepted", color: "#22c55e", bg: "#dcfce7", desc: "Volunteer confirms and heads to site" },
+    { icon: "📸", label: "Submitted",   color: "#3b82f6", bg: "#dbeafe", desc: "Citizen reports issue with photo & location" },
+    { icon: "👤", label: "Assigned",    color: "#f59e0b", bg: "#fef9c3", desc: "Admin assigns a local volunteer" },
+    { icon: "✅", label: "Accepted",    color: "#22c55e", bg: "#dcfce7", desc: "Volunteer confirms and heads to site" },
     { icon: "🔄", label: "In Progress", color: "#8b5cf6", bg: "#ede9fe", desc: "Issue is actively being resolved" },
-    { icon: "🏆", label: "Resolved", color: "#10b981", bg: "#d1fae5", desc: "Done! Citizen gets notified instantly" },
+    { icon: "🏆", label: "Resolved",    color: "#10b981", bg: "#d1fae5", desc: "Done! Citizen gets notified instantly" },
   ];
-
   useEffect(() => {
     const t = setInterval(() => setActiveStep(s => (s + 1) % steps.length), 2200);
     return () => clearInterval(t);
   }, [steps.length]);
-
   return (
     <div style={{ background: "#fff", borderRadius: 22, padding: "28px 26px", border: "1px solid #e5e7eb", boxShadow: "0 8px 32px rgba(37,99,235,0.1)" }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 22 }}>
-        🔴 Live — Complaint Journey
-      </div>
+      <div style={{ fontSize: 11, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 22 }}>🔴 Live — Complaint Journey</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {steps.map((step, i) => (
           <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -338,15 +506,11 @@ function ComplaintJourney() {
               <div style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: i <= activeStep ? step.bg : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21, border: `2px solid ${i === activeStep ? step.color : "transparent"}`, boxShadow: i === activeStep ? `0 0 0 5px ${step.color}25` : "none", transition: "all 0.45s ease" }}>
                 <span style={{ opacity: i <= activeStep ? 1 : 0.3 }}>{step.icon}</span>
               </div>
-              {i < steps.length - 1 && (
-                <div style={{ width: 2, height: 30, background: i < activeStep ? step.color : "#e5e7eb", transition: "background 0.45s ease", marginTop: 3, marginBottom: 3, borderRadius: 99 }} />
-              )}
+              {i < steps.length - 1 && <div style={{ width: 2, height: 30, background: i < activeStep ? step.color : "#e5e7eb", transition: "background 0.45s ease", marginTop: 3, marginBottom: 3, borderRadius: 99 }} />}
             </div>
             <div style={{ paddingTop: 11, opacity: i <= activeStep ? 1 : 0.35, transition: "opacity 0.45s" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: i === activeStep ? step.color : "#374151" }}>{step.label}</div>
-              {i === activeStep && (
-                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, animation: "lpFadeIn 0.3s ease" }}>{step.desc}</div>
-              )}
+              {i === activeStep && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, animation: "lpFadeIn 0.3s ease" }}>{step.desc}</div>}
             </div>
           </div>
         ))}
@@ -363,31 +527,16 @@ function ComplaintJourney() {
 export default function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [stats, setStats] = useState({ total: 0, resolved: 0, users: 0, avgDays: 3 });
   const [recentResolutions, setRecentResolutions] = useState([]);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  const howRef = useRef(null);
-  const featRef = useRef(null);
+  const howRef   = useRef(null);
+  const featRef  = useRef(null);
   const statsRef = useRef(null);
-  const resRef = useRef(null);
-
-  useEffect(() => {
-    const handler = () => setModal("login");
-    window.addEventListener("openLoginModal", handler);
-    return () => window.removeEventListener("openLoginModal", handler);
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      const role = user.role?.toLowerCase();
-      if (role === "admin") navigate("/admin");
-      else if (role === "volunteer") navigate("/volunteer");
-      else navigate("/dashboard");
-    }
-  }, [user, navigate]);
+  const resRef   = useRef(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -426,11 +575,13 @@ const [modal, setModal] = useState(null);
   }, []);
 
   const scrollTo = ref => ref.current?.scrollIntoView({ behavior: "smooth" });
-  const openLogin = () => setModal("login");
-  const openSignup = () => setModal("signup");
-  const openSignupAsVolunteer = () => {
-    setModal("signup-volunteer");
-  };
+
+  // If already logged in, go straight to their dashboard instead of opening a modal
+  const userDashboard = user
+    ? (user.role === "admin" ? "/admin" : user.role === "volunteer" ? "/volunteer" : "/dashboard")
+    : null;
+  const openLogin  = () => user ? navigate(userDashboard) : setModal("login");
+  const openSignup = () => user ? navigate(userDashboard) : setModal("signup");
   const closeModal = () => setModal(null);
 
   const resolveRate = typeof stats.total === "number" && stats.total > 0
@@ -454,38 +605,44 @@ const [modal, setModal] = useState(null);
     { num: "03", icon: "🏆", title: "Issue Gets Resolved", desc: "The volunteer fixes the issue, marks it complete, and you get notified instantly. You can verify and approve the resolution.", color: "#10b981", bg: "linear-gradient(135deg,#d1fae5,#f0fdf4)" },
   ];
 
+  const TESTIMONIALS = [
+    { name: "Priya Sharma", role: "Citizen, Bhubaneswar", avatar: "PS", color: "#dbeafe", text: "\"I reported a broken streetlight and it was fixed within 3 days. CleanStreet actually works — I was shocked by how fast it happened!\"" },
+    { name: "Rahul Nayak",  role: "Volunteer, Cuttack",  avatar: "RN", color: "#dcfce7", text: "\"Being a volunteer has given me a sense of purpose. I've resolved 47 complaints in my area and the community recognition is amazing.\"" },
+    { name: "Anita Das",    role: "Citizen, Puri",       avatar: "AD", color: "#fef9c3", text: "\"The map feature is brilliant. I can see exactly what's being worked on in my neighbourhood. Feels like the city is finally listening.\"" },
+  ];
+
   const FALLBACK_RESOLUTIONS = [
-    { icon: "🕳️", type: "Pothole", title: "Road pothole repaired on Main Street", addr: "Bhubaneswar, Odisha", time: "2 days ago", upvotes: 34, priority: "high" },
-    { icon: "💡", type: "Streetlight", title: "Broken streetlight replaced near park", addr: "Cuttack, Odisha", time: "4 days ago", upvotes: 28, priority: "medium" },
-    { icon: "🗑️", type: "Garbage", title: "Illegal dump cleared from colony road", addr: "Puri, Odisha", time: "1 week ago", upvotes: 52, priority: "critical" },
-    { icon: "💧", type: "Water", title: "Leaking pipe on residential road sealed", addr: "Rourkela, Odisha", time: "3 days ago", upvotes: 19, priority: "high" },
-    { icon: "🛣️", type: "Road", title: "Damaged footpath repaired near school", addr: "Sambalpur, Odisha", time: "5 days ago", upvotes: 41, priority: "medium" },
-    { icon: "💡", type: "Streetlight", title: "Non-functional traffic signal fixed", addr: "Berhampur, Odisha", time: "6 days ago", upvotes: 67, priority: "critical" },
+    { icon: "🕳️", type: "Pothole",     title: "Road pothole repaired on Main Street",        addr: "Bhubaneswar, Odisha", time: "2 days ago", upvotes: 34, priority: "high"     },
+    { icon: "💡", type: "Streetlight", title: "Broken streetlight replaced near park",         addr: "Cuttack, Odisha",     time: "4 days ago", upvotes: 28, priority: "medium"  },
+    { icon: "🗑️", type: "Garbage",    title: "Illegal dump cleared from colony road",          addr: "Puri, Odisha",        time: "1 week ago", upvotes: 52, priority: "critical" },
+    { icon: "💧", type: "Water",       title: "Leaking pipe on residential road sealed",       addr: "Rourkela, Odisha",    time: "3 days ago", upvotes: 19, priority: "high"     },
+    { icon: "🛣️", type: "Road",       title: "Damaged footpath repaired near school",          addr: "Sambalpur, Odisha",   time: "5 days ago", upvotes: 41, priority: "medium"  },
+    { icon: "💡", type: "Streetlight", title: "Non-functional traffic signal fixed",           addr: "Berhampur, Odisha",   time: "6 days ago", upvotes: 67, priority: "critical" },
   ];
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", background: "#fff", overflowX: "hidden" }}>
 
       {/* ── Navbar ── */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000, background: scrolled ? "rgba(255,255,255,0.95)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", borderBottom: scrolled ? "1px solid #f3f4f6" : "none", transition: "all 0.3s ease", padding: "0 48px", height: 66, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000, background: scrolled ? "rgba(255,255,255,0.97)" : "transparent", backdropFilter: scrolled ? "blur(18px)" : "none", borderBottom: scrolled ? "1px solid rgba(0,0,0,0.06)" : "none", transition: "all 0.3s ease", padding: "0 48px", height: 66, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <CleanStreetLogo size={40} />
           <span style={{ fontSize: 19, fontWeight: 900, color: "#111827", letterSpacing: -0.3 }}>CleanStreet</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 30 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
           {[{ label: "How it Works", ref: howRef }, { label: "Features", ref: featRef }, { label: "Impact", ref: statsRef }, { label: "Recent Wins", ref: resRef }].map(item => (
-            <button key={item.label} onClick={() => scrollTo(item.ref)} style={{ background: "none", border: "none", fontSize: 14, fontWeight: 500, color: "#374151", cursor: "pointer", fontFamily: "inherit", padding: 0, transition: "color 0.2s" }}>
-              {item.label}
-            </button>
+            <button key={item.label} onClick={() => scrollTo(item.ref)} style={{ background: "none", border: "none", fontSize: 14, fontWeight: 500, color: "#374151", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>{item.label}</button>
           ))}
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={openLogin} style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
-            Log In
-          </button>
-          <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", border: "none", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(37,99,235,0.35)" }}>
-            Get Started Free
-          </button>
+          {user ? (
+            <button onClick={() => navigate(userDashboard)} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", border: "none", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(37,99,235,0.35)" }}>Go to Dashboard →</button>
+          ) : (
+            <>
+              <button onClick={openLogin} style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "inherit" }}>Log In</button>
+              <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", border: "none", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(37,99,235,0.35)" }}>Get Started Free</button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -495,96 +652,54 @@ const [modal, setModal] = useState(null);
         <div style={{ position: "absolute", bottom: -60, left: -60, width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle,rgba(34,197,94,0.07) 0%,transparent 70%)", pointerEvents: "none" }} />
         <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr 380px", gap: 72, alignItems: "center" }}>
           <div style={{ animation: "lpFadeUp 0.7s ease" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#dcfce7", color: "#166534", padding: "6px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 28, letterSpacing: 0.5 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#dcfce7", color: "#166534", padding: "6px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 28, letterSpacing: 0.3 }}>
               🌿 India's Civic Issue Reporting Platform
             </div>
-            <h1 style={{ fontSize: 56, fontWeight: 900, color: "#111827", lineHeight: 1.08, margin: "0 0 20px", letterSpacing: -1.5 }}>
-            Making Cities.<br />
+            <h1 style={{ fontSize: 56, fontWeight: 900, color: "#111827", lineHeight: 1.07, margin: "0 0 22px", letterSpacing: -1.5 }}>
+              Making Cities<br />
               <span style={{ background: "linear-gradient(135deg,#2563eb,#16a34a)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Cleaner & Safer</span><br />
               Together
             </h1>
             <p style={{ fontSize: 17, color: "#6b7280", lineHeight: 1.75, margin: "0 0 38px", maxWidth: 500 }}>
-            Report civic issues in your neighbourhood, track them in real-time, and watch your community transform — powered by local volunteers and transparent accountability. Full transparency from complaint to resolution.
+              Report potholes, broken streetlights, garbage dumps — and watch local volunteers fix them in real time. Full transparency from complaint to resolution.
             </p>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
-              <button onClick={openSignup}
-                style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 24px rgba(37,99,235,0.35)", transition: "transform 0.15s,box-shadow 0.15s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 14px 32px rgba(37,99,235,0.45)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(37,99,235,0.35)"; }}
-              >🚀 Report an Issue Free</button>
-              <button onClick={() => setModal("signup-volunteer")}
-                style={{ background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "#2563eb"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "#e5e7eb"}
-              >🤝 Become a Volunteer</button>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 44 }}>
+              <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 24px rgba(37,99,235,0.35)", transition: "transform 0.15s,box-shadow 0.15s" }} onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 28px rgba(37,99,235,0.45)"; }} onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(37,99,235,0.35)"; }}>🚀 Report an Issue Free</button>
+              <button onClick={openLogin} style={{ background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.15s" }} onMouseEnter={e => e.currentTarget.style.borderColor = "#2563eb"} onMouseLeave={e => e.currentTarget.style.borderColor = "#e5e7eb"}>Sign In →</button>
             </div>
             <div style={{ display: "flex", gap: 36 }}>
-              {[
-                { num: statsLoading ? "…" : `${stats.total}+`, label: "Issues Reported" },
-                { num: statsLoading ? "…" : `${stats.resolved}+`, label: "Resolved" },
-                { num: `${resolveRate}%`, label: "Resolution Rate" },
-                { num: `${stats.avgDays} days`, label: "Avg. Fix Time" },
-              ].map(s => (
+              {[{ num: statsLoading ? "…" : `${stats.total}+`, label: "Issues Reported" }, { num: statsLoading ? "…" : `${stats.resolved}+`, label: "Resolved" }, { num: `${resolveRate}%`, label: "Resolution Rate" }, { num: `${stats.avgDays} days`, label: "Avg. Fix Time" }].map(s => (
                 <div key={s.label}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{s.num}</div>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: "#111827" }}>{s.num}</div>
                   <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{s.label}</div>
                 </div>
               ))}
             </div>
           </div>
-          <div style={{ animation: "lpFadeUp 0.95s ease" }}>
-            <ComplaintJourney />
-          </div>
+          <div style={{ animation: "lpFadeUp 0.95s ease" }}><ComplaintJourney /></div>
         </div>
       </section>
 
-      {/* ── Role Cards ── */}
-      <section style={{ padding: "80px 40px", background: "#f8fafc" }}>
+      {/* ── Who is it for ── */}
+      <section style={{ padding: "90px 48px", background: "#f8fafc" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <h2 style={{ fontSize: 34, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>Who is CleanStreet for?</h2>
+          <div style={{ textAlign: "center", marginBottom: 52 }}>
+            <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>Who is CleanStreet for?</h2>
             <p style={{ fontSize: 16, color: "#6b7280" }}>Three roles, one mission — cleaner cities.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
             {[
-              {
-                icon: "🧑‍💼", title: "Citizens", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe",
-                points: ["Report civic issues with photos", "Track complaint status live", "Upvote issues in your area", "Get notified on resolution"],
-                cta: "Join as Citizen", role: "user",
-              },
-              {
-                icon: "🤝", title: "Volunteers", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0",
-                points: ["Accept & resolve local issues", "Personal performance dashboard", "Earn community recognition", "Make real neighbourhood impact"],
-                cta: "Become a Volunteer", role: "volunteer",
-              },
-              {
-                icon: "🛡️", title: "Admins", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe",
-                points: ["Oversee all complaints citywide", "Assign volunteers by zone", "Generate PDF/CSV reports", "Manage users & applications"],
-                cta: "Admin Access", role: "admin",
-              },
-            ].map(card => (
-              <div key={card.title} style={{
-                background: card.bg, border: `1.5px solid ${card.border}`,
-                borderRadius: 16, padding: "28px 24px",
-                transition: "transform 0.2s, box-shadow 0.2s",
-              }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.1)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
-              >
-                <div style={{ fontSize: 36, marginBottom: 12 }}>{card.icon}</div>
+              { icon: "🧑‍💼", title: "Citizens",   color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", points: ["Report civic issues with photos & GPS","Track complaint status live","Upvote issues in your neighbourhood","Get notified at resolution"], cta: "Join as Citizen" },
+              { icon: "🤝",   title: "Volunteers", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", points: ["Accept & resolve local assignments","Track your performance dashboard","Earn community recognition","Make visible neighbourhood impact"], cta: "Become a Volunteer" },
+              { icon: "🛡️",  title: "Admins",     color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe", points: ["Oversee all complaints citywide","Assign volunteers by zone","Generate PDF & CSV reports","Manage users & applications"], cta: "Admin Access" },
+            ].map((card, i) => (
+              <div key={i} style={{ background: card.bg, border: `1.5px solid ${card.border}`, borderRadius: 16, padding: "28px 24px", transition: "transform 0.2s,box-shadow 0.2s" }} onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.1)"; }} onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ fontSize: 38, marginBottom: 12 }}>{card.icon}</div>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: "0 0 16px" }}>{card.title}</h3>
                 <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", display: "flex", flexDirection: "column", gap: 10 }}>
-                  {card.points.map(p => (
-                    <li key={p} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#374151" }}>
-                      <span style={{ color: card.color, fontWeight: 700 }}>✓</span> {p}
-                    </li>
-                  ))}
+                  {card.points.map(p => (<li key={p} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "#374151", lineHeight: 1.5 }}><span style={{ color: card.color, fontWeight: 800, flexShrink: 0 }}>✓</span>{p}</li>))}
                 </ul>
-                <button onClick={() => card.role === "volunteer" ? setModal("signup-volunteer") : openSignup()} style={{
-                  width: "100%", padding: "10px", borderRadius: 10, border: "none",
-                  background: card.color, color: "#fff", fontSize: 13, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>{card.cta}</button>
+                <button onClick={openSignup} style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: card.color, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{card.cta}</button>
               </div>
             ))}
           </div>
@@ -595,25 +710,23 @@ const [modal, setModal] = useState(null);
       <section ref={howRef} style={{ padding: "90px 48px", background: "#fff" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
-            <div style={{ display: "inline-block", background: "#dbeafe", color: "#1d4ed8", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14, letterSpacing: 0.5 }}>HOW IT WORKS</div>
+            <div style={{ display: "inline-block", background: "#dbeafe", color: "#1d4ed8", padding: "6px 18px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>HOW IT WORKS</div>
             <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>From photo to fixed — in 3 steps</h2>
             <p style={{ fontSize: 16, color: "#6b7280" }}>Simple, transparent, and community-powered.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24, position: "relative" }}>
-            <div style={{ position: "absolute", top: 58, left: "18%", right: "18%", height: 2, background: "linear-gradient(90deg,#2563eb,#22c55e)", borderRadius: 99, zIndex: 0 }} />
+            <div style={{ position: "absolute", top: 44, left: "16%", right: "16%", height: 2, background: "linear-gradient(90deg,#2563eb,#22c55e)", borderRadius: 99, zIndex: 0 }} />
             {STEPS.map((step, i) => (
               <div key={i} style={{ background: step.bg, borderRadius: 20, padding: "34px 28px", position: "relative", zIndex: 1, border: "1px solid rgba(0,0,0,0.04)" }}>
-                <div style={{ width: 104, height: 104, borderRadius: "50%", margin: "0 auto 22px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, boxShadow: `0 8px 28px ${step.color}22`, border: `3px solid ${step.color}28` }}>{step.icon}</div>
+                <div style={{ width: 88, height: 88, borderRadius: "50%", margin: "0 auto 22px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, boxShadow: `0 8px 28px ${step.color}22`, border: `3px solid ${step.color}28` }}>{step.icon}</div>
                 <div style={{ fontSize: 11, fontWeight: 800, color: step.color, letterSpacing: 1.2, marginBottom: 10, textAlign: "center" }}>{step.num}</div>
-                <h3 style={{ fontSize: 19, fontWeight: 800, color: "#111827", margin: "0 0 10px", textAlign: "center" }}>{step.title}</h3>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: "0 0 10px", textAlign: "center" }}>{step.title}</h3>
                 <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.65, margin: 0, textAlign: "center" }}>{step.desc}</p>
               </div>
             ))}
           </div>
           <div style={{ textAlign: "center", marginTop: 44 }}>
-            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "13px 36px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 6px 20px rgba(37,99,235,0.35)" }}>
-              Start Reporting Now →
-            </button>
+            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "13px 36px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 6px 20px rgba(37,99,235,0.35)" }}>Start Reporting Now →</button>
           </div>
         </div>
       </section>
@@ -622,35 +735,23 @@ const [modal, setModal] = useState(null);
       <section ref={statsRef} style={{ padding: "80px 48px", background: "linear-gradient(135deg,#1e3a8a,#1d4ed8,#2563eb)" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <h2 style={{ fontSize: 34, fontWeight: 800, color: "#fff", margin: "0 0 10px" }}>Real Numbers. Real Impact.</h2>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 16 }}>
-              {statsLoading ? "Loading live data…" : "Computed from our live database right now."}
-            </p>
+            <h2 style={{ fontSize: 36, fontWeight: 800, color: "#fff", margin: "0 0 10px" }}>Real Numbers. Real Impact.</h2>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 16 }}>{statsLoading ? "Loading live data…" : "Computed from our live database right now."}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 20, marginBottom: 32 }}>
-            {[
-              { icon: "📋", num: statsLoading ? "…" : `${stats.total}+`, label: "Issues Reported" },
-              { icon: "✅", num: statsLoading ? "…" : `${stats.resolved}+`, label: "Successfully Resolved" },
-              { icon: "👥", num: statsLoading ? "…" : `${stats.users}+`, label: "Active Citizens" },
-              { icon: "⚡", num: `${stats.avgDays} days`, label: "Average Fix Time" },
-            ].map(s => (
+            {[{ icon: "📋", num: statsLoading ? "…" : `${stats.total}+`, label: "Issues Reported" }, { icon: "✅", num: statsLoading ? "…" : `${stats.resolved}+`, label: "Successfully Resolved" }, { icon: "👥", num: statsLoading ? "…" : `${stats.users}+`, label: "Active Citizens" }, { icon: "⚡", num: `${stats.avgDays} days`, label: "Average Fix Time" }].map(s => (
               <div key={s.label} style={{ textAlign: "center", background: "rgba(255,255,255,0.1)", borderRadius: 16, padding: "28px 16px", border: "1px solid rgba(255,255,255,0.15)" }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
-                <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4 }}>{s.num}</div>
+                <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", marginBottom: 4, letterSpacing: -1 }}>{s.num}</div>
                 <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{s.label}</div>
               </div>
             ))}
           </div>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <div style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 16, padding: "20px 36px", display: "flex", alignItems: "center", gap: 24 }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 30, fontWeight: 900, color: "#fff" }}>{resolveRate}%</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>Resolution Rate</div>
-              </div>
-              <div style={{ width: 200, height: 10, background: "rgba(255,255,255,0.15)", borderRadius: 99, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${resolveRate}%`, background: "#fff", borderRadius: 99 }} />
-              </div>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>of all reported issues resolved ✅</div>
+              <div style={{ textAlign: "center" }}><div style={{ fontSize: 28, fontWeight: 900, color: "#fff" }}>{resolveRate}%</div><div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>Resolution Rate</div></div>
+              <div style={{ width: 200, height: 10, background: "rgba(255,255,255,0.15)", borderRadius: 99, overflow: "hidden" }}><div style={{ height: "100%", width: `${resolveRate}%`, background: "linear-gradient(90deg,#bfdbfe,#fff)", borderRadius: 99 }} /></div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>of all reported issues resolved ✅</div>
             </div>
           </div>
         </div>
@@ -660,22 +761,39 @@ const [modal, setModal] = useState(null);
       <section ref={featRef} style={{ padding: "90px 48px", background: "#f8fafc" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{ display: "inline-block", background: "#dcfce7", color: "#166534", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14, letterSpacing: 0.5 }}>PLATFORM FEATURES</div>
+            <div style={{ display: "inline-block", background: "#dcfce7", color: "#166534", padding: "6px 18px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>PLATFORM FEATURES</div>
             <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>Everything you need to take action</h2>
             <p style={{ fontSize: 16, color: "#6b7280" }}>Designed for citizens, volunteers, and administrators.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
             {FEATURES.map((f, i) => (
-              <div key={i} style={{ background: "#fff", borderRadius: 16, padding: "26px 24px", border: "1px solid #e5e7eb", transition: "transform 0.2s,box-shadow 0.2s,border-color 0.2s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 14px 36px rgba(0,0,0,0.07)"; e.currentTarget.style.borderColor = f.color + "55"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
-              >
-                <div style={{ width: 54, height: 54, borderRadius: 14, background: f.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 16 }}>{f.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111827", margin: "0 0 8px" }}>{f.title}</h3>
+              <div key={i} style={{ background: "#fff", borderRadius: 14, padding: "24px", border: "1px solid #e5e7eb", transition: "transform 0.2s,box-shadow 0.2s,border-color 0.2s" }} onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)"; e.currentTarget.style.borderColor = "#bfdbfe"; }} onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#e5e7eb"; }}>
+                <div style={{ width: 52, height: 52, borderRadius: 13, background: f.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 14 }}>{f.icon}</div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 8px" }}>{f.title}</h3>
                 <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.65, margin: "0 0 14px" }}>{f.desc}</p>
-                {f.cta && f.onClick && (
-                  <button onClick={f.onClick} style={{ background: "none", border: "none", color: f.color, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>{f.cta}</button>
-                )}
+                {f.cta && f.onClick && (<button onClick={f.onClick} style={{ background: "none", border: "none", color: f.color, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>{f.cta}</button>)}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section style={{ padding: "90px 48px", background: "#fff" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 52 }}>
+            <div style={{ display: "inline-block", background: "#fef9c3", color: "#92400e", padding: "6px 18px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>TESTIMONIALS</div>
+            <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>What our community says</h2>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
+            {TESTIMONIALS.map((t, i) => (
+              <div key={i} style={{ background: "#f8fafc", borderRadius: 16, padding: "28px 24px", border: "1px solid #f1f5f9" }}>
+                <div style={{ fontSize: 24, marginBottom: 14 }}>⭐⭐⭐⭐⭐</div>
+                <p style={{ fontSize: 14, color: "#374151", lineHeight: 1.7, margin: "0 0 20px", fontStyle: "italic" }}>{t.text}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: t.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#374151" }}>{t.avatar}</div>
+                  <div><div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{t.name}</div><div style={{ fontSize: 12, color: "#9ca3af" }}>{t.role}</div></div>
+                </div>
               </div>
             ))}
           </div>
@@ -683,37 +801,23 @@ const [modal, setModal] = useState(null);
       </section>
 
       {/* ── Recent Resolutions ── */}
-      <section ref={resRef} style={{ padding: "90px 48px", background: "#fff" }}>
+      <section ref={resRef} style={{ padding: "90px 48px", background: "#f8fafc" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#dcfce7", color: "#065f46", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14, letterSpacing: 0.5 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "linear-gradient(135deg,#dcfce7,#d1fae5)", color: "#065f46", padding: "6px 18px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", animation: "lpPulse 1.5s infinite", display: "inline-block" }} />
               {recentResolutions.length > 0 ? "LIVE FROM OUR DATABASE" : "COMMUNITY SUCCESS STORIES"}
             </div>
-            <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>
-              {recentResolutions.length > 0 ? "Issues Resolved Recently" : "Real Problems. Real Solutions."}
-            </h2>
-            <p style={{ fontSize: 16, color: "#6b7280" }}>
-              {recentResolutions.length > 0
-                ? "Pulled live from our database — anonymized civic issues our volunteers just resolved."
-                : "Join thousands already making a difference in their communities."}
-            </p>
+            <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>{recentResolutions.length > 0 ? "Issues Resolved Recently" : "Real Problems. Real Solutions."}</h2>
+            <p style={{ fontSize: 16, color: "#6b7280" }}>{recentResolutions.length > 0 ? "Pulled live from our database — anonymized civic issues our volunteers just resolved." : "Join thousands already making a difference in their communities."}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
             {(recentResolutions.length > 0 ? recentResolutions : FALLBACK_RESOLUTIONS).map((r, i) => (
-              <div key={r.id || i} style={{ background: "linear-gradient(135deg,#f0fdf4,#f8fafc)", border: "1px solid #dcfce7", borderRadius: 18, padding: "22px 20px", position: "relative", overflow: "hidden", transition: "transform 0.2s,box-shadow 0.2s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 10px 28px rgba(16,185,129,0.12)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
-              >
-                <div style={{ position: "absolute", top: 0, right: 0, background: "linear-gradient(135deg,#22c55e,#10b981)", color: "#fff", fontSize: 10, fontWeight: 800, padding: "5px 14px", borderRadius: "0 18px 0 12px", letterSpacing: 0.5 }}>✓ RESOLVED</div>
+              <div key={r.id || i} style={{ background: "linear-gradient(135deg,#f0fdf4,#f8fafc)", border: "1px solid #dcfce7", borderRadius: 16, padding: "22px 20px", position: "relative", overflow: "hidden", transition: "transform 0.2s,box-shadow 0.2s" }} onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 10px 28px rgba(16,185,129,0.12)"; }} onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ position: "absolute", top: 0, right: 0, background: "linear-gradient(135deg,#22c55e,#10b981)", color: "#fff", fontSize: 10, fontWeight: 800, padding: "5px 14px", borderRadius: "0 16px 0 12px" }}>✓ RESOLVED</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 11, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-                    {recentResolutions.length > 0 ? (TYPE_ICONS[r.type] || "📋") : r.icon}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "capitalize" }}>{r.type}</div>
-                    <div style={{ fontSize: 10, color: "#9ca3af" }}>{recentResolutions.length > 0 ? timeAgo(r.resolvedAt) : r.time}</div>
-                  </div>
+                  <div style={{ width: 42, height: 42, borderRadius: 11, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{recentResolutions.length > 0 ? (TYPE_ICONS[r.type] || "📋") : r.icon}</div>
+                  <div><div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "capitalize" }}>{r.type}</div><div style={{ fontSize: 10, color: "#9ca3af" }}>{recentResolutions.length > 0 ? timeAgo(r.resolvedAt) : r.time}</div></div>
                 </div>
                 <h4 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: "0 0 8px", lineHeight: 1.4 }}>{r.title}</h4>
                 <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 14 }}>📍 {r.address || r.addr}</div>
@@ -725,9 +829,7 @@ const [modal, setModal] = useState(null);
             ))}
           </div>
           <div style={{ textAlign: "center", marginTop: 38 }}>
-            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "13px 34px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 6px 20px rgba(37,99,235,0.35)" }}>
-              Join &amp; Start Reporting →
-            </button>
+            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "13px 34px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 6px 20px rgba(37,99,235,0.35)" }}>Join &amp; Start Reporting →</button>
           </div>
         </div>
       </section>
@@ -735,50 +837,41 @@ const [modal, setModal] = useState(null);
       {/* ── CTA Banner ── */}
       <section style={{ padding: "80px 48px", background: "linear-gradient(135deg,#f0fdf4,#eff6ff)" }}>
         <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 20 }}>🌿</div>
-          <h2 style={{ fontSize: 38, fontWeight: 900, color: "#111827", margin: "0 0 16px", letterSpacing: -0.5 }}>Ready to make a difference?</h2>
-          <p style={{ fontSize: 16, color: "#6b7280", margin: "0 0 36px", lineHeight: 1.75 }}>
-            Join thousands of citizens already helping build cleaner, safer, and more accountable communities across India.
-          </p>
-          <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", marginBottom: 16 }}>
-            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 24px rgba(37,99,235,0.35)" }}>🚀 Get Started Free</button>
-            <button onClick={openLogin} style={{ background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Sign In →</button>
+          <div style={{ fontSize: 52, marginBottom: 20 }}>🌿</div>
+          <h2 style={{ fontSize: 40, fontWeight: 900, color: "#111827", margin: "0 0 16px", letterSpacing: -0.5 }}>Ready to make a difference?</h2>
+          <p style={{ fontSize: 17, color: "#6b7280", margin: "0 0 36px", lineHeight: 1.75 }}>Join thousands of citizens already helping build cleaner, safer, and more accountable communities across India.</p>
+          <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", marginBottom: 22 }}>
+            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 36px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 24px rgba(37,99,235,0.35)" }}>🚀 Get Started Free</button>
+            <button onClick={openLogin} style={{ background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 36px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Sign In →</button>
           </div>
           <div style={{ fontSize: 13, color: "#9ca3af" }}>Free to join · No credit card required · Start in 60 seconds</div>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer style={{ background: "#0f172a", padding: "60px 48px 32px", color: "#94a3b8" }}>
+      <footer style={{ background: "#0f172a", padding: "60px 48px 32px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
                 <CleanStreetLogo size={36} />
                 <span style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>CleanStreet</span>
               </div>
-              <p style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 16px", color: "#64748b" }}>
-                A civic issue reporting platform empowering citizens and volunteers to build cleaner, safer communities across India.
-              </p>
-              <div style={{ display: "flex", gap: 8 }}>
-                {["🐦 Twitter", "📘 Facebook", "📸 Instagram"].map((s, i) => (
-                  <div key={i} style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 600, color: "#64748b", cursor: "pointer" }}>{s}</div>
-                ))}
+              <p style={{ fontSize: 13, lineHeight: 1.75, color: "#64748b", margin: "0 0 20px" }}>A civic issue reporting platform empowering citizens and volunteers to build cleaner, safer communities across India.</p>
+              <div style={{ display: "flex", gap: 10 }}>
+                {["🐦", "📘", "📸", "💼"].map((icon, i) => (<div key={i} style={{ width: 34, height: 34, borderRadius: 8, background: "#1e293b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, cursor: "pointer" }}>{icon}</div>))}
               </div>
             </div>
             {[
-              { title: "Platform", links: [{ label: "Report an Issue", action: openSignup }, { label: "View Complaints", action: openSignup }, { label: "Issue Map", action: openSignup }, { label: "My Dashboard", action: openLogin }] },
-              { title: "Community", links: [{ label: "Become a Volunteer", action: openSignup }, { label: "How it Works", action: () => scrollTo(howRef) }, { label: "Recent Resolutions", action: () => scrollTo(resRef) }, { label: "Our Impact", action: () => scrollTo(statsRef) }] },
-              { title: "Account", links: [{ label: "Sign Up Free", action: openSignup }, { label: "Log In", action: openLogin }, { label: "Forgot Password", action: () => navigate("/forgot-password") }, { label: "Verify OTP", action: () => navigate("/verify-otp") }] },
+              { title: "Platform",  links: [{ label: "Report an Issue",     action: openSignup }, { label: "View Complaints",     action: openSignup }, { label: "Issue Map",             action: openSignup }, { label: "My Dashboard",   action: openLogin }] },
+              { title: "Community", links: [{ label: "Become a Volunteer",   action: openSignup }, { label: "How it Works",       action: () => scrollTo(howRef) }, { label: "Recent Resolutions", action: () => scrollTo(resRef) }, { label: "Our Impact", action: () => scrollTo(statsRef) }] },
+              { title: "Account",   links: [{ label: "Sign Up Free",         action: openSignup }, { label: "Log In",             action: openLogin }, { label: "Forgot Password",       action: () => navigate("/forgot-password") }, { label: "Verify OTP", action: () => navigate("/verify-otp") }] },
             ].map(col => (
               <div key={col.title}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>{col.title}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {col.links.map(link => (
-                    <button key={link.label} onClick={link.action} style={{ background: "none", border: "none", textAlign: "left", fontSize: 13, color: "#64748b", cursor: "pointer", padding: 0, fontFamily: "inherit", transition: "color 0.15s" }}
-                      onMouseEnter={e => e.currentTarget.style.color = "#94a3b8"}
-                      onMouseLeave={e => e.currentTarget.style.color = "#64748b"}
-                    >{link.label}</button>
+                    <button key={link.label} onClick={link.action} style={{ background: "none", border: "none", textAlign: "left", fontSize: 13, color: "#64748b", cursor: "pointer", padding: 0, fontFamily: "inherit", transition: "color 0.15s" }} onMouseEnter={e => e.currentTarget.style.color = "#94a3b8"} onMouseLeave={e => e.currentTarget.style.color = "#64748b"}>{link.label}</button>
                   ))}
                 </div>
               </div>
@@ -791,16 +884,17 @@ const [modal, setModal] = useState(null);
         </div>
       </footer>
 
-      {/* ── Modals ── */}
-      {modal === "login" && <LoginModal onClose={closeModal} onSwitchToSignup={() => setModal("signup")} />}
-{modal === "signup" && <SignupModal onClose={closeModal} onSwitchToLogin={() => setModal("login")} defaultRole="user" />}
-{modal === "signup-volunteer" && <SignupModal onClose={closeModal} onSwitchToLogin={() => setModal("login")} defaultRole="volunteer" />}
+      {modal === "login"  && <LoginModal  onClose={closeModal} onSwitchToSignup={() => setModal("signup")} />}
+      {modal === "signup" && <SignupModal onClose={closeModal} onSwitchToLogin={() => setModal("login")} />}
 
       <style>{`
-        @keyframes lpFadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes lpFadeIn  { from{opacity:0} to{opacity:1} }
         @keyframes lpSlideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes lpFadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes lpPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.6} }
+        @keyframes lpFadeUp  { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes lpPulse   { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.6} }
+        @keyframes lpFloat0  { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-8px)} }
+        @keyframes lpFloat1  { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-6px)} }
+        @keyframes lpFloat2  { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-10px)} }
         *{box-sizing:border-box}
         input:focus{border-color:#2563eb!important;box-shadow:0 0 0 3px rgba(37,99,235,0.12)!important;outline:none!important}
       `}</style>

@@ -88,22 +88,51 @@ function getStrength(password) {
   if (/[^A-Za-z0-9]/.test(password)) score++;
   const map = [
     { label: "", color: "" },
-    { label: "Weak", color: "weak" },
-    { label: "Fair", color: "fair" },
-    { label: "Good", color: "good" },
+    { label: "Weak",   color: "weak"   },
+    { label: "Fair",   color: "fair"   },
+    { label: "Good",   color: "good"   },
     { label: "Strong", color: "strong" },
   ];
   return { score, ...map[score] };
 }
 
+// ── GPS reverse-geocode via Nominatim (same as Maps page + LandingPage modal) ─
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    const a = data.address || {};
+    const city  = a.city || a.town || a.village || a.county || "";
+    const state = a.state || "";
+    return city && state ? `${city}, ${state}` : city || state || data.display_name || "";
+  } catch {
+    return "";
+  }
+}
+
+const roles = [
+  { key: "user",      icon: "🧑‍💼", label: "Citizen",   desc: "Report and track civic issues"     },
+  { key: "volunteer", icon: "🤝",   label: "Volunteer", desc: "Help resolve issues in your area"   },
+  { key: "admin",     icon: "🛡️",  label: "Admin",     desc: "Manage platform & volunteers"       },
+];
+
 export default function Signup() {
   const navigate = useNavigate();
+  // eslint-disable-next-line no-unused-vars
   const { login } = useAuth();
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "user" });
-  const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [form, setForm] = useState({
+    firstName: "", lastName: "", email: "",
+    password: "", location: "", role: "user",
+  });
+  const [showPass,   setShowPass]   = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [success,    setSuccess]    = useState(false);
+  const [errors,     setErrors]     = useState({});
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError,   setGpsError]   = useState("");
 
   const strength = getStrength(form.password);
 
@@ -113,14 +142,46 @@ export default function Signup() {
     setErrors(er => ({ ...er, [name]: "" }));
   };
 
+  // ── GPS: detect location and reverse-geocode to "City, State" string ──
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsError("GPS is not supported by your browser.");
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError("");
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const city = await reverseGeocode(coords.latitude, coords.longitude);
+        if (city) {
+          setForm(f => ({ ...f, location: city }));
+          setErrors(er => ({ ...er, location: "" }));
+        } else {
+          setGpsError("Couldn't detect location. Please type it manually.");
+        }
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsError(
+          err.code === 1
+            ? "Location access denied. Please allow it or type manually."
+            : "Couldn't get your location. Please type it manually."
+        );
+        setGpsLoading(false);
+      },
+      { timeout: 10000 }
+    );
+  };
+
   const validate = () => {
     const e = {};
     if (!form.firstName.trim()) e.firstName = "First name is required";
-    if (!form.lastName.trim()) e.lastName = "Last name is required";
-    if (!form.email.trim()) e.email = "Email is required";
+    if (!form.lastName.trim())  e.lastName  = "Last name is required";
+    if (!form.email.trim())     e.email     = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email address";
-    if (!form.password) e.password = "Password is required";
+    if (!form.password)               e.password = "Password is required";
     else if (form.password.length < 8) e.password = "Password must be at least 8 characters";
+    if (form.role === "volunteer" && !form.location.trim())  e.location  = "Location is required for volunteers";
     return e;
   };
 
@@ -131,20 +192,22 @@ export default function Signup() {
 
     try {
       setLoading(true);
-      // Send OTP first — registration completes on OTP verification
       await API.post("/api/otp/send-register-otp", {
         email: form.email,
-        name: form.firstName + " " + form.lastName,
+        name:  form.firstName + " " + form.lastName,
       });
       setLoading(false);
-      // Navigate to OTP verification page, passing all form data
+      // Store pendingLocation in sessionStorage as a fallback in case
+      // react-router state is lost on page refresh during OTP verification.
+      sessionStorage.setItem("cs_pending_location", form.location);
       navigate("/verify-otp", {
         state: {
-          email: form.email,
-          name: form.firstName + " " + form.lastName,
+          email:    form.email,
+          name:     form.firstName + " " + form.lastName,
           password: form.password,
-          role: form.role,
-        }
+          location: form.location,   // ← passed to VerifyOtp → stored in DB
+          role:     form.role,
+        },
       });
     } catch (err) {
       setLoading(false);
@@ -152,59 +215,51 @@ export default function Signup() {
     }
   };
 
-  const roles = [
-    { key: "user", icon: "🧑‍💼", label: "Citizen" },
-    { key: "volunteer", icon: "🤝", label: "Volunteer" },
-    { key: "admin", icon: "🛡️", label: "Admin" },
-  ];
-
   return (
     <div className="auth-page">
-
-      {/* ── Left Panel ── */}
+      {/* ── Left: Branding Panel ── */}
       <div className="auth-panel">
         <div className="auth-panel__inner">
           <div className="auth-panel__logo">
             <CleanStreetLogo size={110} />
           </div>
           <h1 className="auth-panel__title">
-            Be the Change<br />Your City <span>Needs</span>
+            Join the <span>CleanStreet</span> Community
           </h1>
           <p className="auth-panel__desc">
-            Create your free account and start making a difference. Report
-            issues, earn civic badges, and help build a cleaner, safer community.
+            Help build cleaner, safer cities. Report issues, track progress, and make a real difference in your neighbourhood.
           </p>
           <div className="auth-features">
             <div className="auth-feature">
-              <div className="auth-feature__icon">🏅</div>
+              <div className="auth-feature__icon">📍</div>
               <div className="auth-feature__text">
-                <strong>Earn Civic Badges</strong>
-                Get recognized for your contributions to the community.
+                <strong>Report Issues Instantly</strong>
+                Snap a photo, pin the location, done in seconds.
               </div>
             </div>
             <div className="auth-feature">
-              <div className="auth-feature__icon">📊</div>
+              <div className="auth-feature__icon">🔄</div>
               <div className="auth-feature__text">
-                <strong>Personal Dashboard</strong>
-                Track all your reports, votes, and community impact.
+                <strong>Track in Real-Time</strong>
+                Follow your complaint from submission to resolution.
               </div>
             </div>
             <div className="auth-feature">
-              <div className="auth-feature__icon">🔔</div>
+              <div className="auth-feature__icon">🏙️</div>
               <div className="auth-feature__text">
-                <strong>Live Notifications</strong>
-                Get updates the moment your issue is acted upon.
+                <strong>Community Impact</strong>
+                See how your reports are improving your city.
               </div>
             </div>
           </div>
           <div className="auth-stats">
             <div className="auth-stat">
-              <span className="auth-stat__num">Free</span>
-              <span className="auth-stat__label">Always</span>
+              <span className="auth-stat__num">1.2k</span>
+              <span className="auth-stat__label">Citizens</span>
             </div>
             <div className="auth-stat">
-              <span className="auth-stat__num">30s</span>
-              <span className="auth-stat__label">To Sign Up</span>
+              <span className="auth-stat__num">248</span>
+              <span className="auth-stat__label">Resolved</span>
             </div>
             <div className="auth-stat">
               <span className="auth-stat__num">🔒</span>
@@ -217,7 +272,6 @@ export default function Signup() {
       {/* ── Right: Form ── */}
       <div className="auth-form-side">
         <div className="auth-card">
-
           {success ? (
             <div className="auth-success">
               <span className="auth-success__icon">🎉</span>
@@ -226,7 +280,8 @@ export default function Signup() {
                 Welcome to CleanStreet, {form.firstName}!<br />
                 Your account has been created. Let's start making your city cleaner.
               </p>
-              <button className="auth-btn" style={{ marginTop: 24 }} onClick={() => navigate(form.role === "admin" ? "/admin" : form.role === "volunteer" ? "/volunteer" : "/dashboard")}>
+              <button className="auth-btn" style={{ marginTop: 24 }}
+                onClick={() => navigate(form.role === "admin" ? "/admin" : form.role === "volunteer" ? "/volunteer" : "/dashboard")}>
                 Go to Dashboard →
               </button>
             </div>
@@ -242,16 +297,16 @@ export default function Signup() {
               </div>
 
               <form className="auth-form" onSubmit={handleSubmit}>
-
                 {errors.general && (
                   <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
                     ⚠️ {errors.general}
                   </div>
                 )}
 
+                {/* Name row */}
                 <div className="auth-row">
                   <div className="auth-group">
-                    <label className="auth-label">First Name</label>
+                    <label className="auth-label">First Name <span style={{ color: "#dc2626" }}>*</span></label>
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon">👤</span>
                       <input className={`auth-input${errors.firstName ? " auth-input--error" : ""}`} type="text" name="firstName" placeholder="John" value={form.firstName} onChange={handleChange} />
@@ -259,7 +314,7 @@ export default function Signup() {
                     {errors.firstName && <span className="auth-error-msg">⚠ {errors.firstName}</span>}
                   </div>
                   <div className="auth-group">
-                    <label className="auth-label">Last Name</label>
+                    <label className="auth-label">Last Name <span style={{ color: "#dc2626" }}>*</span></label>
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon">👤</span>
                       <input className={`auth-input${errors.lastName ? " auth-input--error" : ""}`} type="text" name="lastName" placeholder="Doe" value={form.lastName} onChange={handleChange} />
@@ -268,8 +323,9 @@ export default function Signup() {
                   </div>
                 </div>
 
+                {/* Email */}
                 <div className="auth-group">
-                  <label className="auth-label">Email address</label>
+                  <label className="auth-label">Email address <span style={{ color: "#dc2626" }}>*</span></label>
                   <div className="auth-input-wrap">
                     <span className="auth-input-icon">✉️</span>
                     <input className={`auth-input${errors.email ? " auth-input--error" : ""}`} type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
@@ -277,8 +333,9 @@ export default function Signup() {
                   {errors.email && <span className="auth-error-msg">⚠ {errors.email}</span>}
                 </div>
 
+                {/* Password */}
                 <div className="auth-group">
-                  <label className="auth-label">Password</label>
+                  <label className="auth-label">Password <span style={{ color: "#dc2626" }}>*</span></label>
                   <div className="auth-input-wrap">
                     <span className="auth-input-icon">🔒</span>
                     <input className={`auth-input${errors.password ? " auth-input--error" : ""}`} type={showPass ? "text" : "password"} name="password" placeholder="Min. 8 characters" value={form.password} onChange={handleChange} autoComplete="new-password" />
@@ -299,6 +356,72 @@ export default function Signup() {
                   )}
                 </div>
 
+                {/* ── Location with GPS button ── */}
+                <div className="auth-group">
+                  <label className="auth-label">
+                    Location {form.role === "volunteer" && <span style={{ color: "#dc2626" }}>*</span>}
+                  </label>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <div className="auth-input-wrap" style={{ flex: 1 }}>
+                      <span className="auth-input-icon">📍</span>
+                      <input
+                        className={`auth-input${errors.location ? " auth-input--error" : ""}`}
+                        type="text"
+                        name="location"
+                        placeholder="e.g. Kanpur, Uttar Pradesh"
+                        value={form.location}
+                        onChange={handleChange}
+                        autoComplete="address-level2"
+                      />
+                    </div>
+                    {/* 🎯 GPS button — same look as Maps page locate button */}
+                    <button
+                      type="button"
+                      onClick={handleUseLocation}
+                      disabled={gpsLoading}
+                      title="Detect my current location"
+                      style={{
+                        flexShrink: 0,
+                        height: 44,
+                        padding: "0 14px",
+                        border: "1.5px solid var(--auth-primary, #2563eb)",
+                        borderRadius: 10,
+                        background: gpsLoading ? "#eff6ff" : "var(--auth-primary, #2563eb)",
+                        color: gpsLoading ? "var(--auth-primary, #2563eb)" : "#fff",
+                        fontSize: 20,
+                        cursor: gpsLoading ? "wait" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "all 0.15s",
+                        marginTop: 1,
+                      }}
+                    >
+                      {gpsLoading ? (
+                        <span style={{ fontSize: 13, fontWeight: 700 }}>…</span>
+                      ) : "🎯"}
+                    </button>
+                  </div>
+
+                  {/* GPS status */}
+                  {gpsLoading && (
+                    <span className="auth-error-msg" style={{ color: "#2563eb" }}>
+                      📡 Detecting your location…
+                    </span>
+                  )}
+                  {gpsError && !gpsLoading && (
+                    <span className="auth-error-msg">⚠ {gpsError}</span>
+                  )}
+                  {!gpsError && !gpsLoading && form.location && !errors.location && (
+                    <span style={{ fontSize: 11, color: "#16a34a", marginTop: 4, display: "block" }}>✓ Location set</span>
+                  )}
+                  {errors.location && <span className="auth-error-msg">⚠ {errors.location}</span>}
+                  <span style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, display: "block" }}>
+                    Your city or district — used to match you with nearby complaints
+                  </span>
+                </div>
+
+                {/* Role selector */}
                 <div className="auth-group">
                   <label className="auth-label">I am a…</label>
                   <div className="auth-roles" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
@@ -326,7 +449,6 @@ export default function Signup() {
                   <a href="/terms">Terms of Service</a> and{" "}
                   <a href="/privacy">Privacy Policy</a>.
                 </p>
-
               </form>
             </>
           )}
