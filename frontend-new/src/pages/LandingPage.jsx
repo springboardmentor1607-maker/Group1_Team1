@@ -71,7 +71,6 @@ function CleanStreetLogo({ size = 44 }) {
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getStrength(pw) {
   if (!pw) return { score: 0, label: "", color: "" };
   let s = 0;
@@ -102,7 +101,6 @@ function timeAgo(date) {
   return `${days}d ago`;
 }
 
-// ─── Modal styles ─────────────────────────────────────────────────────────────
 const MS = {
   overlay: { position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: "lpFadeIn 0.2s ease" },
   card: { background: "#fff", borderRadius: 20, padding: "36px 32px", width: "100%", maxWidth: 440, position: "relative", boxShadow: "0 24px 60px rgba(0,0,0,0.2)", animation: "lpSlideUp 0.25s ease" },
@@ -127,7 +125,6 @@ const MS = {
   fg: { background: "none", border: "none", color: "#2563eb", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "inherit" },
 };
 
-// ─── Login Modal ──────────────────────────────────────────────────────────────
 function LoginModal({ onClose, onSwitchToSignup }) {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -146,7 +143,7 @@ function LoginModal({ onClose, onSwitchToSignup }) {
       const res = await API.post("/api/auth/login", { email: form.email, password: form.password });
       const data = res.data;
       localStorage.setItem("token", data.token);
-      login(data.user || data);
+      login(data.user || data, data.token);
       const role = (data.user?.role || data.role || "user").toLowerCase();
       onClose();
       if (role === "admin") navigate("/admin");
@@ -187,10 +184,7 @@ function LoginModal({ onClose, onSwitchToSignup }) {
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button type="button" style={MS.fg} onClick={() => { 
-  onClose(); 
-  navigate("/forgot-password", { state: { returnToLogin: true } }); 
-}}>Forgot password?</button>
+            <button type="button" style={MS.fg} onClick={() => { onClose(); navigate("/forgot-password"); }}>Forgot password?</button>
           </div>
           <button style={{ ...MS.sub2, opacity: loading ? 0.75 : 1 }} type="submit" disabled={loading}>
             {loading ? "Signing in…" : "Sign In →"}
@@ -201,10 +195,10 @@ function LoginModal({ onClose, onSwitchToSignup }) {
   );
 }
 
-// ─── Signup Modal ─────────────────────────────────────────────────────────────
-function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
+// ─── FIX: role: defaultRole (variable) not role: "defaultRole" (string) ──────
+function SignupModal({ onClose, onSwitchToLogin, defaultRole = "user" }) {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: "defaultRole" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", role: defaultRole });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -310,7 +304,6 @@ function SignupModal({ onClose, onSwitchToLogin, defaultRole= "user" }) {
   );
 }
 
-// ─── Complaint Journey Animation ──────────────────────────────────────────────
 function ComplaintJourney() {
   const [activeStep, setActiveStep] = useState(0);
   const steps = [
@@ -320,7 +313,6 @@ function ComplaintJourney() {
     { icon: "🔄", label: "In Progress", color: "#8b5cf6", bg: "#ede9fe", desc: "Issue is actively being resolved" },
     { icon: "🏆", label: "Resolved", color: "#10b981", bg: "#d1fae5", desc: "Done! Citizen gets notified instantly" },
   ];
-
   useEffect(() => {
     const t = setInterval(() => setActiveStep(s => (s + 1) % steps.length), 2200);
     return () => clearInterval(t);
@@ -328,9 +320,7 @@ function ComplaintJourney() {
 
   return (
     <div style={{ background: "#fff", borderRadius: 22, padding: "28px 26px", border: "1px solid #e5e7eb", boxShadow: "0 8px 32px rgba(37,99,235,0.1)" }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 22 }}>
-        🔴 Live — Complaint Journey
-      </div>
+      <div style={{ fontSize: 11, fontWeight: 800, color: "#6b7280", textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 22 }}>🔴 Live — Complaint Journey</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {steps.map((step, i) => (
           <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
@@ -338,15 +328,11 @@ function ComplaintJourney() {
               <div style={{ width: 46, height: 46, borderRadius: "50%", flexShrink: 0, background: i <= activeStep ? step.bg : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21, border: `2px solid ${i === activeStep ? step.color : "transparent"}`, boxShadow: i === activeStep ? `0 0 0 5px ${step.color}25` : "none", transition: "all 0.45s ease" }}>
                 <span style={{ opacity: i <= activeStep ? 1 : 0.3 }}>{step.icon}</span>
               </div>
-              {i < steps.length - 1 && (
-                <div style={{ width: 2, height: 30, background: i < activeStep ? step.color : "#e5e7eb", transition: "background 0.45s ease", marginTop: 3, marginBottom: 3, borderRadius: 99 }} />
-              )}
+              {i < steps.length - 1 && <div style={{ width: 2, height: 30, background: i < activeStep ? step.color : "#e5e7eb", transition: "background 0.45s ease", marginTop: 3, marginBottom: 3, borderRadius: 99 }} />}
             </div>
             <div style={{ paddingTop: 11, opacity: i <= activeStep ? 1 : 0.35, transition: "opacity 0.45s" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: i === activeStep ? step.color : "#374151" }}>{step.label}</div>
-              {i === activeStep && (
-                <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, animation: "lpFadeIn 0.3s ease" }}>{step.desc}</div>
-              )}
+              {i === activeStep && <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2, animation: "lpFadeIn 0.3s ease" }}>{step.desc}</div>}
             </div>
           </div>
         ))}
@@ -359,15 +345,14 @@ function ComplaintJourney() {
   );
 }
 
-// ─── Main Landing Page ────────────────────────────────────────────────────────
 export default function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null);
   const [scrolled, setScrolled] = useState(false);
-  const [stats, setStats] = useState({ total: 0, resolved: 0, users: 0, avgDays: 3 });
+  const [stats, setStats] = useState({ total: "500+", resolved: "380+", users: "1,200+", avgDays: 3 });
   const [recentResolutions, setRecentResolutions] = useState([]);
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const howRef = useRef(null);
   const featRef = useRef(null);
@@ -380,6 +365,7 @@ const [modal, setModal] = useState(null);
     return () => window.removeEventListener("openLoginModal", handler);
   }, []);
 
+  // Redirect logged-in users to their dashboard
   useEffect(() => {
     if (user) {
       const role = user.role?.toLowerCase();
@@ -389,9 +375,19 @@ const [modal, setModal] = useState(null);
     }
   }, [user, navigate]);
 
+  // ─── FIX: Only fetch stats when user is logged in ─────────────────────────
+  // Previously this called /api/complaints without auth → 401 → api interceptor
+  // redirected to /login. Now we only fetch if the user is authenticated,
+  // and fall back to static numbers for guests.
   useEffect(() => {
+    if (!user) {
+      // Guest — show static fallback numbers, don't hit authenticated endpoints
+      setStatsLoading(false);
+      return;
+    }
     const fetchStats = async () => {
       try {
+        setStatsLoading(true);
         const res = await API.get("/api/complaints");
         const raw = Array.isArray(res.data) ? res.data : res.data?.complaints || [];
         const total = raw.length;
@@ -413,11 +409,13 @@ const [modal, setModal] = useState(null);
           .map(c => ({ id: String(c._id), title: c.title || "Civic Issue", type: (c.type || "general").toLowerCase(), address: c.address ? c.address.split(",").slice(0, 2).join(", ") : "Local Area", resolvedAt: c.updated_at || c.updatedAt, priority: c.priority || "medium", upvotes: c.upvotes || 0 }));
         setRecentResolutions(recent);
       } catch {
-        setStats({ total: "500+", resolved: "380+", users: "1,200+", avgDays: 3 });
-      } finally { setStatsLoading(false); }
+        // Keep static fallback numbers on error
+      } finally {
+        setStatsLoading(false);
+      }
     };
     fetchStats();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 50);
@@ -428,9 +426,6 @@ const [modal, setModal] = useState(null);
   const scrollTo = ref => ref.current?.scrollIntoView({ behavior: "smooth" });
   const openLogin = () => setModal("login");
   const openSignup = () => setModal("signup");
-  const openSignupAsVolunteer = () => {
-    setModal("signup-volunteer");
-  };
   const closeModal = () => setModal(null);
 
   const resolveRate = typeof stats.total === "number" && stats.total > 0
@@ -443,7 +438,7 @@ const [modal, setModal] = useState(null);
     { icon: "📍", title: "Pin & Report Instantly", desc: "Snap a photo, mark the spot on the map, submit in under 30 seconds. No paperwork, no queues.", color: "#2563eb", bg: "#dbeafe", cta: "Try Reporting →", onClick: openSignup },
     { icon: "🔄", title: "Real-Time Tracking", desc: "Follow every stage of your complaint with live status updates and push notifications.", color: "#8b5cf6", bg: "#ede9fe", cta: "View Complaints →", onClick: openSignup },
     { icon: "🗺️", title: "City-Wide Issue Map", desc: "See every reported issue on an interactive map. Know exactly what's being worked on near you.", color: "#0891b2", bg: "#cffafe", cta: "Explore Map →", onClick: openSignup },
-    { icon: "🤝", title: "Local Volunteer Network", desc: "Trained volunteers are assigned to every issue — fast, accountable, community-driven action.", color: "#16a34a", bg: "#dcfce7", cta: "Become a Volunteer →", onClick: openSignup },
+    { icon: "🤝", title: "Local Volunteer Network", desc: "Trained volunteers are assigned to every issue — fast, accountable, community-driven action.", color: "#16a34a", bg: "#dcfce7", cta: "Become a Volunteer →", onClick: () => setModal("signup-volunteer") },
     { icon: "🔔", title: "Instant Notifications", desc: "Get notified at every status change. From submission to resolution — always in the loop.", color: "#d97706", bg: "#fef9c3", cta: null, onClick: null },
     { icon: "📊", title: "Personal Dashboard", desc: "Track all your complaints, upvotes, and civic impact from your beautiful personal dashboard.", color: "#dc2626", bg: "#fee2e2", cta: "Go to Dashboard →", onClick: openSignup },
   ];
@@ -474,18 +469,14 @@ const [modal, setModal] = useState(null);
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 30 }}>
           {[{ label: "How it Works", ref: howRef }, { label: "Features", ref: featRef }, { label: "Impact", ref: statsRef }, { label: "Recent Wins", ref: resRef }].map(item => (
-            <button key={item.label} onClick={() => scrollTo(item.ref)} style={{ background: "none", border: "none", fontSize: 14, fontWeight: 500, color: "#374151", cursor: "pointer", fontFamily: "inherit", padding: 0, transition: "color 0.2s" }}>
+            <button key={item.label} onClick={() => scrollTo(item.ref)} style={{ background: "none", border: "none", fontSize: 14, fontWeight: 500, color: "#374151", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
               {item.label}
             </button>
           ))}
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={openLogin} style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
-            Log In
-          </button>
-          <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", border: "none", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(37,99,235,0.35)" }}>
-            Get Started Free
-          </button>
+          <button onClick={openLogin} style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "inherit" }}>Log In</button>
+          <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", border: "none", borderRadius: 10, padding: "8px 20px", fontSize: 13, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(37,99,235,0.35)" }}>Get Started Free</button>
         </div>
       </nav>
 
@@ -499,29 +490,27 @@ const [modal, setModal] = useState(null);
               🌿 India's Civic Issue Reporting Platform
             </div>
             <h1 style={{ fontSize: 56, fontWeight: 900, color: "#111827", lineHeight: 1.08, margin: "0 0 20px", letterSpacing: -1.5 }}>
-            Making Cities.<br />
+              Making Cities.<br />
               <span style={{ background: "linear-gradient(135deg,#2563eb,#16a34a)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Cleaner & Safer</span><br />
               Together
             </h1>
             <p style={{ fontSize: 17, color: "#6b7280", lineHeight: 1.75, margin: "0 0 38px", maxWidth: 500 }}>
-            Report civic issues in your neighbourhood, track them in real-time, and watch your community transform — powered by local volunteers and transparent accountability. Full transparency from complaint to resolution.
+              Report civic issues in your neighbourhood, track them in real-time, and watch your community transform — powered by local volunteers and transparent accountability.
             </p>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 48 }}>
               <button onClick={openSignup}
-                style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 24px rgba(37,99,235,0.35)", transition: "transform 0.15s,box-shadow 0.15s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 14px 32px rgba(37,99,235,0.45)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(37,99,235,0.35)"; }}
+                style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 24px rgba(37,99,235,0.35)" }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; }}
               >🚀 Report an Issue Free</button>
               <button onClick={() => setModal("signup-volunteer")}
-                style={{ background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "#2563eb"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "#e5e7eb"}
+                style={{ background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
               >🤝 Become a Volunteer</button>
             </div>
             <div style={{ display: "flex", gap: 36 }}>
               {[
-                { num: statsLoading ? "…" : `${stats.total}+`, label: "Issues Reported" },
-                { num: statsLoading ? "…" : `${stats.resolved}+`, label: "Resolved" },
+                { num: `${stats.total}+`, label: "Issues Reported" },
+                { num: `${stats.resolved}+`, label: "Resolved" },
                 { num: `${resolveRate}%`, label: "Resolution Rate" },
                 { num: `${stats.avgDays} days`, label: "Avg. Fix Time" },
               ].map(s => (
@@ -547,30 +536,13 @@ const [modal, setModal] = useState(null);
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
             {[
-              {
-                icon: "🧑‍💼", title: "Citizens", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe",
-                points: ["Report civic issues with photos", "Track complaint status live", "Upvote issues in your area", "Get notified on resolution"],
-                cta: "Join as Citizen", role: "user",
-              },
-              {
-                icon: "🤝", title: "Volunteers", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0",
-                points: ["Accept & resolve local issues", "Personal performance dashboard", "Earn community recognition", "Make real neighbourhood impact"],
-                cta: "Become a Volunteer", role: "volunteer",
-              },
-              {
-                icon: "🛡️", title: "Admins", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe",
-                points: ["Oversee all complaints citywide", "Assign volunteers by zone", "Generate PDF/CSV reports", "Manage users & applications"],
-                cta: "Admin Access", role: "admin",
-              },
+              { icon: "🧑‍💼", title: "Citizens", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", points: ["Report civic issues with photos", "Track complaint status live", "Upvote issues in your area", "Get notified on resolution"], cta: "Join as Citizen", action: openSignup },
+              { icon: "🤝", title: "Volunteers", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", points: ["Accept & resolve local issues", "Personal performance dashboard", "Earn community recognition", "Make real neighbourhood impact"], cta: "Become a Volunteer", action: () => setModal("signup-volunteer") },
+              { icon: "🛡️", title: "Admins", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe", points: ["Oversee all complaints citywide", "Assign volunteers by zone", "Generate PDF/CSV reports", "Manage users & applications"], cta: "Admin Access", action: openSignup },
             ].map(card => (
-              <div key={card.title} style={{
-                background: card.bg, border: `1.5px solid ${card.border}`,
-                borderRadius: 16, padding: "28px 24px",
-                transition: "transform 0.2s, box-shadow 0.2s",
-              }}
+              <div key={card.title} style={{ background: card.bg, border: `1.5px solid ${card.border}`, borderRadius: 16, padding: "28px 24px", transition: "transform 0.2s,box-shadow 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.1)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
-              >
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{card.icon}</div>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: "0 0 16px" }}>{card.title}</h3>
                 <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -580,11 +552,7 @@ const [modal, setModal] = useState(null);
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => card.role === "volunteer" ? setModal("signup-volunteer") : openSignup()} style={{
-                  width: "100%", padding: "10px", borderRadius: 10, border: "none",
-                  background: card.color, color: "#fff", fontSize: 13, fontWeight: 700,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}>{card.cta}</button>
+                <button onClick={card.action} style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: card.color, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{card.cta}</button>
               </div>
             ))}
           </div>
@@ -595,7 +563,7 @@ const [modal, setModal] = useState(null);
       <section ref={howRef} style={{ padding: "90px 48px", background: "#fff" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
-            <div style={{ display: "inline-block", background: "#dbeafe", color: "#1d4ed8", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14, letterSpacing: 0.5 }}>HOW IT WORKS</div>
+            <div style={{ display: "inline-block", background: "#dbeafe", color: "#1d4ed8", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>HOW IT WORKS</div>
             <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>From photo to fixed — in 3 steps</h2>
             <p style={{ fontSize: 16, color: "#6b7280" }}>Simple, transparent, and community-powered.</p>
           </div>
@@ -603,7 +571,7 @@ const [modal, setModal] = useState(null);
             <div style={{ position: "absolute", top: 58, left: "18%", right: "18%", height: 2, background: "linear-gradient(90deg,#2563eb,#22c55e)", borderRadius: 99, zIndex: 0 }} />
             {STEPS.map((step, i) => (
               <div key={i} style={{ background: step.bg, borderRadius: 20, padding: "34px 28px", position: "relative", zIndex: 1, border: "1px solid rgba(0,0,0,0.04)" }}>
-                <div style={{ width: 104, height: 104, borderRadius: "50%", margin: "0 auto 22px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, boxShadow: `0 8px 28px ${step.color}22`, border: `3px solid ${step.color}28` }}>{step.icon}</div>
+                <div style={{ width: 104, height: 104, borderRadius: "50%", margin: "0 auto 22px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, boxShadow: `0 8px 28px ${step.color}22` }}>{step.icon}</div>
                 <div style={{ fontSize: 11, fontWeight: 800, color: step.color, letterSpacing: 1.2, marginBottom: 10, textAlign: "center" }}>{step.num}</div>
                 <h3 style={{ fontSize: 19, fontWeight: 800, color: "#111827", margin: "0 0 10px", textAlign: "center" }}>{step.title}</h3>
                 <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.65, margin: 0, textAlign: "center" }}>{step.desc}</p>
@@ -611,9 +579,7 @@ const [modal, setModal] = useState(null);
             ))}
           </div>
           <div style={{ textAlign: "center", marginTop: 44 }}>
-            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "13px 36px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 6px 20px rgba(37,99,235,0.35)" }}>
-              Start Reporting Now →
-            </button>
+            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "13px 36px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 6px 20px rgba(37,99,235,0.35)" }}>Start Reporting Now →</button>
           </div>
         </div>
       </section>
@@ -623,15 +589,13 @@ const [modal, setModal] = useState(null);
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <h2 style={{ fontSize: 34, fontWeight: 800, color: "#fff", margin: "0 0 10px" }}>Real Numbers. Real Impact.</h2>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 16 }}>
-              {statsLoading ? "Loading live data…" : "Computed from our live database right now."}
-            </p>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 16 }}>{statsLoading ? "Loading live data…" : "Community-driven civic action across India."}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 20, marginBottom: 32 }}>
             {[
-              { icon: "📋", num: statsLoading ? "…" : `${stats.total}+`, label: "Issues Reported" },
-              { icon: "✅", num: statsLoading ? "…" : `${stats.resolved}+`, label: "Successfully Resolved" },
-              { icon: "👥", num: statsLoading ? "…" : `${stats.users}+`, label: "Active Citizens" },
+              { icon: "📋", num: `${stats.total}+`, label: "Issues Reported" },
+              { icon: "✅", num: `${stats.resolved}+`, label: "Successfully Resolved" },
+              { icon: "👥", num: `${stats.users}+`, label: "Active Citizens" },
               { icon: "⚡", num: `${stats.avgDays} days`, label: "Average Fix Time" },
             ].map(s => (
               <div key={s.label} style={{ textAlign: "center", background: "rgba(255,255,255,0.1)", borderRadius: 16, padding: "28px 16px", border: "1px solid rgba(255,255,255,0.15)" }}>
@@ -660,7 +624,7 @@ const [modal, setModal] = useState(null);
       <section ref={featRef} style={{ padding: "90px 48px", background: "#f8fafc" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{ display: "inline-block", background: "#dcfce7", color: "#166534", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14, letterSpacing: 0.5 }}>PLATFORM FEATURES</div>
+            <div style={{ display: "inline-block", background: "#dcfce7", color: "#166534", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>PLATFORM FEATURES</div>
             <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>Everything you need to take action</h2>
             <p style={{ fontSize: 16, color: "#6b7280" }}>Designed for citizens, volunteers, and administrators.</p>
           </div>
@@ -668,8 +632,7 @@ const [modal, setModal] = useState(null);
             {FEATURES.map((f, i) => (
               <div key={i} style={{ background: "#fff", borderRadius: 16, padding: "26px 24px", border: "1px solid #e5e7eb", transition: "transform 0.2s,box-shadow 0.2s,border-color 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 14px 36px rgba(0,0,0,0.07)"; e.currentTarget.style.borderColor = f.color + "55"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#e5e7eb"; }}
-              >
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "#e5e7eb"; }}>
                 <div style={{ width: 54, height: 54, borderRadius: 14, background: f.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 16 }}>{f.icon}</div>
                 <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111827", margin: "0 0 8px" }}>{f.title}</h3>
                 <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.65, margin: "0 0 14px" }}>{f.desc}</p>
@@ -686,26 +649,19 @@ const [modal, setModal] = useState(null);
       <section ref={resRef} style={{ padding: "90px 48px", background: "#fff" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#dcfce7", color: "#065f46", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14, letterSpacing: 0.5 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#dcfce7", color: "#065f46", padding: "5px 16px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", animation: "lpPulse 1.5s infinite", display: "inline-block" }} />
-              {recentResolutions.length > 0 ? "LIVE FROM OUR DATABASE" : "COMMUNITY SUCCESS STORIES"}
+              COMMUNITY SUCCESS STORIES
             </div>
-            <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>
-              {recentResolutions.length > 0 ? "Issues Resolved Recently" : "Real Problems. Real Solutions."}
-            </h2>
-            <p style={{ fontSize: 16, color: "#6b7280" }}>
-              {recentResolutions.length > 0
-                ? "Pulled live from our database — anonymized civic issues our volunteers just resolved."
-                : "Join thousands already making a difference in their communities."}
-            </p>
+            <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>Real Problems. Real Solutions.</h2>
+            <p style={{ fontSize: 16, color: "#6b7280" }}>Join thousands already making a difference in their communities.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
             {(recentResolutions.length > 0 ? recentResolutions : FALLBACK_RESOLUTIONS).map((r, i) => (
               <div key={r.id || i} style={{ background: "linear-gradient(135deg,#f0fdf4,#f8fafc)", border: "1px solid #dcfce7", borderRadius: 18, padding: "22px 20px", position: "relative", overflow: "hidden", transition: "transform 0.2s,box-shadow 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 10px 28px rgba(16,185,129,0.12)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
-              >
-                <div style={{ position: "absolute", top: 0, right: 0, background: "linear-gradient(135deg,#22c55e,#10b981)", color: "#fff", fontSize: 10, fontWeight: 800, padding: "5px 14px", borderRadius: "0 18px 0 12px", letterSpacing: 0.5 }}>✓ RESOLVED</div>
+                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ position: "absolute", top: 0, right: 0, background: "linear-gradient(135deg,#22c55e,#10b981)", color: "#fff", fontSize: 10, fontWeight: 800, padding: "5px 14px", borderRadius: "0 18px 0 12px" }}>✓ RESOLVED</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 11, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
                     {recentResolutions.length > 0 ? (TYPE_ICONS[r.type] || "📋") : r.icon}
@@ -725,9 +681,7 @@ const [modal, setModal] = useState(null);
             ))}
           </div>
           <div style={{ textAlign: "center", marginTop: 38 }}>
-            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "13px 34px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 6px 20px rgba(37,99,235,0.35)" }}>
-              Join &amp; Start Reporting →
-            </button>
+            <button onClick={openSignup} style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", color: "#fff", border: "none", borderRadius: 12, padding: "13px 34px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 6px 20px rgba(37,99,235,0.35)" }}>Join &amp; Start Reporting →</button>
           </div>
         </div>
       </section>
@@ -760,25 +714,17 @@ const [modal, setModal] = useState(null);
               <p style={{ fontSize: 13, lineHeight: 1.7, margin: "0 0 16px", color: "#64748b" }}>
                 A civic issue reporting platform empowering citizens and volunteers to build cleaner, safer communities across India.
               </p>
-              <div style={{ display: "flex", gap: 8 }}>
-                {["🐦 Twitter", "📘 Facebook", "📸 Instagram"].map((s, i) => (
-                  <div key={i} style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 600, color: "#64748b", cursor: "pointer" }}>{s}</div>
-                ))}
-              </div>
             </div>
             {[
               { title: "Platform", links: [{ label: "Report an Issue", action: openSignup }, { label: "View Complaints", action: openSignup }, { label: "Issue Map", action: openSignup }, { label: "My Dashboard", action: openLogin }] },
-              { title: "Community", links: [{ label: "Become a Volunteer", action: openSignup }, { label: "How it Works", action: () => scrollTo(howRef) }, { label: "Recent Resolutions", action: () => scrollTo(resRef) }, { label: "Our Impact", action: () => scrollTo(statsRef) }] },
+              { title: "Community", links: [{ label: "Become a Volunteer", action: () => setModal("signup-volunteer") }, { label: "How it Works", action: () => scrollTo(howRef) }, { label: "Recent Resolutions", action: () => scrollTo(resRef) }, { label: "Our Impact", action: () => scrollTo(statsRef) }] },
               { title: "Account", links: [{ label: "Sign Up Free", action: openSignup }, { label: "Log In", action: openLogin }, { label: "Forgot Password", action: () => navigate("/forgot-password") }, { label: "Verify OTP", action: () => navigate("/verify-otp") }] },
             ].map(col => (
               <div key={col.title}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>{col.title}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {col.links.map(link => (
-                    <button key={link.label} onClick={link.action} style={{ background: "none", border: "none", textAlign: "left", fontSize: 13, color: "#64748b", cursor: "pointer", padding: 0, fontFamily: "inherit", transition: "color 0.15s" }}
-                      onMouseEnter={e => e.currentTarget.style.color = "#94a3b8"}
-                      onMouseLeave={e => e.currentTarget.style.color = "#64748b"}
-                    >{link.label}</button>
+                    <button key={link.label} onClick={link.action} style={{ background: "none", border: "none", textAlign: "left", fontSize: 13, color: "#64748b", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>{link.label}</button>
                   ))}
                 </div>
               </div>
@@ -793,8 +739,8 @@ const [modal, setModal] = useState(null);
 
       {/* ── Modals ── */}
       {modal === "login" && <LoginModal onClose={closeModal} onSwitchToSignup={() => setModal("signup")} />}
-{modal === "signup" && <SignupModal onClose={closeModal} onSwitchToLogin={() => setModal("login")} defaultRole="user" />}
-{modal === "signup-volunteer" && <SignupModal onClose={closeModal} onSwitchToLogin={() => setModal("login")} defaultRole="volunteer" />}
+      {modal === "signup" && <SignupModal onClose={closeModal} onSwitchToLogin={() => setModal("login")} defaultRole="user" />}
+      {modal === "signup-volunteer" && <SignupModal onClose={closeModal} onSwitchToLogin={() => setModal("login")} defaultRole="volunteer" />}
 
       <style>{`
         @keyframes lpFadeIn { from{opacity:0} to{opacity:1} }
