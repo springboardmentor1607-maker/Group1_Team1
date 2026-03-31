@@ -27,34 +27,54 @@ function CleanStreetLogo({ size = 100 }) {
         <g fill="white">
           <rect x="25" y="78" width="16" height="32" />
           <rect x="27" y="80" width="3" height="3" fill="#90caf9" /><rect x="32" y="80" width="3" height="3" fill="#90caf9" />
-          <rect x="42" y="60" width="18" height="50" /><rect x="50" y="52" width="2" height="9" />
+          <rect x="27" y="86" width="3" height="3" fill="#90caf9" /><rect x="32" y="86" width="3" height="3" fill="#90caf9" />
+          <rect x="42" y="60" width="18" height="50" />
+          <rect x="50" y="52" width="2" height="9" />
           <rect x="44" y="64" width="4" height="4" fill="#90caf9" /><rect x="51" y="64" width="4" height="4" fill="#90caf9" />
           <rect x="44" y="72" width="4" height="4" fill="#90caf9" /><rect x="51" y="72" width="4" height="4" fill="#90caf9" />
-          <rect x="62" y="50" width="20" height="60" /><rect x="71" y="42" width="2" height="10" />
+          <rect x="62" y="50" width="20" height="60" />
+          <rect x="71" y="42" width="2" height="10" />
           <rect x="64" y="54" width="5" height="5" fill="#90caf9" /><rect x="72" y="54" width="5" height="5" fill="#90caf9" />
           <rect x="64" y="63" width="5" height="5" fill="#90caf9" /><rect x="72" y="63" width="5" height="5" fill="#90caf9" />
           <rect x="64" y="72" width="5" height="5" fill="#90caf9" /><rect x="72" y="72" width="5" height="5" fill="#90caf9" />
+          <rect x="64" y="81" width="5" height="5" fill="#90caf9" />
           <rect x="84" y="58" width="18" height="52" />
           <rect x="86" y="62" width="4" height="4" fill="#90caf9" /><rect x="93" y="62" width="4" height="4" fill="#90caf9" />
           <rect x="86" y="70" width="4" height="4" fill="#90caf9" /><rect x="93" y="70" width="4" height="4" fill="#90caf9" />
           <rect x="104" y="65" width="16" height="45" />
           <rect x="106" y="68" width="4" height="4" fill="#90caf9" /><rect x="112" y="68" width="4" height="4" fill="#90caf9" />
+          <rect x="106" y="76" width="4" height="4" fill="#90caf9" />
           <rect x="121" y="74" width="16" height="36" />
           <rect x="123" y="78" width="3" height="3" fill="#90caf9" /><rect x="129" y="78" width="3" height="3" fill="#90caf9" />
+          <rect x="123" y="85" width="3" height="3" fill="#90caf9" />
         </g>
         <ellipse cx="100" cy="132" rx="95" ry="44" fill="#81c784" />
         <path d="M13,148 Q50,110 100,120 Q150,110 187,148 L187,190 L13,190 Z" fill="url(#grassG2)" />
         <path d="M86,190 Q91,150 100,120 Q109,150 114,190 Z" fill="url(#roadG2)" />
+        <line x1="100" y1="178" x2="100" y2="170" stroke="white" strokeWidth="1.5" strokeDasharray="3,3" />
+        <line x1="100" y1="165" x2="100" y2="155" stroke="white" strokeWidth="1.5" strokeDasharray="3,3" />
         <circle cx="48" cy="130" r="10" fill="#2e7d32" /><circle cx="42" cy="136" r="9" fill="#43a047" />
         <circle cx="54" cy="136" r="9" fill="#43a047" /><rect x="47" y="142" width="3" height="7" fill="#5d4037" />
         <circle cx="152" cy="130" r="10" fill="#2e7d32" /><circle cx="146" cy="136" r="9" fill="#43a047" />
         <circle cx="158" cy="136" r="9" fill="#43a047" /><rect x="151" y="142" width="3" height="7" fill="#5d4037" />
+        <path d="M132,44 Q134,41 136,44" stroke="#37474f" strokeWidth="1.2" fill="none" />
+        <path d="M142,37 Q144,34 146,37" stroke="#37474f" strokeWidth="1.2" fill="none" />
       </g>
       <circle cx="100" cy="100" r="87" fill="none" stroke="#4caf50" strokeWidth="3" />
       <path id="la2" d="M 26,100 A 74,74 0 0,1 174,100" fill="none" />
       <text fontFamily="'Arial Rounded MT Bold', Arial, sans-serif" fontSize="17" fontWeight="800" fill="#2e7d32" letterSpacing="2.5">
         <textPath href="#la2" startOffset="7%">CLEAN STREETS</textPath>
       </text>
+      <g transform="translate(12,106) rotate(-15)">
+        <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)" />
+        <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)" />
+        <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)" />
+      </g>
+      <g transform="translate(188,106) rotate(15) scale(-1,1)">
+        <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)" />
+        <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)" />
+        <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)" />
+      </g>
     </svg>
   );
 }
@@ -76,30 +96,82 @@ function getStrength(password) {
   return { score, ...map[score] };
 }
 
+// ── GPS reverse-geocode via Nominatim (same as Maps page + LandingPage modal) ─
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    const a = data.address || {};
+    const city  = a.city || a.town || a.village || a.county || "";
+    const state = a.state || "";
+    return city && state ? `${city}, ${state}` : city || state || data.display_name || "";
+  } catch {
+    return "";
+  }
+}
+
+const roles = [
+  { key: "user",      icon: "🧑‍💼", label: "Citizen",   desc: "Report and track civic issues"     },
+  { key: "volunteer", icon: "🤝",   label: "Volunteer", desc: "Help resolve issues in your area"   },
+  { key: "admin",     icon: "🛡️",  label: "Admin",     desc: "Manage platform & volunteers"       },
+];
+
 export default function Signup() {
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
+  // eslint-disable-next-line no-unused-vars
   const { login } = useAuth();
 
   const [form, setForm] = useState({
-    firstName: "",
-    lastName:  "",
-    email:     "",
-    password:  "",
-    role:      "user",
-    location:  "",   // ✅ always collected for all roles
+    firstName: "", lastName: "", email: "",
+    password: "", location: "", role: "user",
   });
-
-  const [showPass, setShowPass] = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [success,  setSuccess]  = useState(false);
-  const [errors,   setErrors]   = useState({});
+  const [showPass,   setShowPass]   = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [success,    setSuccess]    = useState(false);
+  const [errors,     setErrors]     = useState({});
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError,   setGpsError]   = useState("");
 
   const strength = getStrength(form.password);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(f  => ({ ...f,  [name]: value }));
+    setForm(f => ({ ...f, [name]: value }));
     setErrors(er => ({ ...er, [name]: "" }));
+  };
+
+  // ── GPS: detect location and reverse-geocode to "City, State" string ──
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsError("GPS is not supported by your browser.");
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError("");
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const city = await reverseGeocode(coords.latitude, coords.longitude);
+        if (city) {
+          setForm(f => ({ ...f, location: city }));
+          setErrors(er => ({ ...er, location: "" }));
+        } else {
+          setGpsError("Couldn't detect location. Please type it manually.");
+        }
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsError(
+          err.code === 1
+            ? "Location access denied. Please allow it or type manually."
+            : "Couldn't get your location. Please type it manually."
+        );
+        setGpsLoading(false);
+      },
+      { timeout: 10000 }
+    );
   };
 
   const validate = () => {
@@ -108,12 +180,9 @@ export default function Signup() {
     if (!form.lastName.trim())  e.lastName  = "Last name is required";
     if (!form.email.trim())     e.email     = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email address";
-    if (!form.password)         e.password  = "Password is required";
+    if (!form.password)               e.password = "Password is required";
     else if (form.password.length < 8) e.password = "Password must be at least 8 characters";
-    // location required only for volunteers
-    if (form.role === "volunteer" && !form.location.trim()) {
-      e.location = "Location is required for volunteers";
-    }
+    if (form.role === "volunteer" && !form.location.trim())  e.location  = "Location is required for volunteers";
     return e;
   };
 
@@ -126,17 +195,19 @@ export default function Signup() {
       setLoading(true);
       await API.post("/api/otp/send-register-otp", {
         email: form.email,
-        name:  `${form.firstName} ${form.lastName}`,
+        name:  form.firstName + " " + form.lastName,
       });
       setLoading(false);
-      // ✅ Pass location to VerifyOtp so it reaches the backend
+      // Store pendingLocation in sessionStorage as a fallback in case
+      // react-router state is lost on page refresh during OTP verification.
+      sessionStorage.setItem("cs_pending_location", form.location);
       navigate("/verify-otp", {
         state: {
           email:    form.email,
-          name:     `${form.firstName} ${form.lastName}`,
+          name:     form.firstName + " " + form.lastName,
           password: form.password,
+          location: form.location,   // ← passed to VerifyOtp → stored in DB
           role:     form.role,
-          location: form.location,   // ✅ IMPORTANT
         },
       });
     } catch (err) {
@@ -145,46 +216,56 @@ export default function Signup() {
     }
   };
 
-  const roles = [
-    { key: "user",      icon: "🧑‍💼", label: "Citizen"   },
-    { key: "volunteer", icon: "🤝",   label: "Volunteer" },
-    { key: "admin",     icon: "🛡️",  label: "Admin"     },
-  ];
-
   return (
     <div className="auth-page">
-
-      {/* ── Left Panel ── */}
+      {/* ── Left: Branding Panel ── */}
       <div className="auth-panel">
         <div className="auth-panel__inner">
           <div className="auth-panel__logo">
             <CleanStreetLogo size={110} />
           </div>
           <h1 className="auth-panel__title">
-            Be the Change<br />Your City <span>Needs</span>
+            Join the <span>CleanStreet</span> Community
           </h1>
           <p className="auth-panel__desc">
-            Create your free account and start making a difference. Report issues,
-            earn civic badges, and help build a cleaner, safer community.
+            Help build cleaner, safer cities. Report issues, track progress, and make a real difference in your neighbourhood.
           </p>
           <div className="auth-features">
             <div className="auth-feature">
-              <div className="auth-feature__icon">🏅</div>
-              <div className="auth-feature__text"><strong>Earn Civic Badges</strong> Get recognized for your contributions.</div>
+              <div className="auth-feature__icon">📍</div>
+              <div className="auth-feature__text">
+                <strong>Report Issues Instantly</strong>
+                Snap a photo, pin the location, done in seconds.
+              </div>
             </div>
             <div className="auth-feature">
-              <div className="auth-feature__icon">📊</div>
-              <div className="auth-feature__text"><strong>Personal Dashboard</strong> Track all your reports and impact.</div>
+              <div className="auth-feature__icon">🔄</div>
+              <div className="auth-feature__text">
+                <strong>Track in Real-Time</strong>
+                Follow your complaint from submission to resolution.
+              </div>
             </div>
             <div className="auth-feature">
-              <div className="auth-feature__icon">🔔</div>
-              <div className="auth-feature__text"><strong>Live Notifications</strong> Get updates the moment your issue is acted upon.</div>
+              <div className="auth-feature__icon">🏙️</div>
+              <div className="auth-feature__text">
+                <strong>Community Impact</strong>
+                See how your reports are improving your city.
+              </div>
             </div>
           </div>
           <div className="auth-stats">
-            <div className="auth-stat"><span className="auth-stat__num">Free</span><span className="auth-stat__label">Always</span></div>
-            <div className="auth-stat"><span className="auth-stat__num">30s</span><span className="auth-stat__label">To Sign Up</span></div>
-            <div className="auth-stat"><span className="auth-stat__num">🔒</span><span className="auth-stat__label">Secure</span></div>
+            <div className="auth-stat">
+              <span className="auth-stat__num">1.2k</span>
+              <span className="auth-stat__label">Citizens</span>
+            </div>
+            <div className="auth-stat">
+              <span className="auth-stat__num">248</span>
+              <span className="auth-stat__label">Resolved</span>
+            </div>
+            <div className="auth-stat">
+              <span className="auth-stat__num">🔒</span>
+              <span className="auth-stat__label">Secure</span>
+            </div>
           </div>
         </div>
       </div>
@@ -199,7 +280,7 @@ export default function Signup() {
               <h2 className="auth-success__title">You're all set!</h2>
               <p className="auth-success__msg">
                 Welcome to CleanStreet, {form.firstName}!<br />
-                Your account has been created.
+                Your account has been created. Let's start making your city cleaner.
               </p>
               <button className="auth-btn" style={{ marginTop: 24 }}
                 onClick={() => navigate(form.role === "admin" ? "/admin" : form.role === "volunteer" ? "/volunteer" : "/dashboard")}>
@@ -213,24 +294,22 @@ export default function Signup() {
                 <h2 className="auth-card__title">Create your account 🌿</h2>
                 <p className="auth-card__subtitle">
                   Already have an account?{" "}
-                  <button onClick={() => navigate("/login")} style={{ background:"none", border:"none", color:"var(--auth-primary)", fontWeight:600, cursor:"pointer", padding:0, font:"inherit" }}>
-                    Sign in
-                  </button>
+                  <button onClick={() => navigate("/login")} style={{ background: "none", border: "none", color: "var(--auth-primary)", fontWeight: 600, cursor: "pointer", padding: 0, font: "inherit" }}>Sign in</button>
                 </p>
               </div>
 
               <form className="auth-form" onSubmit={handleSubmit}>
 
                 {errors.general && (
-                  <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626", display:"flex", alignItems:"center", gap:6 }}>
+                  <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
                     ⚠️ {errors.general}
                   </div>
                 )}
 
-                {/* First + Last Name */}
+                {/* Name row */}
                 <div className="auth-row">
                   <div className="auth-group">
-                    <label className="auth-label">First Name</label>
+                    <label className="auth-label">First Name <span style={{ color: "#dc2626" }}>*</span></label>
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon">👤</span>
                       <input className={`auth-input${errors.firstName ? " auth-input--error" : ""}`} type="text" name="firstName" placeholder="John" value={form.firstName} onChange={handleChange} />
@@ -238,7 +317,7 @@ export default function Signup() {
                     {errors.firstName && <span className="auth-error-msg">⚠ {errors.firstName}</span>}
                   </div>
                   <div className="auth-group">
-                    <label className="auth-label">Last Name</label>
+                    <label className="auth-label">Last Name <span style={{ color: "#dc2626" }}>*</span></label>
                     <div className="auth-input-wrap">
                       <span className="auth-input-icon">👤</span>
                       <input className={`auth-input${errors.lastName ? " auth-input--error" : ""}`} type="text" name="lastName" placeholder="Doe" value={form.lastName} onChange={handleChange} />
@@ -249,7 +328,7 @@ export default function Signup() {
 
                 {/* Email */}
                 <div className="auth-group">
-                  <label className="auth-label">Email address</label>
+                  <label className="auth-label">Email address <span style={{ color: "#dc2626" }}>*</span></label>
                   <div className="auth-input-wrap">
                     <span className="auth-input-icon">✉️</span>
                     <input className={`auth-input${errors.email ? " auth-input--error" : ""}`} type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
@@ -257,37 +336,9 @@ export default function Signup() {
                   {errors.email && <span className="auth-error-msg">⚠ {errors.email}</span>}
                 </div>
 
-                {/* ✅ Location — always shown, required only for volunteers */}
-                <div className="auth-group">
-                  <label className="auth-label">
-                    Location / City
-                    {form.role === "volunteer"
-                      ? <span style={{ color:"#ef4444", marginLeft:4 }}>*</span>
-                      : <span style={{ fontSize:11, color:"#9ca3af", marginLeft:6 }}>(optional)</span>
-                    }
-                  </label>
-                  <div className="auth-input-wrap">
-                    <span className="auth-input-icon">📍</span>
-                    <input
-                      className={`auth-input${errors.location ? " auth-input--error" : ""}`}
-                      type="text"
-                      name="location"
-                      placeholder={form.role === "volunteer" ? "e.g. Lucknow, Uttar Pradesh" : "e.g. Chennai (optional)"}
-                      value={form.location}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  {errors.location
-                    ? <span className="auth-error-msg">⚠ {errors.location}</span>
-                    : form.role === "volunteer"
-                      ? <span style={{ fontSize:11, color:"#2563eb", marginTop:3, display:"block" }}>📌 Used to match you with complaints in your area</span>
-                      : null
-                  }
-                </div>
-
                 {/* Password */}
                 <div className="auth-group">
-                  <label className="auth-label">Password</label>
+                  <label className="auth-label">Password <span style={{ color: "#dc2626" }}>*</span></label>
                   <div className="auth-input-wrap">
                     <span className="auth-input-icon">🔒</span>
                     <input className={`auth-input${errors.password ? " auth-input--error" : ""}`} type={showPass ? "text" : "password"} name="password" placeholder="Min. 8 characters" value={form.password} onChange={handleChange} autoComplete="new-password" />
@@ -297,24 +348,94 @@ export default function Signup() {
                   {form.password && (
                     <div className="auth-strength">
                       <div className="auth-strength__bars">
-                        {[1,2,3,4].map(i => (
+                        {[1, 2, 3, 4].map(i => (
                           <div key={i} className={`auth-strength__bar${strength.score >= i ? ` auth-strength__bar--${strength.color}` : ""}`} />
                         ))}
                       </div>
-                      <span className="auth-strength__label">{strength.label ? `Password strength: ${strength.label}` : ""}</span>
+                      <span className="auth-strength__label">
+                        {strength.label ? `Password strength: ${strength.label}` : ""}
+                      </span>
                     </div>
                   )}
                 </div>
 
-                {/* Role */}
+                {/* ── Location with GPS button ── */}
+                <div className="auth-group">
+                  <label className="auth-label">
+                    Location {form.role === "volunteer" && <span style={{ color: "#dc2626" }}>*</span>}
+                  </label>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <div className="auth-input-wrap" style={{ flex: 1 }}>
+                      <span className="auth-input-icon">📍</span>
+                      <input
+                        className={`auth-input${errors.location ? " auth-input--error" : ""}`}
+                        type="text"
+                        name="location"
+                        placeholder="e.g. Kanpur, Uttar Pradesh"
+                        value={form.location}
+                        onChange={handleChange}
+                        autoComplete="address-level2"
+                      />
+                    </div>
+                    {/* 🎯 GPS button — same look as Maps page locate button */}
+                    <button
+                      type="button"
+                      onClick={handleUseLocation}
+                      disabled={gpsLoading}
+                      title="Detect my current location"
+                      style={{
+                        flexShrink: 0,
+                        height: 44,
+                        padding: "0 14px",
+                        border: "1.5px solid var(--auth-primary, #2563eb)",
+                        borderRadius: 10,
+                        background: gpsLoading ? "#eff6ff" : "var(--auth-primary, #2563eb)",
+                        color: gpsLoading ? "var(--auth-primary, #2563eb)" : "#fff",
+                        fontSize: 20,
+                        cursor: gpsLoading ? "wait" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "all 0.15s",
+                        marginTop: 1,
+                      }}
+                    >
+                      {gpsLoading ? (
+                        <span style={{ fontSize: 13, fontWeight: 700 }}>…</span>
+                      ) : "🎯"}
+                    </button>
+                  </div>
+
+                  {/* GPS status */}
+                  {gpsLoading && (
+                    <span className="auth-error-msg" style={{ color: "#2563eb" }}>
+                      📡 Detecting your location…
+                    </span>
+                  )}
+                  {gpsError && !gpsLoading && (
+                    <span className="auth-error-msg">⚠ {gpsError}</span>
+                  )}
+                  {!gpsError && !gpsLoading && form.location && !errors.location && (
+                    <span style={{ fontSize: 11, color: "#16a34a", marginTop: 4, display: "block" }}>✓ Location set</span>
+                  )}
+                  {errors.location && <span className="auth-error-msg">⚠ {errors.location}</span>}
+                  <span style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, display: "block" }}>
+                    Your city or district — used to match you with nearby complaints
+                  </span>
+                </div>
+
+                {/* Role selector */}
                 <div className="auth-group">
                   <label className="auth-label">I am a…</label>
-                  <div className="auth-roles" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+                  <div className="auth-roles" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                     {roles.map(r => (
-                      <button key={r.key} type="button"
+                      <button
+                        key={r.key}
+                        type="button"
                         className={`auth-role-btn${form.role === r.key ? " auth-role-btn--active" : ""}`}
                         onClick={() => setForm(f => ({ ...f, role: r.key }))}
-                        style={r.key === "admin" ? { gridColumn:"1 / -1" } : {}}>
+                        style={r.key === "admin" ? { gridColumn: "1 / -1" } : {}}
+                      >
                         <span className="auth-role-btn__icon">{r.icon}</span>
                         <span className="auth-role-btn__label">{r.label}</span>
                       </button>
@@ -323,7 +444,7 @@ export default function Signup() {
                 </div>
 
                 <button className="auth-btn auth-btn--green" type="submit" disabled={loading}>
-                  {loading ? <><span className="auth-btn__spinner" />Creating account…</> : "Create Account 🌿"}
+                  {loading ? (<><span className="auth-btn__spinner" />Creating account…</>) : "Create Account 🌿"}
                 </button>
 
                 <p className="auth-terms">

@@ -179,7 +179,7 @@ export default function Login() {
       <div className="auth-form-side">
         <div className="auth-card">
           <div className="auth-card__header">
-            <button className="auth-card__back" onClick={() => navigate("/dashboard")}>← Back to dashboard</button>
+            <button className="auth-card__back" onClick={() => navigate("/dashboard")}>← Back to home</button>
             <h2 className="auth-card__title">Welcome back 👋</h2>
             <p className="auth-card__subtitle">
               Don't have an account?{" "}
@@ -206,7 +206,7 @@ export default function Login() {
             )}
 
             <div className="auth-group">
-              <label className="auth-label">Email address</label>
+              <label className="auth-label">Email address <span style={{ color: "#dc2626" }}>*</span></label>
               <div className="auth-input-wrap">
                 <span className="auth-input-icon">✉️</span>
                 <input className={`auth-input${error ? " auth-input--error" : ""}`} type="email" name="email" placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
@@ -214,7 +214,7 @@ export default function Login() {
             </div>
 
             <div className="auth-group">
-              <label className="auth-label">Password</label>
+              <label className="auth-label">Password <span style={{ color: "#dc2626" }}>*</span></label>
               <div className="auth-input-wrap">
                 <span className="auth-input-icon">🔒</span>
                 <input className={`auth-input${error ? " auth-input--error" : ""}`} type={showPass ? "text" : "password"} name="password" placeholder="Enter your password" value={form.password} onChange={handleChange} autoComplete="current-password" />
