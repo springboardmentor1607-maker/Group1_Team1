@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import "../Profile.css";
 import Navbar from "./Navbar";
 import API from "../api";
+import { useParams } from "react-router-dom";
+
 
 // ─── Stat Mini Card ───────────────────────────────────────────────────────────
 function StatMini({ icon, value, label, colorClass }) {
@@ -455,6 +457,7 @@ function DeleteAccountSection({ user, logout }) {
 
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function Profile() {
+    const [saving, setSaving] = useState(false);
     const navigate = useNavigate();
     const { user, updateUser, logout } = useAuth();
     const { id: profileId } = useParams();
@@ -529,13 +532,26 @@ function Profile() {
     const [activeTab, setActiveTab] = useState("info");
     const [locating, setLocating] = useState(false);
 
-    // Re-sync form when user loads/changes — check both _id and id
-    useEffect(() => {
-        const data = buildForm(user);
-        setFormData(data);
-        setSavedData(data);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?._id, user?.id]);
+    function Profile() {
+
+  const [saving, setSaving] = useState(false);
+
+  const buildForm = (user) => {
+    return {
+      name: user?.name || "",
+      email: user?.email || "",
+    };
+  };
+
+  useEffect(() => {
+    if (user) {
+      const data = buildForm(user);
+      setFormData(data);
+      setSavedData(data);
+    }
+  }, [user?._id, user?.id]);
+
+}
 
     const handleUseCurrentLocation = () => {
         if (!navigator.geolocation) return setMessage("Geolocation not supported ❌");
