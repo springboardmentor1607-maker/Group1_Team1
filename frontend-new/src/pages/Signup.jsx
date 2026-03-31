@@ -123,6 +123,7 @@ export default function Signup() {
   const navigate = useNavigate();
   // eslint-disable-next-line no-unused-vars
   const { login } = useAuth();
+
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "",
     password: "", location: "", role: "user",
@@ -272,6 +273,7 @@ export default function Signup() {
       {/* ── Right: Form ── */}
       <div className="auth-form-side">
         <div className="auth-card">
+
           {success ? (
             <div className="auth-success">
               <span className="auth-success__icon">🎉</span>
@@ -297,6 +299,7 @@ export default function Signup() {
               </div>
 
               <form className="auth-form" onSubmit={handleSubmit}>
+
                 {errors.general && (
                   <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
                     ⚠️ {errors.general}
@@ -445,10 +448,9 @@ export default function Signup() {
                 </button>
 
                 <p className="auth-terms">
-                  By signing up you agree to our{" "}
-                  <a href="/terms">Terms of Service</a> and{" "}
-                  <a href="/privacy">Privacy Policy</a>.
+                  By signing up you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.
                 </p>
+
               </form>
             </>
           )}

@@ -71,7 +71,6 @@ function CleanStreetLogo({ size = 44 }) {
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getStrength(pw) {
   if (!pw) return { score: 0, label: "", color: "" };
   let s = 0;
@@ -167,7 +166,7 @@ function LoginModal({ onClose, onSwitchToSignup }) {
       const res = await API.post("/api/auth/login", { email: form.email, password: form.password });
       const data = res.data;
       localStorage.setItem("token", data.token);
-      login(data.user || data);
+      login(data.user || data, data.token);
       const role = (data.user?.role || data.role || "user").toLowerCase();
       onClose();
       if (role === "admin") navigate("/admin");
@@ -482,7 +481,6 @@ function SignupModal({ onClose, onSwitchToLogin }) {
   );
 }
 
-// ─── Complaint Journey Animation ──────────────────────────────────────────────
 function ComplaintJourney() {
   const [activeStep, setActiveStep] = useState(0);
   const steps = [
@@ -523,24 +521,33 @@ function ComplaintJourney() {
   );
 }
 
-// ─── Main Landing Page ────────────────────────────────────────────────────────
 export default function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [modal, setModal] = useState(null);
   const [scrolled, setScrolled] = useState(false);
-  const [stats, setStats] = useState({ total: 0, resolved: 0, users: 0, avgDays: 3 });
+  const [stats, setStats] = useState({ total: "500+", resolved: "380+", users: "1,200+", avgDays: 3 });
   const [recentResolutions, setRecentResolutions] = useState([]);
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const howRef   = useRef(null);
   const featRef  = useRef(null);
   const statsRef = useRef(null);
   const resRef   = useRef(null);
 
+  // ─── FIX: Only fetch stats when user is logged in ─────────────────────────
+  // Previously this called /api/complaints without auth → 401 → api interceptor
+  // redirected to /login. Now we only fetch if the user is authenticated,
+  // and fall back to static numbers for guests.
   useEffect(() => {
+    if (!user) {
+      // Guest — show static fallback numbers, don't hit authenticated endpoints
+      setStatsLoading(false);
+      return;
+    }
     const fetchStats = async () => {
       try {
+        setStatsLoading(true);
         const res = await API.get("/api/complaints");
         const raw = Array.isArray(res.data) ? res.data : res.data?.complaints || [];
         const total = raw.length;
@@ -562,11 +569,13 @@ export default function LandingPage() {
           .map(c => ({ id: String(c._id), title: c.title || "Civic Issue", type: (c.type || "general").toLowerCase(), address: c.address ? c.address.split(",").slice(0, 2).join(", ") : "Local Area", resolvedAt: c.updated_at || c.updatedAt, priority: c.priority || "medium", upvotes: c.upvotes || 0 }));
         setRecentResolutions(recent);
       } catch {
-        setStats({ total: "500+", resolved: "380+", users: "1,200+", avgDays: 3 });
-      } finally { setStatsLoading(false); }
+        // Keep static fallback numbers on error
+      } finally {
+        setStatsLoading(false);
+      }
     };
     fetchStats();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 50);
@@ -594,7 +603,7 @@ export default function LandingPage() {
     { icon: "📍", title: "Pin & Report Instantly", desc: "Snap a photo, mark the spot on the map, submit in under 30 seconds. No paperwork, no queues.", color: "#2563eb", bg: "#dbeafe", cta: "Try Reporting →", onClick: openSignup },
     { icon: "🔄", title: "Real-Time Tracking", desc: "Follow every stage of your complaint with live status updates and push notifications.", color: "#8b5cf6", bg: "#ede9fe", cta: "View Complaints →", onClick: openSignup },
     { icon: "🗺️", title: "City-Wide Issue Map", desc: "See every reported issue on an interactive map. Know exactly what's being worked on near you.", color: "#0891b2", bg: "#cffafe", cta: "Explore Map →", onClick: openSignup },
-    { icon: "🤝", title: "Local Volunteer Network", desc: "Trained volunteers are assigned to every issue — fast, accountable, community-driven action.", color: "#16a34a", bg: "#dcfce7", cta: "Become a Volunteer →", onClick: openSignup },
+    { icon: "🤝", title: "Local Volunteer Network", desc: "Trained volunteers are assigned to every issue — fast, accountable, community-driven action.", color: "#16a34a", bg: "#dcfce7", cta: "Become a Volunteer →", onClick: () => setModal("signup-volunteer") },
     { icon: "🔔", title: "Instant Notifications", desc: "Get notified at every status change. From submission to resolution — always in the loop.", color: "#d97706", bg: "#fef9c3", cta: null, onClick: null },
     { icon: "📊", title: "Personal Dashboard", desc: "Track all your complaints, upvotes, and civic impact from your beautiful personal dashboard.", color: "#dc2626", bg: "#fee2e2", cta: "Go to Dashboard →", onClick: openSignup },
   ];
@@ -806,7 +815,7 @@ export default function LandingPage() {
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "linear-gradient(135deg,#dcfce7,#d1fae5)", color: "#065f46", padding: "6px 18px", borderRadius: 9999, fontSize: 12, fontWeight: 700, marginBottom: 14 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", animation: "lpPulse 1.5s infinite", display: "inline-block" }} />
-              {recentResolutions.length > 0 ? "LIVE FROM OUR DATABASE" : "COMMUNITY SUCCESS STORIES"}
+              COMMUNITY SUCCESS STORIES
             </div>
             <h2 style={{ fontSize: 36, fontWeight: 800, color: "#111827", margin: "0 0 12px" }}>{recentResolutions.length > 0 ? "Issues Resolved Recently" : "Real Problems. Real Solutions."}</h2>
             <p style={{ fontSize: 16, color: "#6b7280" }}>{recentResolutions.length > 0 ? "Pulled live from our database — anonymized civic issues our volunteers just resolved." : "Join thousands already making a difference in their communities."}</p>

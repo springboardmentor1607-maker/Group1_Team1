@@ -1,75 +1,11 @@
 import { useAuth } from "./AuthContext";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import "../Profile.css";
 import Navbar from "./Navbar";
 import API from "../api";
+import { useParams } from "react-router-dom";
 
-// ─── Logo ─────────────────────────────────────────────────────────────────────
-function CleanStreetLogo({ size = 34 }) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
-            <defs>
-                <linearGradient id="skyGP" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#29b6f6" /><stop offset="100%" stopColor="#81d4fa" />
-                </linearGradient>
-                <linearGradient id="grassGP" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#66bb6a" /><stop offset="100%" stopColor="#388e3c" />
-                </linearGradient>
-                <linearGradient id="roadGP" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#78909c" /><stop offset="100%" stopColor="#546e7a" />
-                </linearGradient>
-                <clipPath id="ccP"><circle cx="100" cy="100" r="86" /></clipPath>
-            </defs>
-            <circle cx="100" cy="100" r="98" fill="white" />
-            <circle cx="100" cy="100" r="98" fill="none" stroke="#4caf50" strokeWidth="4" />
-            <circle cx="100" cy="100" r="90" fill="none" stroke="#4caf50" strokeWidth="2" />
-            <circle cx="100" cy="100" r="87" fill="url(#skyGP)" />
-            <g clipPath="url(#ccP)">
-                <g fill="white">
-                    <rect x="25" y="78" width="16" height="32" />
-                    <rect x="27" y="80" width="3" height="3" fill="#90caf9" /><rect x="32" y="80" width="3" height="3" fill="#90caf9" />
-                    <rect x="42" y="60" width="18" height="50" /><rect x="50" y="52" width="2" height="9" />
-                    <rect x="44" y="64" width="4" height="4" fill="#90caf9" /><rect x="51" y="64" width="4" height="4" fill="#90caf9" />
-                    <rect x="44" y="72" width="4" height="4" fill="#90caf9" /><rect x="51" y="72" width="4" height="4" fill="#90caf9" />
-                    <rect x="62" y="50" width="20" height="60" /><rect x="71" y="42" width="2" height="10" />
-                    <rect x="64" y="54" width="5" height="5" fill="#90caf9" /><rect x="72" y="54" width="5" height="5" fill="#90caf9" />
-                    <rect x="64" y="63" width="5" height="5" fill="#90caf9" /><rect x="72" y="63" width="5" height="5" fill="#90caf9" />
-                    <rect x="64" y="72" width="5" height="5" fill="#90caf9" /><rect x="72" y="72" width="5" height="5" fill="#90caf9" />
-                    <rect x="84" y="58" width="18" height="52" />
-                    <rect x="86" y="62" width="4" height="4" fill="#90caf9" /><rect x="93" y="62" width="4" height="4" fill="#90caf9" />
-                    <rect x="86" y="70" width="4" height="4" fill="#90caf9" /><rect x="93" y="70" width="4" height="4" fill="#90caf9" />
-                    <rect x="104" y="65" width="16" height="45" />
-                    <rect x="106" y="68" width="4" height="4" fill="#90caf9" /><rect x="112" y="68" width="4" height="4" fill="#90caf9" />
-                    <rect x="121" y="74" width="16" height="36" />
-                    <rect x="123" y="78" width="3" height="3" fill="#90caf9" /><rect x="129" y="78" width="3" height="3" fill="#90caf9" />
-                </g>
-                <ellipse cx="100" cy="132" rx="95" ry="44" fill="#81c784" />
-                <path d="M13,148 Q50,110 100,120 Q150,110 187,148 L187,190 L13,190 Z" fill="url(#grassGP)" />
-                <path d="M86,190 Q91,150 100,120 Q109,150 114,190 Z" fill="url(#roadGP)" />
-                <line x1="100" y1="178" x2="100" y2="170" stroke="white" strokeWidth="1.5" strokeDasharray="3,3" />
-                <line x1="100" y1="165" x2="100" y2="155" stroke="white" strokeWidth="1.5" strokeDasharray="3,3" />
-                <circle cx="48" cy="130" r="10" fill="#2e7d32" /><circle cx="42" cy="136" r="9" fill="#43a047" />
-                <circle cx="54" cy="136" r="9" fill="#43a047" /><rect x="47" y="142" width="3" height="7" fill="#5d4037" />
-                <circle cx="152" cy="130" r="10" fill="#2e7d32" /><circle cx="146" cy="136" r="9" fill="#43a047" />
-                <circle cx="158" cy="136" r="9" fill="#43a047" /><rect x="151" y="142" width="3" height="7" fill="#5d4037" />
-            </g>
-            <circle cx="100" cy="100" r="87" fill="none" stroke="#4caf50" strokeWidth="3" />
-            <path id="laP" d="M 26,100 A 74,74 0 0,1 174,100" fill="none" />
-            <text fontFamily="Arial Rounded MT Bold, Arial, sans-serif" fontSize="17" fontWeight="800" fill="#2e7d32" letterSpacing="2.5">
-                <textPath href="#laP" startOffset="7%">CLEAN STREETS</textPath>
-            </text>
-            <g transform="translate(12,106) rotate(-15)">
-                <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)" />
-                <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)" />
-            </g>
-            <g transform="translate(188,106) rotate(15) scale(-1,1)">
-                <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)" />
-                <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)" />
-            </g>
-        </svg>
-    );
-}
 
 // ─── Stat Mini Card ───────────────────────────────────────────────────────────
 function StatMini({ icon, value, label, colorClass }) {
@@ -521,6 +457,7 @@ function DeleteAccountSection({ user, logout }) {
 
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 function Profile() {
+    const [saving, setSaving] = useState(false);
     const navigate = useNavigate();
     const { user, updateUser, logout } = useAuth();
     const { id: profileId } = useParams();
@@ -595,6 +532,27 @@ function Profile() {
     const [activeTab, setActiveTab] = useState("info");
     const [locating, setLocating] = useState(false);
 
+    function Profile() {
+
+  const [saving, setSaving] = useState(false);
+
+  const buildForm = (user) => {
+    return {
+      name: user?.name || "",
+      email: user?.email || "",
+    };
+  };
+
+  useEffect(() => {
+    if (user) {
+      const data = buildForm(user);
+      setFormData(data);
+      setSavedData(data);
+    }
+  }, [user?._id, user?.id]);
+
+}
+
     const handleUseCurrentLocation = () => {
         if (!navigator.geolocation) return setMessage("Geolocation not supported ❌");
         setLocating(true);
@@ -602,7 +560,9 @@ function Profile() {
             async (pos) => {
                 try {
                     const { latitude: lat, longitude: lng } = pos.coords;
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+                    const res = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
+                    );
                     const data = await res.json();
                     setFormData(prev => ({ ...prev, location: data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}` }));
                 } catch { setMessage("Could not fetch address ❌"); }
@@ -634,7 +594,9 @@ function Profile() {
     const tabs = ["info", "activity", "security"];
     const avatarText = savedData.fullName ? savedData.fullName.substring(0, 2).toUpperCase() : "DU";
     const memberSince = user?.createdAt || user?.memberSince
-        ? new Date(user.createdAt || user.memberSince).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+        ? new Date(user.createdAt || user.memberSince).toLocaleDateString("en-US", {
+              month: "long", day: "numeric", year: "numeric",
+          })
         : "July 2025";
 
     return (
@@ -674,9 +636,9 @@ function Profile() {
                             <p className="pf-avatar-card__bio">{savedData.bio}</p>
                             <div className="pf-avatar-card__divider" />
                             <div className="pf-avatar-card__meta">
-                                <span>📍 {savedData.location}</span>
-                                <span>📞 {savedData.phone}</span>
-                                <span>✉️ {savedData.email}</span>
+                                <span>📍 {savedData.location || "—"}</span>
+                                <span>📞 {savedData.phone    || "—"}</span>
+                                <span>✉️ {savedData.email    || "—"}</span>
                             </div>
                             <p className="pf-avatar-card__since">Member since {memberSince}</p>
                         </div>
@@ -716,7 +678,6 @@ function Profile() {
                     {/* ─── RIGHT MAIN PANEL ─── */}
                     <div className="pf-main">
 
-                        {/* Tabs */}
                         <div className="pf-tabs">
                             {tabs.map(tab => (
                                 <button key={tab} className={`pf-tab${activeTab === tab ? " pf-tab--active" : ""}`} onClick={() => setActiveTab(tab)}>
@@ -736,11 +697,25 @@ function Profile() {
                                         <p className="pf-card__sub">Update your personal details below</p>
                                     </div>
                                     {!editMode ? (
-                                        <button className="pf-btn pf-btn--primary" onClick={handleEdit}>✏️ Edit Profile</button>
+                                        <button className="pf-btn pf-btn--primary" onClick={handleEdit}>
+                                            ✏️ Edit Profile
+                                        </button>
                                     ) : (
                                         <div className="pf-btn-group">
-                                            <button className="pf-btn pf-btn--outline" onClick={handleCancel}>Cancel</button>
-                                            <button className="pf-btn pf-btn--primary" onClick={handleSave}>💾 Save Changes</button>
+                                            <button
+                                                className="pf-btn pf-btn--outline"
+                                                onClick={handleCancel}
+                                                disabled={saving}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                className="pf-btn pf-btn--primary"
+                                                onClick={handleSave}
+                                                disabled={saving}
+                                            >
+                                                {saving ? "Saving…" : "💾 Save Changes"}
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -797,7 +772,10 @@ function Profile() {
                                         </div>
                                     ) : (
                                         [...complaints]
-                                            .sort((a, b) => new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt) - new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt))
+                                            .sort((a, b) =>
+                                                new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt) -
+                                                new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt)
+                                            )
                                             .slice(0, 10)
                                             .map((c, i) => {
                                                 const status = c.status || "received";
