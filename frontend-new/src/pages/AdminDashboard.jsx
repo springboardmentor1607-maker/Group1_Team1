@@ -1,0 +1,2764 @@
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+// react-router-dom not needed in this component
+import { useAuth } from "./AuthContext";
+import "../Dashboard.css";
+import Navbar from "./Navbar";
+import API from "../api";
+
+// ─── Logo ─────────────────────────────────────────────────────────────────────
+// eslint-disable-next-line no-unused-vars
+function CleanStreetLogo({ size = 44 }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width={size} height={size}>
+      <defs>
+        <linearGradient id="skyGradAD" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#29b6f6" /><stop offset="100%" stopColor="#81d4fa" />
+        </linearGradient>
+        <linearGradient id="grassGradAD" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#66bb6a" /><stop offset="100%" stopColor="#388e3c" />
+        </linearGradient>
+        <linearGradient id="roadGradAD" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#78909c" /><stop offset="100%" stopColor="#546e7a" />
+        </linearGradient>
+        <clipPath id="circleClipAD"><circle cx="100" cy="100" r="86" /></clipPath>
+      </defs>
+      <circle cx="100" cy="100" r="98" fill="white" />
+      <circle cx="100" cy="100" r="98" fill="none" stroke="#4caf50" strokeWidth="4" />
+      <circle cx="100" cy="100" r="90" fill="none" stroke="#4caf50" strokeWidth="2" />
+      <circle cx="100" cy="100" r="87" fill="url(#skyGradAD)" />
+      <g clipPath="url(#circleClipAD)">
+        <g fill="white">
+          <rect x="25" y="78" width="16" height="32" />
+          <rect x="27" y="80" width="3" height="3" fill="#90caf9" /><rect x="32" y="80" width="3" height="3" fill="#90caf9" />
+          <rect x="42" y="60" width="18" height="50" /><rect x="50" y="52" width="2" height="9" fill="white" />
+          <rect x="44" y="64" width="4" height="4" fill="#90caf9" /><rect x="51" y="64" width="4" height="4" fill="#90caf9" />
+          <rect x="44" y="72" width="4" height="4" fill="#90caf9" /><rect x="51" y="72" width="4" height="4" fill="#90caf9" />
+          <rect x="62" y="50" width="20" height="60" /><rect x="71" y="42" width="2" height="10" fill="white" />
+          <rect x="64" y="54" width="5" height="5" fill="#90caf9" /><rect x="72" y="54" width="5" height="5" fill="#90caf9" />
+          <rect x="64" y="63" width="5" height="5" fill="#90caf9" /><rect x="72" y="63" width="5" height="5" fill="#90caf9" />
+          <rect x="64" y="72" width="5" height="5" fill="#90caf9" /><rect x="72" y="72" width="5" height="5" fill="#90caf9" />
+          <rect x="84" y="58" width="18" height="52" />
+          <rect x="86" y="62" width="4" height="4" fill="#90caf9" /><rect x="93" y="62" width="4" height="4" fill="#90caf9" />
+          <rect x="86" y="70" width="4" height="4" fill="#90caf9" /><rect x="93" y="70" width="4" height="4" fill="#90caf9" />
+          <rect x="104" y="65" width="16" height="45" />
+          <rect x="106" y="68" width="4" height="4" fill="#90caf9" /><rect x="112" y="68" width="4" height="4" fill="#90caf9" />
+          <rect x="121" y="74" width="16" height="36" />
+          <rect x="123" y="78" width="3" height="3" fill="#90caf9" /><rect x="129" y="78" width="3" height="3" fill="#90caf9" />
+        </g>
+        <ellipse cx="100" cy="132" rx="95" ry="44" fill="#81c784" />
+        <path d="M13,148 Q50,110 100,120 Q150,110 187,148 L187,190 L13,190 Z" fill="url(#grassGradAD)" />
+        <path d="M86,190 Q91,150 100,120 Q109,150 114,190 Z" fill="url(#roadGradAD)" />
+        <line x1="100" y1="178" x2="100" y2="170" stroke="white" strokeWidth="1.5" strokeDasharray="3,3" />
+        <line x1="100" y1="165" x2="100" y2="155" stroke="white" strokeWidth="1.5" strokeDasharray="3,3" />
+        <circle cx="48" cy="130" r="10" fill="#2e7d32" /><circle cx="42" cy="136" r="9" fill="#43a047" />
+        <circle cx="54" cy="136" r="9" fill="#43a047" /><rect x="47" y="142" width="3" height="7" fill="#5d4037" />
+        <circle cx="152" cy="130" r="10" fill="#2e7d32" /><circle cx="146" cy="136" r="9" fill="#43a047" />
+        <circle cx="158" cy="136" r="9" fill="#43a047" /><rect x="151" y="142" width="3" height="7" fill="#5d4037" />
+      </g>
+      <circle cx="100" cy="100" r="87" fill="none" stroke="#4caf50" strokeWidth="3" />
+      <path id="csArcAD" d="M 26,100 A 74,74 0 0,1 174,100" fill="none" />
+      <text fontFamily="Arial Rounded MT Bold, Arial, sans-serif" fontSize="17" fontWeight="800" fill="#2e7d32" letterSpacing="2.5">
+        <textPath href="#csArcAD" startOffset="7%">CLEAN STREETS</textPath>
+      </text>
+      <g transform="translate(12,106) rotate(-15)">
+        <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)" />
+        <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)" />
+        <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)" />
+      </g>
+      <g transform="translate(188,106) rotate(15) scale(-1,1)">
+        <ellipse cx="0" cy="0" rx="7" ry="3" fill="#4caf50" transform="rotate(-35)" />
+        <ellipse cx="6" cy="-4" rx="6" ry="2.5" fill="#66bb6a" transform="rotate(-65)" />
+        <ellipse cx="-2" cy="5" rx="5" ry="2.5" fill="#388e3c" transform="rotate(5)" />
+      </g>
+    </svg>
+  );
+}
+
+// ─── Zone Dropdown (custom, fixed-position) ───────────────────────────────────
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli",
+  "Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry",
+];
+
+function ZoneDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = React.useRef(null);
+  const dropRef = React.useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const scrollHandler = (e) => {
+      // Only close if the scroll happened outside the dropdown list itself
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", scrollHandler, true);
+    };
+  }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = 260;
+      const top = spaceBelow < dropHeight
+        ? rect.top - dropHeight - 4   // flip upward
+        : rect.bottom + 4;
+      setDropPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
+
+  const label = value === "all" ? "All States" : value;
+
+  const allItems = [
+    { key: "all", label: "🗺️ All States" },
+    ...INDIAN_STATES.map(s => ({ key: s, label: `📍 ${s}` })),
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={handleOpen}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "7.5px 12px",
+          fontSize: 13,
+          color: "#374151",
+          background: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          minWidth: 155,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        🗺️ {label}
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          ref={dropRef}
+          onWheel={e => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            overscrollBehavior: "contain",
+            touchAction: "none",
+            top: dropPos.top,
+            left: dropPos.left,
+            zIndex: 99999,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+            maxHeight: 260,
+            overflowY: "auto",
+            minWidth: 210,
+          }}
+        >
+          {allItems.map(item => {
+            const active = value === item.key || (item.key === "all" && value === "all");
+            return (
+              <div
+                key={item.key}
+                onClick={() => { onChange(item.key); setOpen(false); }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: active ? "#2563eb" : "#374151",
+                  background: active ? "#eff6ff" : "transparent",
+                  fontWeight: active ? 600 : 400,
+                  userSelect: "none",
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {item.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VolunteerDropdown({ value, onChange, volunteers, placeholder = "— Select Volunteer —" }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = React.useRef(null);
+  const dropRef = React.useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    const scrollHandler = (e) => {
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => window.removeEventListener("scroll", scrollHandler, true);
+  }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = 220;
+      const top = spaceBelow < dropHeight ? rect.top - dropHeight - 4 : rect.bottom + 4;
+      setDropPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
+
+  const selected = (Array.isArray(volunteers) ? volunteers : []).find(
+    v => String(v._id) === String(value)
+  );
+  const label = selected ? selected.name : placeholder;
+
+  const allItems = [
+    { key: "", label: placeholder },
+    ...(Array.isArray(volunteers) ? volunteers : []).map(v => ({
+      key: String(v._id),
+      label: v.location
+        ? `🤝 ${v.name} — 📍 ${v.location}`
+        : `🤝 ${v.name}`,
+    })),
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={handleOpen}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "8.5px 12px",
+          fontSize: 12,
+          color: value ? "#111827" : "#9ca3af",
+          background: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          minWidth: 140,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+          fontWeight: value ? 500 : 400,
+        }}
+      >
+        {value
+          ? selected?.location
+            ? `🤝 ${label} — 📍 ${selected.location}`
+            : `🤝 ${label}`
+          : label}
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          ref={dropRef}
+          style={{
+            position: "fixed",
+            overscrollBehavior: "contain",
+            touchAction: "none",
+            top: dropPos.top,
+            left: dropPos.left,
+            zIndex: 99999,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+            maxHeight: 300,
+            overflowY: "scroll",
+            minWidth: 220,
+          }}
+        >
+          {allItems.map((volItem, idx) => {
+            const isActive = String(value) === String(volItem.key);
+            return (
+              <div
+                key={volItem.key === "" ? `__placeholder__${idx}` : volItem.key}
+                onClick={() => { onChange(volItem.key); setOpen(false); }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: isActive ? "#2563eb" : volItem.key === "" ? "#9ca3af" : "#374151",
+                  background: isActive ? "#eff6ff" : "transparent",
+                  fontWeight: isActive ? 600 : 400,
+                  userSelect: "none",
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+              >
+                {volItem.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LocationDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = React.useRef(null);
+  const dropRef = React.useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const scrollHandler = (e) => {
+      // Only close if the scroll happened outside the dropdown list itself
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", scrollHandler, true);
+    };
+  }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = 260;
+      const top = spaceBelow < dropHeight
+        ? rect.top - dropHeight - 4
+        : rect.bottom + 4;
+      setDropPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
+
+  const label = value === "all" ? "All Locations" : value;
+
+  const allItems = [
+    { key: "all", label: "📍 All Locations" },
+    ...INDIAN_STATES.map(s => ({ key: s, label: `📍 ${s}` })),
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={handleOpen}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "6.5px 12px",
+          fontSize: 13,
+          color: "#374151",
+          background: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          minWidth: 155,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        📍 {label}
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          ref={dropRef}
+          onWheel={e => e.stopPropagation()}
+          style={{
+            position: "fixed",
+            overscrollBehavior: "contain",
+            touchAction: "none",
+            top: dropPos.top,
+            left: dropPos.left,
+            zIndex: 99999,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+            maxHeight: 283,
+            overflowY: "auto",
+            minWidth: 210,
+          }}
+        >
+          {allItems.map(item => {
+            const active = value === item.key;
+            return (
+              <div
+                key={item.key}
+                onClick={() => { onChange(item.key); setOpen(false); }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: active ? "#2563eb" : "#374151",
+                  background: active ? "#eff6ff" : "transparent",
+                  fontWeight: active ? 600 : 400,
+                  userSelect: "none",
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {item.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomDropdown({ value, onChange, options, icon = "" }) {
+  const [open, setOpen] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const ref = React.useRef(null);
+  const dropRef = React.useRef(null);
+
+  useEffect(() => {
+    const el = dropRef.current;
+    if (!el) return;
+    const stop = (e) => e.preventDefault();
+    el.addEventListener("wheel", stop, { passive: false });
+    return () => el.removeEventListener("wheel", stop);
+  });
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const scrollHandler = (e) => {
+      // Only close if the scroll happened outside the dropdown list itself
+      if (dropRef.current && dropRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("scroll", scrollHandler, true);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", scrollHandler, true);
+    };
+  }, []);
+
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = 260;
+      const top = spaceBelow < dropHeight
+        ? rect.top - dropHeight - 4
+        : rect.bottom + 4;
+      setDropPos({ top, left: rect.left });
+    }
+    setOpen(o => !o);
+  };
+
+  const selectedLabel = options.find(o => o.key === value)?.label || options[0]?.label;
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={handleOpen}
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "6.5px 12px",
+          fontSize: 13,
+          color: "#374151",
+          background: "#fff",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          whiteSpace: "nowrap",
+          outline: "none",
+          minWidth: 155,
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        {icon && <span>{icon}</span>}
+        {selectedLabel}
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "#9ca3af", paddingLeft: 6 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div
+          ref={dropRef}
+          style={{
+            position: "fixed",
+            overscrollBehavior: "contain",
+            touchAction: "none",
+            top: dropPos.top,
+            left: dropPos.left,
+            zIndex: 99999,
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+            maxHeight: 300,
+            overflowY: "scroll",
+            minWidth: 210,
+          }}
+        >
+          {options.map(item => {
+            const active = value === item.key;
+            return (
+              <div
+                key={item.key}
+                onClick={() => { onChange(item.key); setOpen(false); }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: active ? "#2563eb" : "#374151",
+                  background: active ? "#eff6ff" : "transparent",
+                  fontWeight: active ? 600 : 400,
+                  userSelect: "none",
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#f9fafb"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {item.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+function StatusBadge({ status }) {
+  const map = {
+    resolved: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Resolved" },
+    completed: { bg: "#d1fae5", color: "#065f46", dot: "#10b981", label: "Completed" },
+    assigned: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b", label: "Assigned" },
+    accepted: { bg: "#dcfce7", color: "#166534", dot: "#22c55e", label: "Accepted" },
+    pending: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    in_review: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
+    in_progress: { bg: "#ede9fe", color: "#5b21b6", dot: "#8b5cf6", label: "In Progress" },
+    received: { bg: "#dbeafe", color: "#1d4ed8", dot: "#3b82f6", label: "Pending" },
+    denied: { bg: "#fee2e2", color: "#991b1b", dot: "#ef4444", label: "Denied" },
+  };
+  const key = status?.toLowerCase().replace(" ", "_") || "pending";
+  const s = map[key] || map["pending"];
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      background: s.bg, color: s.color,
+      padding: "3px 10px", borderRadius: 9999,
+      fontSize: 12, fontWeight: 600,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block" }} />
+      {s.label}
+    </span>
+  );
+}
+
+// ─── Priority Badge ───────────────────────────────────────────────────────────
+function PriorityBadge({ priority }) {
+  const map = {
+    critical: { bg: "#fee2e2", color: "#991b1b" },
+    high: { bg: "#ffedd5", color: "#9a3412" },
+    medium: { bg: "#fef9c3", color: "#92400e" },
+    low: { bg: "#dcfce7", color: "#166534" },
+  };
+  const s = map[priority?.toLowerCase()] || map["low"];
+  return (
+    <span style={{
+      background: s.bg, color: s.color,
+      padding: "2px 8px", borderRadius: 9999,
+      fontSize: 11, fontWeight: 700, textTransform: "capitalize",
+    }}>
+      {priority || "—"}
+    </span>
+  );
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({ icon, count, label, accent }) {
+  return (
+    <div className="cs-stat-card" style={{ borderTop: `3px solid ${accent}` }}>
+      <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>
+      <div style={{ fontSize: 32, fontWeight: 800, color: "#111827", lineHeight: 1 }}>{count}</div>
+      <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>{label}</div>
+    </div>
+  );
+}
+
+// ─── Table styles ─────────────────────────────────────────────────────────────
+const TH = ({ children, style }) => (
+  <th style={{
+    padding: "10px 14px", textAlign: "left", fontSize: 12,
+    fontWeight: 700, color: "#6b7280", textTransform: "uppercase",
+    letterSpacing: 0.5, borderBottom: "2px solid #f3f4f6",
+    background: "#f9fafb", ...style,
+  }}>{children}</th>
+);
+
+const TD = ({ children, style }) => (
+  <td style={{
+    padding: "12px 14px", fontSize: 13, color: "#374151",
+    borderBottom: "1px solid #f3f4f6", verticalAlign: "middle", ...style,
+  }}>{children}</td>
+);
+
+// ─── Reports Tab ─────────────────────────────────────────────────────────────
+function ReportsTab({ complaints, users, volunteers }) {
+  const total = complaints.length;
+  const pending = complaints.filter(c => c.status === "received" || c.status === "pending").length;
+  const inProgress = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
+  const resolved = complaints.filter(c => c.status === "resolved").length;
+  const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+
+  const byType = complaints.reduce((acc, c) => {
+    const t = c.type || "other";
+    acc[t] = (acc[t] || 0) + 1;
+    return acc;
+  }, {});
+
+  const byPriority = complaints.reduce((acc, c) => {
+    const p = c.priority || "medium";
+    acc[p] = (acc[p] || 0) + 1;
+    return acc;
+  }, {});
+
+  const volStats = volunteers.map(v => ({
+    name: v.name,
+    resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length,
+    assigned: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length,
+  })).sort((a, b) => b.resolved - a.resolved);
+
+  const downloadCSV = () => {
+    const headers = ["ID", "Title", "Type", "Priority", "Status", "Address", "Reported By", "Assigned To", "Created At", "Updated At"];
+    const rows = complaints.map(c => [
+      String(c._id).slice(-6).toUpperCase(),
+      `"${(c.title || "").replace(/"/g, "'")}"`,
+      c.type || "other",
+      c.priority || "medium",
+      c.status || "received",
+      `"${(c.address || "").replace(/"/g, "'")}"`,
+      `"${c.user_id?.name || "—"}"`,
+      `"${c.assigned_to?.name || "Not assigned"}"`,
+      new Date(c.created_at || c.createdAt).toLocaleDateString(),
+      new Date(c.updated_at || c.updatedAt).toLocaleDateString(),
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cleanstreet_complaints_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadSummary = () => {
+    const html = `
+      <html><head><title>CleanStreet Summary Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 40px; color: #111827; }
+        h1 { color: #1d4ed8; font-size: 24px; margin-bottom: 4px; }
+        .subtitle { color: #6b7280; font-size: 13px; margin-bottom: 28px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+        .stat-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 28px; font-weight: 800; color: #1d4ed8; }
+        .stat-label { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        .section { margin-bottom: 24px; }
+        .section-title { font-size: 14px; font-weight: 700; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+        .resolved { background: #dcfce7; color: #166534; }
+        .in_review { background: #ede9fe; color: #5b21b6; }
+        .received  { background: #dbeafe; color: #1d4ed8; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>
+      <h1>🌿 CleanStreet — Summary Report</h1>
+      <div class="subtitle">Generated: ${new Date().toLocaleString()}</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-label">Total Complaints</div></div>
+        <div class="stat-box"><div class="stat-num">${pending}</div><div class="stat-label">Pending</div></div>
+        <div class="stat-box"><div class="stat-num">${inProgress}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#22c55e">${resolved}</div><div class="stat-label">Resolved</div></div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num">${resolveRate}%</div><div class="stat-label">Resolution Rate</div></div>
+        <div class="stat-box"><div class="stat-num">${users.length}</div><div class="stat-label">Total Users</div></div>
+        <div class="stat-box"><div class="stat-num">${volunteers.length}</div><div class="stat-label">Volunteers</div></div>
+        <div class="stat-box"><div class="stat-num">${total - resolved}</div><div class="stat-label">Pending</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Complaints by Type</div>
+        <table><tr>${Object.entries(byType).map(([k]) => `<th>${k}</th>`).join("")}</tr>
+        <tr>${Object.entries(byType).map(([, v]) => `<td>${v}</td>`).join("")}</tr></table>
+      </div>
+      <div class="section">
+        <div class="section-title">Complaints by Priority</div>
+        <table><tr>${Object.entries(byPriority).map(([k]) => `<th>${k}</th>`).join("")}</tr>
+        <tr>${Object.entries(byPriority).map(([, v]) => `<td>${v}</td>`).join("")}</tr></table>
+      </div>
+      <div class="section">
+        <div class="section-title">Top Volunteers</div>
+        <table><tr><th>#</th><th>Name</th><th>Assigned</th><th>Resolved</th></tr>
+        ${volStats.map((v, i) => `<tr><td>${i + 1}</td><td>${v.name}</td><td>${v.assigned}</td><td>${v.resolved}</td></tr>`).join("")}
+        </table>
+      </div>
+      <div class="section">
+        <div class="section-title">All Complaints</div>
+        <table>
+          <tr><th>ID</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Reported By</th><th>Date</th></tr>
+          ${complaints.map(c => `<tr>
+            <td style="font-family:monospace;color:#9ca3af">#${String(c._id).slice(-6).toUpperCase()}</td>
+            <td>${c.title || "—"}</td>
+            <td style="text-transform:capitalize">${c.type || "other"}</td>
+            <td style="text-transform:capitalize">${c.priority || "medium"}</td>
+            <td><span class="badge ${c.status}">${(c.status || "received").replace("_", " ")}</span></td>
+            <td>${c.user_id?.name || "—"}</td>
+            <td>${new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
+          </tr>`).join("")}
+        </table>
+      </div>
+      </body></html>`;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 500);
+  };
+
+  const downloadSingleReport = (c) => {
+    const id = String(c._id).slice(-6).toUpperCase();
+    const statusColor = c.status === "resolved" ? "#166534" : c.status === "in_review" ? "#5b21b6" : "#1d4ed8";
+    const statusBg = c.status === "resolved" ? "#dcfce7" : c.status === "in_review" ? "#ede9fe" : "#dbeafe";
+    const html = `
+      <html><head><title>Complaint #${id}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 40px; color: #111827; max-width: 700px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg,#1e3a8a,#2563eb); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; }
+        .header h1 { margin: 0 0 4px; font-size: 22px; }
+        .header .meta { font-size: 12px; opacity: 0.7; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; background: ${statusBg}; color: ${statusColor}; }
+        .section { background: #f8fafc; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; }
+        .section-title { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .field-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+        .field-value { font-size: 13px; color: #111827; font-weight: 500; }
+        .stat-row { display: flex; gap: 24px; }
+        .stat { text-align: center; }
+        .stat-num { font-size: 22px; font-weight: 800; }
+        .stat-label { font-size: 11px; color: #9ca3af; }
+        .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 28px; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>
+      <div class="header">
+        <div class="meta">CleanStreet Complaint Report · Generated ${new Date().toLocaleString()}</div>
+        <h1>${c.title || "Untitled Complaint"}</h1>
+        <div class="meta">#${id} · ${c.type || "General"}</div>
+        <div style="margin-top:10px"><span class="badge">${(c.status || "received").replace("_", " ").toUpperCase()}</span></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Description</div>
+        <div style="font-size:13px;color:#374151;line-height:1.6">${c.description || "No description provided."}</div>
+      </div>
+      <div class="section">
+        <div class="section-title">Details</div>
+        <div class="grid">
+          <div><div class="field-label">Type</div><div class="field-value" style="text-transform:capitalize">${c.type || "other"}</div></div>
+          <div><div class="field-label">Priority</div><div class="field-value" style="text-transform:capitalize">${c.priority || "medium"}</div></div>
+          <div><div class="field-label">Address</div><div class="field-value">${c.address || "—"}</div></div>
+          <div><div class="field-label">Landmark</div><div class="field-value">${c.landmark || "—"}</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">People</div>
+        <div class="grid">
+          <div><div class="field-label">Reported By</div><div class="field-value">${c.user_id?.name || "—"}</div><div style="font-size:11px;color:#6b7280">${c.user_id?.email || ""}</div></div>
+          <div><div class="field-label">Assigned To</div><div class="field-value">${c.assigned_to?.name || "Not assigned"}</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Dates</div>
+        <div class="grid">
+          <div><div class="field-label">Reported On</div><div class="field-value">${new Date(c.created_at || c.createdAt).toLocaleString()}</div></div>
+          <div><div class="field-label">Last Updated</div><div class="field-value">${new Date(c.updated_at || c.updatedAt).toLocaleString()}</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Community Engagement</div>
+        <div class="stat-row">
+          <div class="stat"><div class="stat-num" style="color:#22c55e">${c.upvotes || 0}</div><div class="stat-label">Upvotes</div></div>
+          <div class="stat"><div class="stat-num" style="color:#ef4444">${c.downvotes || 0}</div><div class="stat-label">Downvotes</div></div>
+          <div class="stat"><div class="stat-num" style="color:#3b82f6">${c.comments || 0}</div><div class="stat-label">Comments</div></div>
+        </div>
+      </div>
+      <div class="footer">CleanStreet · Civic Issue Reporting & Tracking · Report ID: ${id}</div>
+      </body></html>`;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 500);
+  };
+
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 10;
+  const totalPages = Math.ceil(complaints.length / PAGE_SIZE);
+  const pagedComplaints = complaints.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const barMax = Math.max(...Object.values(byType), 1);
+  const TYPE_COLORS = { pothole: "#3b82f6", streetlight: "#f59e0b", garbage: "#10b981", water: "#06b6d4", road: "#8b5cf6", noise: "#f43f5e", other: "#6b7280", general: "#6b7280" };
+  const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", urgent: "#ef4444", critical: "#dc2626" };
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Reports & Analytics</h1>
+          <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Generate and download complaint reports.</p>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={downloadCSV} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "#2563eb", color: "#fff", border: "none",
+            borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+          }}>📥 Download CSV</button>
+          <button onClick={downloadSummary} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
+            borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+          }}>📄 Summary PDF</button>
+        </div>
+      </div>
+
+      {/* Stats Row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+        {[
+          { label: "Total Complaints", value: total, icon: "📋", color: "#3b82f6" },
+          { label: "Pending", value: pending, icon: "📥", color: "#f59e0b" },
+          { label: "In Progress", value: inProgress, icon: "🔄", color: "#8b5cf6" },
+          { label: "Resolved", value: resolved, icon: "✅", color: "#22c55e" },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: "#fff", borderRadius: 12, padding: "18px 20px",
+            border: "1px solid #e5e7eb", borderTop: `3px solid ${s.color}`,
+          }}>
+            <div style={{ fontSize: 24, marginBottom: 6 }}>{s.icon}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#111827", lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+
+        {/* Complaints by Type */}
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>📊 Complaints by Type</div>
+          {Object.entries(byType).length === 0 ? (
+            <div style={{ color: "#9ca3af", fontSize: 13 }}>No data yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([type, count]) => (
+                <div key={type}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 500, color: "#374151", textTransform: "capitalize" }}>{type}</span>
+                    <span style={{ fontWeight: 700, color: "#111827" }}>{count}</span>
+                  </div>
+                  <div style={{ height: 8, background: "#f3f4f6", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 99,
+                      background: TYPE_COLORS[type] || "#6b7280",
+                      width: `${Math.round((count / barMax) * 100)}%`,
+                      transition: "width 0.5s",
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Resolution Rate */}
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🎯 Resolution Rate</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", padding: "10px 0" }}>
+            <div style={{
+              width: 120, height: 120, borderRadius: "50%",
+              background: `conic-gradient(#22c55e ${resolveRate * 3.6}deg, #f3f4f6 0deg)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <div style={{
+                width: 88, height: 88, borderRadius: "50%", background: "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column",
+              }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{resolveRate}%</div>
+                <div style={{ fontSize: 10, color: "#9ca3af" }}>Resolved</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 20, marginTop: 16 }}>
+              {[
+                { label: "Pending", count: pending, color: "#f59e0b" },
+                { label: "In Progress", count: inProgress, color: "#8b5cf6" },
+                { label: "Resolved", count: resolved, color: "#22c55e" },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign: "center" }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: s.color, margin: "0 auto 4px" }} />
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>{s.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{s.count}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* By Priority */}
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🚨 Complaints by Priority</div>
+          {Object.entries(byPriority).length === 0 ? (
+            <div style={{ color: "#9ca3af", fontSize: 13 }}>No data yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {Object.entries(byPriority).sort((a, b) => b[1] - a[1]).map(([p, count]) => (
+                <div key={p} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ minWidth: 70, fontSize: 11, fontWeight: 700, textTransform: "capitalize", color: PRIORITY_COLORS[p] || "#6b7280" }}>{p}</span>
+                  <div style={{ flex: 1, height: 20, background: "#f3f4f6", borderRadius: 6, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 6, background: PRIORITY_COLORS[p] || "#6b7280",
+                      width: `${Math.round((count / total) * 100)}%`,
+                      display: "flex", alignItems: "center", paddingLeft: 8,
+                    }}>
+                      <span style={{ fontSize: 10, color: "#fff", fontWeight: 700 }}>{count}</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#374151", minWidth: 20 }}>{count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Top Volunteers */}
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>🏆 Top Volunteers</div>
+          {volStats.length === 0 ? (
+            <div style={{ color: "#9ca3af", fontSize: 13 }}>No volunteers yet.</div>
+          ) : (
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {volStats.slice(0, 5).map((v, i) => (
+                  <div key={v.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                      background: i === 0 ? "#fbbf24" : i === 1 ? "#9ca3af" : i === 2 ? "#d97706" : "#e5e7eb",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12, fontWeight: 800, color: i < 3 ? "#fff" : "#6b7280",
+                    }}>#{i + 1}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{v.name}</div>
+                      <div style={{ fontSize: 11, color: "#9ca3af" }}>{v.assigned} assigned · {v.resolved} resolved</div>
+                    </div>
+                    <div style={{ background: "#dcfce7", color: "#166534", padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 700 }}>
+                      {v.resolved} ✓
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {volStats.length > 5 && (
+                <div style={{ marginTop: 12, textAlign: "center", fontSize: 12, color: "#9ca3af", borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
+                  +{volStats.length - 5} more volunteers · Download Summary PDF for full rankings
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* All Complaints Table — Paginated */}
+      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>📋 All Complaints</div>
+          <div style={{ fontSize: 12, color: "#6b7280" }}>
+            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, complaints.length)} of {complaints.length}
+          </div>
+        </div>
+
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#f9fafb" }}>
+                {["ID", "Title", "Type", "Priority", "Status", "Reported By", "Date", "Report"].map(h => (
+                  <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", borderBottom: "2px solid #f3f4f6" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pagedComplaints.map(c => (
+                <tr key={c._id} style={{ borderBottom: "1px solid #f3f4f6" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <td style={{ padding: "10px 12px", color: "#9ca3af", fontFamily: "monospace" }}>#{String(c._id).slice(-6).toUpperCase()}</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 500, color: "#111827", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</td>
+                  <td style={{ padding: "10px 12px", color: "#374151", textTransform: "capitalize" }}>{c.type || "other"}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <span style={{ background: (PRIORITY_COLORS[c.priority] || "#6b7280") + "20", color: PRIORITY_COLORS[c.priority] || "#6b7280", padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 700, textTransform: "capitalize" }}>{c.priority || "medium"}</span>
+                  </td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <span style={{
+                      background: c.status === "resolved" ? "#dcfce7" : c.status === "in_review" || c.status === "assigned" ? "#ede9fe" : "#dbeafe",
+                      color: c.status === "resolved" ? "#166534" : c.status === "in_review" || c.status === "assigned" ? "#5b21b6" : "#1d4ed8",
+                      padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 600,
+                    }}>
+                      {c.status === "received" || c.status === "pending" ? "Pending"
+                        : c.status === "in_review" || c.status === "assigned" ? "In Progress"
+                          : c.status === "resolved" ? "Resolved"
+                            : c.status?.replace("_", " ")}
+                    </span>
+                  </td>
+                  <td style={{ padding: "10px 12px", color: "#6b7280" }}>{c.user_id?.name || "—"}</td>
+                  <td style={{ padding: "10px 12px", color: "#9ca3af" }}>{new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <button onClick={() => downloadSingleReport(c)} style={{
+                      background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0",
+                      borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+                    }}>📄 Report</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, paddingTop: 16, borderTop: "1px solid #f3f4f6", marginTop: 12 }}>
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              style={{
+                width: 32, height: 32, borderRadius: 8, border: "1px solid #e5e7eb",
+                background: page === 0 ? "#f9fafb" : "#fff",
+                color: page === 0 ? "#d1d5db" : "#374151",
+                cursor: page === 0 ? "not-allowed" : "pointer",
+                fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>‹</button>
+
+            {Array.from({ length: totalPages }, (_, i) => i)
+              .filter(i => i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 2)
+              .reduce((acc, i, idx, arr) => {
+                if (idx > 0 && i - arr[idx - 1] > 1) acc.push("...");
+                acc.push(i);
+                return acc;
+              }, [])
+              .map((item, idx) => item === "..." ? (
+                <span key={`ellipsis-${idx}`} style={{ fontSize: 13, color: "#9ca3af", padding: "0 4px" }}>…</span>
+              ) : (
+                <button key={item}
+                  onClick={() => setPage(item)}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8, border: "1px solid",
+                    borderColor: page === item ? "#2563eb" : "#e5e7eb",
+                    background: page === item ? "#2563eb" : "#fff",
+                    color: page === item ? "#fff" : "#374151",
+                    cursor: "pointer", fontSize: 13, fontWeight: page === item ? 700 : 400,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>{item + 1}</button>
+              ))}
+
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+              style={{
+                width: 32, height: 32, borderRadius: 8, border: "1px solid #e5e7eb",
+                background: page === totalPages - 1 ? "#f9fafb" : "#fff",
+                color: page === totalPages - 1 ? "#d1d5db" : "#374151",
+                cursor: page === totalPages - 1 ? "not-allowed" : "pointer",
+                fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>›</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+function AdminDashboard() {
+  const { user, getInitials } = useAuth();
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState("overview");
+  const [complaints, setComplaints] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [volunteers, setVolunteers] = useState([]);
+  const [assignSelections, setAssignSelections] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [zoneFilter, setZoneFilter] = useState("all");
+  const [loadingComplaints, setLoadingComplaints] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [zones, setZones] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("cs_zones") || "[]"); } catch { return []; }
+  });
+
+  const avatar = user?.name ? getInitials(user.name) : "AD";
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchComplaints(); fetchUsers(); }, []);
+
+  const fetchComplaints = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoadingComplaints(true);
+    try {
+      const res = await API.get("/api/complaints");
+      const data = res.data;
+      const raw = Array.isArray(data) ? data : data.complaints || [];
+      const VALID = ["pending", "received", "assigned", "accepted", "in_review", "in_progress", "resolved", "completed", "denied"];
+      setComplaints(raw.map(c => ({
+        ...c,
+        id: c._id || c.id,
+        address: c.address || c.location || "No address",
+        type: c.type || c.issueType || "General",
+        priority: c.priority || "low",
+        status: VALID.includes(c.status) ? c.status : "received",
+        createdAt: c.created_at || c.createdAt,
+      })));
+    } catch (err) { console.error("Failed to fetch complaints", err); }
+    finally { setLoadingComplaints(false); setRefreshing(false); }
+  };
+
+  const [volSearch, setVolSearch] = useState("");
+  const [volFilter, setVolFilter] = useState("all");
+  const [volLocation, setVolLocation] = useState("all");
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
+
+  const [volApplications, setVolApplications] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("vol_applications") || "[]"); } catch { return []; }
+  });
+
+  const handleVolunteerApplication = async (app, action) => {
+    try {
+      const updated = { ...app, status: action === "approve" ? "approved" : "rejected" };
+      const all = volApplications.map(a => a.userEmail === app.userEmail ? updated : a);
+      if (action === "approve") {
+        const matchedUser = users.find(u => u.email === app.userEmail);
+        const realUserId = matchedUser?._id || app.userId;
+        if (!realUserId || realUserId === "undefined") {
+          alert("Cannot find user in the system. Please refresh and try again.");
+          return;
+        }
+        await API.patch(`/api/users/${realUserId}/role`, { role: "volunteer" });
+        await fetchUsers();
+      }
+      localStorage.setItem("vol_applications", JSON.stringify(all));
+      localStorage.setItem(`vol_app_${app.userEmail}`, JSON.stringify(updated));
+      setVolApplications([...all]);
+    } catch (err) {
+      console.error("Application action failed", err);
+      alert("Failed to approve: " + (err?.response?.data?.message || err.message));
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await API.get("/api/users");
+      const data = res.data;
+      const allUsers = Array.isArray(data) ? data : data.users || [];
+      setUsers(allUsers);
+      setVolunteers(allUsers.filter(u => u.role === "volunteer"));
+    } catch (err) { console.error("Failed to fetch users", err); }
+  };
+
+  const [assigning, setAssigning] = useState({});
+  const [manualAssignModal, setManualAssignModal] = useState(null);
+  const [manualSelection, setManualSelection] = useState("");
+
+  // Tokenise address/location into lowercase words for fuzzy matching
+  const tokenise = (str) =>
+    (str || "").toLowerCase().replace(/[,.\-]/g, " ").split(/\s+/).filter(Boolean);
+
+  // Returns true if the complaint's assigned volunteer is no longer active
+  // AND the complaint still needs an active volunteer (not already done)
+  const isOrphanedAssignment = (c) => {
+    const finishedStatuses = ["completed", "resolved"];
+    if (finishedStatuses.includes(c.status)) return false; // work is done, no reassign needed
+    const assignedId = c.assigned_to?._id || c.assigned_to;
+    if (!assignedId) return false;
+    return !volunteers.find(v => String(v._id) === String(assignedId));
+  };
+
+  // Resolve the volunteer name — for finished complaints shows historical name even if demoted,
+  // for active complaints only returns name if they're still an active volunteer
+  const resolveAssigneeName = (c) => {
+    const finishedStatuses = ["completed", "resolved"];
+    if (finishedStatuses.includes(c.status)) {
+      // Historical — show whoever did it, active or not
+      return c.assigned_to?.name ||
+        volunteers.find(v => String(v._id) === String(c.assigned_to?._id || c.assigned_to))?.name ||
+        null;
+    }
+    // Active complaint — only return name if still an active volunteer
+    const assignedId = c.assigned_to?._id || c.assigned_to;
+    if (!assignedId) return null;
+    const activeVol = volunteers.find(v => String(v._id) === String(assignedId));
+    return activeVol?.name || null;
+  };
+
+  // Returns the display name even for demoted/deleted volunteers (for showing "was assigned to X")
+  const getStaleAssigneeName = (c) =>
+    c.assigned_to?.name || null;
+
+  // Returns the best-matching volunteer for a complaint:
+  // 1) Checks localStorage zones first, 2) falls back to volunteer.location token match
+  const getZoneVolunteerForComplaint = (complaint) => {
+    const addrTokens = tokenise(complaint.address);
+    if (addrTokens.length === 0) return null;
+
+    if (zones && zones.length > 0) {
+      const matchedZone = zones.find(z =>
+        z.area && tokenise(z.area).some(t => addrTokens.includes(t))
+      );
+      if (matchedZone?.volunteerId) {
+        const v = volunteers.find(v => String(v._id) === String(matchedZone.volunteerId));
+        if (v) return v;
+      }
+    }
+
+    let best = null, bestScore = 0;
+    for (const v of volunteers) {
+      const locTokens = tokenise(v.location);
+      if (!locTokens.length) continue;
+      const score = locTokens.filter(t => addrTokens.includes(t)).length;
+      if (score > bestScore) { bestScore = score; best = v; }
+    }
+    return bestScore > 0 ? best : null;
+  };
+
+  // Smart assign — auto if location matches, else open manual modal
+  const smartAssignVolunteer = async (complaint) => {
+    const complaintId = complaint._id || complaint.id;
+    const matchedVol = getZoneVolunteerForComplaint(complaint);
+    if (matchedVol) {
+      setAssigning(prev => ({ ...prev, [complaintId]: true }));
+      try {
+        await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId: matchedVol._id });
+        await fetchComplaints();
+      } catch (err) { console.error("Auto-assign failed", err); }
+      finally { setAssigning(prev => ({ ...prev, [complaintId]: false })); }
+    } else {
+      setManualAssignModal({
+        complaintId,
+        complaintTitle: complaint.title,
+        complaintAddress: complaint.address,
+        isOrphaned: isOrphanedAssignment(complaint),
+        staleName: getStaleAssigneeName(complaint),
+        volunteers,
+      });
+      setManualSelection("");
+    }
+  };
+
+  // Confirms manual volunteer selection from modal
+  const confirmManualAssign = async () => {
+    if (!manualAssignModal || !manualSelection) return;
+    const { complaintId } = manualAssignModal;
+    setAssigning(prev => ({ ...prev, [complaintId]: true }));
+    try {
+      await API.put(`/api/complaints/assign/${complaintId}`, { volunteerId: manualSelection });
+      setManualAssignModal(null);
+      setManualSelection("");
+      await fetchComplaints();
+    } catch (err) { console.error("Manual assign failed", err); }
+    finally { setAssigning(prev => ({ ...prev, [complaintId]: false })); }
+  };
+
+  const markResolved = async (complaintId) => {
+    try {
+      await API.put(`/api/complaints/status/${complaintId}`, { status: "resolved" });
+      fetchComplaints();
+    } catch (err) { console.error("Resolve failed", err); }
+  };
+
+  const downloadFilteredCSV = () => {
+    const headers = ["ID", "Title", "Type", "Priority", "Status", "Address", "Reported By", "Assigned To", "Created At"];
+    const rows = filteredComplaints.map(c => [
+      String(c._id).slice(-6).toUpperCase(),
+      `"${(c.title || "").replace(/"/g, "'")}"`,
+      c.type || "other",
+      c.priority || "medium",
+      c.status || "received",
+      `"${(c.address || "").replace(/"/g, "'")}"`,
+      `"${c.user_id?.name || "—"}"`,
+      `"${c.assigned_to?.name || "Not assigned"}"`,
+      new Date(c.created_at || c.createdAt).toLocaleDateString(),
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `complaints_${statusFilter}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadFilteredPDF = () => {
+    const PRIORITY_COLORS = { low: "#22c55e", medium: "#f59e0b", high: "#f97316", critical: "#dc2626" };
+    const html = `
+      <html><head><title>Complaints Export</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
+        h1 { color: #1d4ed8; font-size: 20px; margin-bottom: 2px; }
+        .meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+        .summary { display: flex; gap: 16px; margin-bottom: 24px; }
+        .stat { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 18px; text-align: center; }
+        .stat-num { font-size: 24px; font-weight: 800; color: #1d4ed8; }
+        .stat-label { font-size: 11px; color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <h1>📋 Complaints Export</h1>
+      <div class="meta">
+        Filter: <strong>${statusFilter === "all" ? "All" : statusFilter}</strong> · 
+        Zone: <strong>${zoneFilter === "all" ? "All Zones" : zoneFilter}</strong> · 
+        ${searchQuery ? `Search: <strong>"${searchQuery}"</strong> · ` : ""}
+        Generated: ${new Date().toLocaleString()}
+      </div>
+      <div class="summary">
+        <div class="stat"><div class="stat-num">${filteredComplaints.length}</div><div class="stat-label">Showing</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => c.status === "resolved").length}</div><div class="stat-label">Resolved</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => ["pending", "received"].includes(c.status)).length}</div><div class="stat-label">Pending</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length}</div><div class="stat-label">In Progress</div></div>
+      </div>
+      <table>
+        <tr><th>ID</th><th>Title</th><th>Type</th><th>Priority</th><th>Status</th><th>Reported By</th><th>Assigned To</th><th>Date</th></tr>
+        ${filteredComplaints.map(c => `<tr>
+          <td style="font-family:monospace;color:#9ca3af">#${String(c._id).slice(-6).toUpperCase()}</td>
+          <td style="font-weight:600">${c.title || "—"}</td>
+          <td style="text-transform:capitalize">${c.type || "other"}</td>
+          <td><span class="badge" style="background:${(PRIORITY_COLORS[c.priority] || "#6b7280")}20;color:${PRIORITY_COLORS[c.priority] || "#6b7280"}">${c.priority || "medium"}</span></td>
+          <td><span class="badge" style="background:${c.status === "resolved" ? "#dcfce7" : c.status === "in_review" || c.status === "assigned" ? "#ede9fe" : "#dbeafe"};color:${c.status === "resolved" ? "#166534" : c.status === "in_review" || c.status === "assigned" ? "#5b21b6" : "#1d4ed8"}">${c.status?.replace("_", " ")}</span></td>
+          <td>${c.user_id?.name || "—"}</td>
+          <td>${c.assigned_to?.name || "Not assigned"}</td>
+          <td>${new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
+        </tr>`).join("")}
+      </table>
+      </body></html>`;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 1000); }, 500);
+  };
+
+  const downloadUsersCSV = () => {
+    const headers = ["Name", "Email", "Role", "Location", "Joined"];
+    const rows = filteredUsers.map(u => [
+      `"${u.name || "—"}"`,
+      `"${u.email || "—"}"`,
+      u.role || "user",
+      `"${u.location || "—"}"`,
+      u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—",
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users_${userRoleFilter}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadUsersPDF = () => {
+    const roleColor = (role) =>
+      role === "admin" ? { bg: "#fef2f2", color: "#dc2626" } :
+        role === "volunteer" ? { bg: "#eff6ff", color: "#2563eb" } :
+          { bg: "#f0fdf4", color: "#16a34a" };
+
+    const admins = filteredUsers.filter(u => u.role === "admin").length;
+    const vols = filteredUsers.filter(u => u.role === "volunteer").length;
+    const regular = filteredUsers.filter(u => !u.role || u.role === "user").length;
+
+    const html = `
+      <html><head><title>User List Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
+        h1 { color: #1d4ed8; font-size: 20px; margin-bottom: 2px; }
+        .meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+        .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+        .stat { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 24px; font-weight: 800; color: #1d4ed8; }
+        .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 10px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        tr:hover td { background: #f9fafb; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+        .avatar { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: 700; margin-right: 8px; vertical-align: middle; }
+        .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 32px; border-top: 1px solid #f3f4f6; padding-top: 16px; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <h1>👥 User List Report</h1>
+      <div class="meta">
+        Filter: <strong>${userRoleFilter === "all" ? "All Roles" : userRoleFilter}</strong> ·
+        ${userSearch ? `Search: <strong>"${userSearch}"</strong> · ` : ""}
+        Generated: ${new Date().toLocaleString()}
+      </div>
+  
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num">${filteredUsers.length}</div>
+          <div class="stat-label">Total Shown</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#dc2626">${admins}</div>
+          <div class="stat-label">Admins</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#2563eb">${vols}</div>
+          <div class="stat-label">Volunteers</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#16a34a">${regular}</div>
+          <div class="stat-label">Regular Users</div>
+        </div>
+      </div>
+  
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Location</th>
+          <th>Joined</th>
+          <th>Complaints Filed</th>
+        </tr>
+        ${filteredUsers.map(u => {
+      const rc = roleColor(u.role);
+      const initials = (u.name || "??").substring(0, 2).toUpperCase();
+      const complaintsFiled = complaints.filter(c =>
+        String(c.user_id?._id || c.user_id) === String(u._id)).length;
+      return `<tr>
+            <td>
+              <span class="avatar">${initials}</span>
+              <span style="font-weight:600">${u.name || "—"}</span>
+            </td>
+            <td style="color:#6b7280">${u.email || "—"}</td>
+            <td>
+              <span class="badge" style="background:${rc.bg};color:${rc.color}">
+                ${u.role === "admin" ? "🛡️" : u.role === "volunteer" ? "🤝" : "🧑‍💼"} ${u.role || "user"}
+              </span>
+            </td>
+            <td style="color:#6b7280">${u.location || "Not specified"}</td>
+            <td style="color:#9ca3af">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</td>
+            <td style="font-weight:700;color:#2563eb;text-align:center">${complaintsFiled}</td>
+          </tr>`;
+    }).join("")}
+      </table>
+  
+      <div class="footer">
+        CleanStreet · User List Report · ${filteredUsers.length} users · ${new Date().toLocaleDateString()}
+      </div>
+      </body></html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 500);
+  };
+
+  const downloadVolunteersCSV = () => {
+    const headers = ["Name", "Email", "Location", "Assigned", "In Progress", "Resolved", "Resolution Rate %"];
+    const rows = volunteers.map(v => {
+      const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id));
+      const resolvedCount = assigned.filter(c => c.status === "resolved" || c.status === "completed").length;
+      const inProgressCount = assigned.filter(c => ["in_review", "in_progress", "accepted"].includes(c.status)).length;
+      const rate = assigned.length > 0 ? Math.round((resolvedCount / assigned.length) * 100) : 0;
+      return [
+        `"${v.name}"`, `"${v.email}"`, `"${v.location || "—"}"`,
+        assigned.length, inProgressCount, resolvedCount, `${rate}%`,
+      ];
+    });
+    const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `volunteers_performance_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadVolunteersPDF = () => {
+    const volData = volunteers.map(v => {
+      const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id));
+      const resolvedCount = assigned.filter(c => c.status === "resolved" || c.status === "completed").length;
+      const inProgress = assigned.filter(c => ["in_review", "in_progress", "accepted"].includes(c.status)).length;
+      const rate = assigned.length > 0 ? Math.round((resolvedCount / assigned.length) * 100) : 0;
+      return { ...v, assigned: assigned.length, resolved: resolvedCount, inProgress, rate };
+    }).sort((a, b) => b.resolved - a.resolved);
+
+    const html = `
+      <html><head><title>Volunteer Performance Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
+        h1 { color: #1d4ed8; font-size: 20px; margin-bottom: 2px; }
+        .meta { color: #6b7280; font-size: 12px; margin-bottom: 24px; }
+        .summary { display: flex; gap: 16px; margin-bottom: 24px; }
+        .stat { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 18px; text-align: center; }
+        .stat-num { font-size: 24px; font-weight: 800; color: #1d4ed8; }
+        .stat-label { font-size: 11px; color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 8px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        td { padding: 10px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .rate-bar { height: 6px; background: #f3f4f6; border-radius: 99px; width: 80px; display: inline-block; overflow: hidden; }
+        .rate-fill { height: 100%; border-radius: 99px; background: #22c55e; }
+        .medal { font-size: 16px; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <h1>🤝 Volunteer Performance Report</h1>
+      <div class="meta">Generated: ${new Date().toLocaleString()} · ${volunteers.length} volunteers</div>
+      <div class="summary">
+        <div class="stat"><div class="stat-num">${volunteers.length}</div><div class="stat-label">Total Volunteers</div></div>
+        <div class="stat"><div class="stat-num">${volData.filter(v => v.assigned > 0).length}</div><div class="stat-label">Active</div></div>
+        <div class="stat"><div class="stat-num">${volData.reduce((s, v) => s + v.resolved, 0)}</div><div class="stat-label">Total Resolved</div></div>
+        <div class="stat"><div class="stat-num">${volData.length > 0 ? Math.round(volData.reduce((s, v) => s + v.rate, 0) / volData.length) : 0}%</div><div class="stat-label">Avg Resolution Rate</div></div>
+      </div>
+      <table>
+        <tr><th>#</th><th>Name</th><th>Email</th><th>Location</th><th>Assigned</th><th>In Progress</th><th>Resolved</th><th>Rate</th></tr>
+        ${volData.map((v, i) => `<tr>
+          <td><span class="medal">${i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</span></td>
+          <td style="font-weight:600">${v.name}</td>
+          <td style="color:#6b7280">${v.email}</td>
+          <td style="color:#6b7280">${v.location || "—"}</td>
+          <td style="font-weight:700;color:#2563eb">${v.assigned}</td>
+          <td style="color:#8b5cf6">${v.inProgress}</td>
+          <td style="font-weight:700;color:#22c55e">${v.resolved}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="rate-bar"><div class="rate-fill" style="width:${v.rate}%;background:${v.rate >= 80 ? "#22c55e" : v.rate >= 50 ? "#f59e0b" : "#ef4444"}"></div></div>
+              <span style="font-weight:700;color:${v.rate >= 80 ? "#166534" : v.rate >= 50 ? "#92400e" : "#991b1b"}">${v.rate}%</span>
+            </div>
+          </td>
+        </tr>`).join("")}
+      </table>
+      </body></html>`;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 1000); }, 500);
+  };
+
+  const approveComplaint = async (complaintId) => {
+    try {
+      await API.put(`/api/complaints/status/${complaintId}`, { status: "completed" });
+      fetchComplaints();
+    } catch (err) { console.error("Approve failed", err); }
+  };
+
+  const changeUserRole = async (userId, newRole) => {
+    try {
+      await API.patch(`/api/users/${userId}/role`, { role: newRole });
+      fetchUsers();
+    } catch (err) { console.error("Role change failed", err); }
+  };
+
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(null); // { userId, userName, userRole }
+
+  const deleteUser = async () => {
+    if (!deleteConfirmModal) return;
+    try {
+      await API.delete(`/api/users/${deleteConfirmModal.userId}`);
+      setDeleteConfirmModal(null);
+      await fetchUsers();
+      await fetchComplaints(); // refresh so orphaned complaints update
+    } catch (err) {
+      console.error("Delete user failed", err);
+      alert("Failed to delete user: " + (err?.response?.data?.message || err.message));
+    }
+  };
+
+  const total = complaints.length;
+  const pending = complaints.filter(c => c.status === "pending" || c.status === "received").length;
+  const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
+  const inProg = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
+  const denied = complaints.filter(c => c.status === "denied").length;
+
+  const filteredVolunteers = volunteers.filter(v => {
+    const assignedList = complaints.filter(c =>
+      String(c.assigned_to?._id || c.assigned_to) === String(v._id));
+    const assigned = assignedList.length;
+    const volResolved = assignedList.filter(c => c.status === "resolved" || c.status === "completed").length;
+    const inProgress = assignedList.filter(c =>
+      ["in_review", "in_progress", "accepted"].includes(c.status)).length;
+    const hasPending = assignedList.some(c =>
+      c.status === "pending" || c.status === "received" || c.status === "assigned");
+    const resolutionRate = assigned > 0 ? (volResolved / assigned) * 100 : 0;
+
+    const matchSearch = !volSearch ||
+      v.name?.toLowerCase().includes(volSearch.toLowerCase()) ||
+      v.email?.toLowerCase().includes(volSearch.toLowerCase()) ||
+      v.location?.toLowerCase().includes(volSearch.toLowerCase());
+
+    const matchFilter =
+      volFilter === "all" ? true :
+        volFilter === "active" ? assigned > 0 :
+          volFilter === "idle" ? assigned === 0 :
+            volFilter === "top_resolver" ? volResolved >= 3 :
+              volFilter === "in_progress" ? inProgress > 0 :
+                volFilter === "pending" ? hasPending :
+                  volFilter === "perfect" ? assigned > 0 && resolutionRate === 100 :
+                    volFilter === "new" ? assigned > 0 && volResolved === 0 :
+                      true;
+
+    const matchLocation = volLocation === "all" ||
+      (v.location || "").toLowerCase().includes(volLocation.toLowerCase());
+
+    return matchSearch && matchFilter && matchLocation;
+  });
+
+  const filteredUsers = users.filter(u => {
+    const matchSearch = !userSearch ||
+      u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.email?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.location?.toLowerCase().includes(userSearch.toLowerCase());
+    const matchRole = userRoleFilter === "all" || u.role === userRoleFilter;
+    return matchSearch && matchRole;
+  });
+
+  const filteredComplaints = complaints.filter(c => {
+    const matchStatus =
+      statusFilter === "all" ? true :
+        statusFilter === "received" ? ["received", "pending"].includes(c.status) :
+          statusFilter === "in_review" ? ["assigned", "accepted", "in_review", "in_progress"].includes(c.status) :
+            statusFilter === "denied" ? c.status === "denied" :
+              c.status === statusFilter;
+    const matchSearch =
+      c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.address?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchZone = zoneFilter === "all" ? true :
+      (c.address || "").toLowerCase().includes(zoneFilter.toLowerCase());
+    return matchStatus && matchSearch && matchZone;
+  });
+
+  const sidebarItems = [
+    { key: "overview", icon: "📊", label: "Overview" },
+    { key: "complaints", icon: "📋", label: "Complaints" },
+    { key: "users", icon: "👥", label: "User Management", badge: volApplications.filter(a => a.status === "pending").length },
+    { key: "volunteers", icon: "🤝", label: "Volunteers" },
+    { key: "zones", icon: "🗺️", label: "Zones" },
+    { key: "reports", icon: "📈", label: "Reports" },
+  ];
+
+  return (
+    <div className="cs-page" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <Navbar />
+
+      <div style={{ display: "flex", flex: 1 }}>
+        {/* ── Sidebar ── */}
+        <aside style={{
+          width: 220, background: "#fff", borderRight: "1px solid #e5e7eb",
+          padding: "24px 0", flexShrink: 0, position: "sticky", top: 64,
+          height: "calc(100vh - 64px)", display: "flex", flexDirection: "column",
+        }}>
+          <div style={{ padding: "0 16px 16px", borderBottom: "1px solid #f3f4f6" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+              Navigation
+            </div>
+            {sidebarItems.map(item => (
+              <button key={item.key} onClick={() => setActiveTab(item.key)} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                width: "100%", padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 14,
+                fontWeight: activeTab === item.key ? 600 : 400,
+                background: activeTab === item.key ? "#eff6ff" : "transparent",
+                color: activeTab === item.key ? "#2563eb" : "#374151",
+                marginBottom: 4, transition: "all 0.15s ease",
+              }}>
+                <span style={{ fontSize: 16 }}>{item.icon}</span>
+                {item.label}
+                {item.key === "complaints" && total > 0 && (
+                  <span style={{
+                    marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 9999,
+                    background: activeTab === item.key ? "#2563eb" : "#e5e7eb",
+                    color: activeTab === item.key ? "#fff" : "#6b7280",
+                  }}>{total}</span>
+                )}
+                {item.key === "users" && item.badge > 0 && (
+                  <span style={{
+                    marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "1px 7px", borderRadius: 9999,
+                    background: "#f59e0b", color: "#fff",
+                  }}>{item.badge}</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <div style={{ marginTop: "auto", padding: "16px", borderTop: "1px solid #f3f4f6" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/profile")} title="View your profile">
+              <div className="cs-avatar" style={{ width: 32, height: 32, fontSize: 12 }}>{avatar}</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{user?.name || "Admin"}</div>
+                <div style={{ fontSize: 11, color: "#9ca3af" }}>Administrator</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Main Content ── */}
+        <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
+
+          {/* ══ OVERVIEW ══ */}
+          {activeTab === "overview" && (
+            <div>
+              <div style={{ marginBottom: 24 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>System Overview</h1>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Monitor all civic complaints across the platform.</p>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16, marginBottom: 28 }}>
+                <StatCard icon="⚠️" count={loadingComplaints ? "…" : total} label="Total Complaints" accent="#3b82f6" />
+                <StatCard icon="⏳" count={loadingComplaints ? "…" : pending} label="Pending" accent="#f59e0b" />
+                <StatCard icon="🔄" count={loadingComplaints ? "…" : inProg} label="In Progress" accent="#8b5cf6" />
+                <StatCard icon="✅" count={loadingComplaints ? "…" : resolved} label="Resolved" accent="#22c55e" />
+                <StatCard icon="🚫" count={loadingComplaints ? "…" : denied} label="Denied" accent="#ef4444" />
+              </div>
+              <div className="cs-card">
+                <div className="cs-section-header" style={{ marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>Recent Complaints</div>
+                    <div style={{ fontSize: 13, color: "#6b7280" }}>Latest submissions from citizens</div>
+                  </div>
+                  <button className="cs-btn cs-btn--outline cs-btn--sm" onClick={() => setActiveTab("complaints")}>View All →</button>
+                </div>
+                {loadingComplaints ? (
+                  <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                    <div>Loading complaints…</div>
+                  </div>
+                ) : complaints.length === 0 ? (
+                  <div className="cs-empty">
+                    <div className="cs-empty__icon">📭</div>
+                    <div className="cs-empty__title">No complaints yet</div>
+                    <div className="cs-empty__desc">Complaints submitted by citizens will appear here.</div>
+                  </div>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead><tr><TH>Title</TH><TH>Type</TH><TH>Priority</TH><TH>Status</TH><TH>Date</TH></tr></thead>
+                    <tbody>
+                      {complaints.slice(0, 5).map(c => (
+                        <tr key={c._id || c.id}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <TD style={{ fontWeight: 600 }}>{c.title}</TD>
+                          <TD style={{ color: "#6b7280" }}>{c.type || "—"}</TD>
+                          <TD><PriorityBadge priority={c.priority} /></TD>
+                          <TD><StatusBadge status={c.status} /></TD>
+                          <TD style={{ color: "#9ca3af" }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}</TD>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ══ COMPLAINTS ══ */}
+          {activeTab === "complaints" && (
+            <div>
+              <div style={{ marginBottom: 20 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Manage Complaints</h1>
+                <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>Assign volunteers and update complaint status.</p>
+              </div>
+              <div className="cs-filter-bar" style={{ marginBottom: 20 }}>
+                <div className="cs-filter-tabs">
+                  {[
+                    { key: "all", label: "All", count: total },
+                    { key: "received", label: "Pending", count: pending },
+                    { key: "in_review", label: "In Progress", count: inProg },
+                    { key: "resolved", label: "Resolved", count: resolved },
+                    { key: "denied", label: "Denied", count: denied },
+                  ].map(f => (
+                    <button key={f.key}
+                      className={`cs-filter-tab${statusFilter === f.key ? " cs-filter-tab--active" : ""}`}
+                      onClick={() => setStatusFilter(f.key)}>
+                      {f.label}<span className="cs-filter-tab__count">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {/* ── Custom Zone Dropdown (replaces buggy native <select size={1}>) ── */}
+                  <ZoneDropdown value={zoneFilter} onChange={setZoneFilter} />
+
+                  <input className="cs-input cs-search-input"
+                    placeholder="🔍 Search complaints..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)} />
+                  <button
+                    onClick={() => fetchComplaints(true)}
+                    title="Refresh complaints"
+                    style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontSize: 14, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    <style>{`@keyframes spin-a { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+                    <span style={{ display: "inline-block", animation: refreshing ? "spin-a 0.7s linear infinite" : "none" }}>🔄</span>
+                  </button>
+                  <button onClick={downloadFilteredCSV} title="Export filtered as CSV"
+                    style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#2563eb", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                    📥 CSV
+                  </button>
+                  <button onClick={downloadFilteredPDF} title="Export filtered as PDF"
+                    style={{ background: "#f4f6fb", border: "1px solid #e5e9f2", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#374151", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+                    📄 PDF
+                  </button>
+                </div>
+              </div>
+
+              {loadingComplaints ? (
+                <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
+                  <div>Loading complaints…</div>
+                </div>
+              ) : filteredComplaints.length === 0 ? (
+                <div className="cs-empty">
+                  <div className="cs-empty__icon">📭</div>
+                  <div className="cs-empty__title">No complaints found</div>
+                  <div className="cs-empty__desc">Try adjusting your search or filter.</div>
+                </div>
+              ) : (
+                <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead><tr><TH>Title</TH><TH>Type</TH><TH>Priority</TH><TH>Reporter</TH><TH>Status</TH><TH>Assign Volunteer</TH><TH>Actions</TH></tr></thead>
+                    <tbody>
+                      {filteredComplaints.map(c => (
+                        <tr key={c._id || c.id}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <TD>
+                            <div style={{ fontWeight: 600, color: "#111827" }}>{c.title}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{c.address || "No address"}</div>
+                          </TD>
+                          <TD style={{ color: "#6b7280", textTransform: "capitalize" }}>{c.type || "—"}</TD>
+                          <TD><PriorityBadge priority={c.priority} /></TD>
+                          <TD style={{ color: "#374151" }}>{c.user_id?.name || c.reportedBy?.name || "—"}</TD>
+                          <TD><StatusBadge status={c.status} /></TD>
+                          <TD>
+                            {(() => {
+                              const assignedName = resolveAssigneeName(c);
+                              const orphaned = isOrphanedAssignment(c);
+                              const staleName = getStaleAssigneeName(c);
+
+                              // Orphaned — volunteer was demoted or deleted
+                              if (orphaned) {
+                                return (
+                                  <div style={{ fontSize: 11 }}>
+                                    <div style={{ color: "#dc2626", fontWeight: 600 }}>⚠️ Volunteer removed</div>
+                                    {staleName && (
+                                      <div style={{ color: "#9ca3af", fontSize: 10, marginTop: 1, textDecoration: "line-through" }}>
+                                        was: {staleName}
+                                      </div>
+                                    )}
+                                    <div style={{ color: "#9ca3af", fontSize: 10, marginTop: 2 }}>Click Reassign to fix</div>
+                                  </div>
+                                );
+                              }
+                              // Has a valid assignee — just show name
+                              if (assignedName) {
+                                const isResolved = c.status === "resolved" || c.status === "completed";
+                                const isDenied = c.status === "denied";
+                                return (
+                                  <div style={{ fontSize: 12, fontWeight: 600,
+                                    color: isResolved ? "#16a34a" : isDenied ? "#ef4444" : "#2563eb" }}>
+                                    {isResolved ? "✅" : isDenied ? "🚫" : "👤"} {assignedName}
+                                    {isDenied && <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>Denied — click Reassign</div>}
+                                  </div>
+                                );
+                              }
+                              // Unassigned — show location match or manual prompt
+                              const zoneVol = getZoneVolunteerForComplaint(c);
+                              if (zoneVol) {
+                                return (
+                                  <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                                    ⚡ {zoneVol.name}
+                                    <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>Location matched — auto</div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div style={{ fontSize: 11, color: "#f59e0b", fontWeight: 500 }}>
+                                  ⚠️ No location match
+                                  <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>Click Assign to select manually</div>
+                                </div>
+                              );
+                            })()}
+                          </TD>
+                          <TD>
+                            <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
+                              {(() => {
+                                const cid = c._id || c.id;
+                                const isWorking = assigning[cid];
+                                const assignedName = resolveAssigneeName(c);
+                                const orphaned = isOrphanedAssignment(c);
+                                const zoneVol = getZoneVolunteerForComplaint(c);
+
+                                if (c.status === "completed") {
+                                  return <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>✅ Completed</span>;
+                                }
+                                if (c.status === "resolved") {
+                                  return (
+                                    <button onClick={() => approveComplaint(cid)}
+                                      style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                      ✓ Approve
+                                    </button>
+                                  );
+                                }
+                                if (orphaned) {
+                                  return (
+                                    <button onClick={() => smartAssignVolunteer(c)} disabled={isWorking}
+                                      style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: isWorking ? "#f3f4f6" : "#dc2626", color: isWorking ? "#9ca3af" : "#fff", fontWeight: 600, fontSize: 12, cursor: isWorking ? "not-allowed" : "pointer" }}>
+                                      {isWorking ? "Assigning…" : "🔄 Reassign"}
+                                    </button>
+                                  );
+                                }
+                                // Already properly assigned — no action needed
+                                if (assignedName && c.status !== "denied") {
+                                  return <span style={{ fontSize: 11, color: "#9ca3af" }}>—</span>;
+                                }
+                                if (c.status === "denied") {
+                                  return (
+                                    <button onClick={() => smartAssignVolunteer(c)} disabled={isWorking}
+                                      style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: isWorking ? "#f3f4f6" : "#dc2626", color: isWorking ? "#9ca3af" : "#fff", fontWeight: 600, fontSize: 12, cursor: isWorking ? "not-allowed" : "pointer" }}>
+                                      {isWorking ? "Assigning…" : "⚠️ Reassign"}
+                                    </button>
+                                  );
+                                }
+                                // Unassigned (pending/received)
+                                return (
+                                  <button onClick={() => smartAssignVolunteer(c)} disabled={isWorking}
+                                    style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: isWorking ? "#f3f4f6" : "#2563eb", color: isWorking ? "#9ca3af" : "#fff", fontWeight: 600, fontSize: 12, cursor: isWorking ? "not-allowed" : "pointer" }}>
+                                    {isWorking ? "Assigning…" : zoneVol ? "⚡ Auto Assign" : "👤 Assign"}
+                                  </button>
+                                );
+                              })()}
+                            </div>
+                          </TD>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ USER MANAGEMENT ══ */}
+          {activeTab === "users" && (
+            <div>
+              <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                <div>
+                  <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>User Management</h1>
+                  <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{users.length} registered users · Manage roles and access.</p>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={downloadUsersCSV} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#2563eb", color: "#fff", border: "none",
+                    borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>📥 Export CSV</button>
+                  <button onClick={downloadUsersPDF} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
+                    borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>📄 User PDF</button>
+                </div>
+              </div>
+
+              {/* ── Volunteer Applications ── */}
+              {volApplications.filter(a => a.status === "pending").length > 0 && (
+                <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #f59e0b", marginBottom: 24, overflow: "hidden" }}>
+                  <div style={{ background: "linear-gradient(135deg,#fffbeb,#fef3c7)", padding: "14px 20px", borderBottom: "1px solid #fde68a", display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>📋</span>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "#92400e" }}>Volunteer Applications</div>
+                      <div style={{ fontSize: 12, color: "#b45309" }}>{volApplications.filter(a => a.status === "pending").length} pending review</div>
+                    </div>
+                  </div>
+                  <div style={{ padding: "0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <TH>Applicant</TH><TH>Reason</TH><TH>Skills</TH><TH>Availability</TH><TH>Applied</TH><TH>Actions</TH>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {volApplications.filter(a => a.status === "pending").map((app, i) => (
+                          <tr key={i}
+                            onMouseEnter={e => e.currentTarget.style.background = "#fffbeb"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <TD>
+                              <div style={{ fontWeight: 600, color: "#111827" }}>{app.userName}</div>
+                              <div style={{ fontSize: 11, color: "#9ca3af" }}>{app.userEmail}</div>
+                            </TD>
+                            <TD style={{ maxWidth: 180 }}>
+                              <div style={{ fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.reason}</div>
+                            </TD>
+                            <TD style={{ maxWidth: 160 }}>
+                              <div style={{ fontSize: 12, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.skills}</div>
+                            </TD>
+                            <TD>
+                              <span style={{ background: "#eff6ff", color: "#2563eb", padding: "2px 8px", borderRadius: 9999, fontSize: 11, fontWeight: 600 }}>{app.availability}</span>
+                            </TD>
+                            <TD style={{ color: "#9ca3af", fontSize: 12 }}>{new Date(app.appliedAt).toLocaleDateString()}</TD>
+                            <TD>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button
+                                  onClick={() => handleVolunteerApplication(app, "approve")}
+                                  style={{ background: "#dcfce7", color: "#166534", border: "1px solid #86efac", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                                  ✓ Approve
+                                </button>
+                                <button
+                                  onClick={() => handleVolunteerApplication(app, "reject")}
+                                  style={{ background: "#fee2e2", color: "#991b1b", border: "1px solid #fca5a5", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                                  ✕ Reject
+                                </button>
+                              </div>
+                            </TD>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* All Applications History */}
+              {volApplications.filter(a => a.status !== "pending").length > 0 && (
+                <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", marginBottom: 24, overflow: "hidden" }}>
+                  <div style={{ padding: "12px 20px", borderBottom: "1px solid #f3f4f6" }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: "#374151" }}>Past Applications</div>
+                  </div>
+                  <div style={{ padding: "0" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead><tr><TH>Applicant</TH><TH>Skills</TH><TH>Availability</TH><TH>Applied</TH><TH>Status</TH></tr></thead>
+                      <tbody>
+                        {volApplications.filter(a => a.status !== "pending").map((app, i) => (
+                          <tr key={i}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <TD>
+                              <div style={{ fontWeight: 600 }}>{app.userName}</div>
+                              <div style={{ fontSize: 11, color: "#9ca3af" }}>{app.userEmail}</div>
+                            </TD>
+                            <TD style={{ fontSize: 12, color: "#6b7280" }}>{app.skills}</TD>
+                            <TD style={{ fontSize: 12, color: "#6b7280" }}>{app.availability}</TD>
+                            <TD style={{ fontSize: 12, color: "#9ca3af" }}>{new Date(app.appliedAt).toLocaleDateString()}</TD>
+                            <TD>
+                              <span style={{
+                                background: app.status === "approved" ? "#dcfce7" : "#fee2e2",
+                                color: app.status === "approved" ? "#166534" : "#991b1b",
+                                padding: "2px 10px", borderRadius: 9999, fontSize: 12, fontWeight: 600, textTransform: "capitalize",
+                              }}>{app.status === "approved" ? "✓ Approved" : "✕ Rejected"}</span>
+                            </TD>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Search + Role Filter */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af" }}>🔍</span>
+                  <input
+                    placeholder="Search by name, email or location..."
+                    value={userSearch}
+                    onChange={e => setUserSearch(e.target.value)}
+                    style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                <CustomDropdown
+                  value={userRoleFilter}
+                  onChange={setUserRoleFilter}
+                  options={[
+                    { key: "all", label: "👥 All Roles" },
+                    { key: "user", label: "🧑‍💼 User" },
+                    { key: "volunteer", label: "🤝 Volunteer" },
+                    { key: "admin", label: "🛡️ Admin" },
+                  ]}
+                />
+                <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
+                  {filteredUsers.length} of {users.length} users
+                </span>
+              </div>
+
+              {filteredUsers.length === 0 ? (
+                <div className="cs-empty">
+                  <div className="cs-empty__icon">👥</div>
+                  <div className="cs-empty__title">No users found</div>
+                  <div className="cs-empty__desc">Users will appear here once the backend endpoint is connected.</div>
+                </div>
+              ) : (
+                <div className="cs-card" style={{ padding: 0, overflow: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead><tr><TH>Name</TH><TH>Email</TH><TH>Current Role</TH><TH>Location</TH><TH>Joined</TH><TH>Actions</TH></tr></thead>
+                    <tbody>
+                      {filteredUsers.map(u => (
+                        <tr key={u._id}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          <TD>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div className="cs-avatar" style={{ width: 30, height: 30, fontSize: 11, flexShrink: 0 }}>{u.name?.substring(0, 2).toUpperCase() || "??"}</div>
+                              <span style={{ fontWeight: 600 }}>{u.name}</span>
+                            </div>
+                          </TD>
+                          <TD style={{ color: "#6b7280" }}>{u.email}</TD>
+                          <TD>
+                            <span style={{
+                              background: u.role === "admin" ? "#fef2f2" : u.role === "volunteer" ? "#eff6ff" : "#f0fdf4",
+                              color: u.role === "admin" ? "#dc2626" : u.role === "volunteer" ? "#2563eb" : "#16a34a",
+                              padding: "2px 10px", borderRadius: 9999, fontSize: 12, fontWeight: 600, textTransform: "capitalize",
+                            }}>{u.role || "user"}</span>
+                          </TD>
+                          <TD style={{ color: "#6b7280" }}>{u.location || "Not specified"}</TD>
+                          <TD style={{ color: "#9ca3af" }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</TD>
+                          <TD>
+                            {u.role === "admin" ? (
+                              <span style={{ fontSize: 11, color: "#9ca3af" }}>—</span>
+                            ) : (
+                              <button
+                                onClick={() => setDeleteConfirmModal({ userId: u._id, userName: u.name, userRole: u.role })}
+                                style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                                🗑️ Remove
+                              </button>
+                            )}
+                          </TD>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ VOLUNTEERS ══ */}
+          {activeTab === "volunteers" && (
+            <div>
+              <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                <div>
+                  <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Volunteer Management</h1>
+                  <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>{volunteers.length} active volunteers.</p>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={downloadVolunteersCSV} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#2563eb", color: "#fff", border: "none",
+                    borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>📥 Export CSV</button>
+                  <button onClick={downloadVolunteersPDF} style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    background: "#fff", color: "#374151", border: "1.5px solid #e5e7eb",
+                    borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>📄 Performance PDF</button>
+                </div>
+              </div>
+
+              {/* Search + Filter bar */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
+                  <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#9ca3af" }}>🔍</span>
+                  <input
+                    placeholder="Search by name, email or location..."
+                    value={volSearch}
+                    onChange={e => setVolSearch(e.target.value)}
+                    style={{ width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+
+                <CustomDropdown
+                  value={volFilter}
+                  onChange={setVolFilter}
+                  options={[
+                    { key: "all", label: "🤝 All Volunteers" },
+                    { key: "active", label: "🔥 Most Active" },
+                    { key: "idle", label: "💤 No Assignments" },
+                    { key: "top_resolver", label: "🏆 Top Resolvers" },
+                    { key: "in_progress", label: "🔄 Currently Working" },
+                    { key: "pending", label: "⏳ Has Pending Tasks" },
+                    { key: "perfect", label: "⭐ 100% Resolution" },
+                    { key: "new", label: "🆕 No Resolved Yet" },
+                  ]}
+                />
+
+                <LocationDropdown value={volLocation} onChange={setVolLocation} />
+
+                <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
+                  {filteredVolunteers.length} of {volunteers.length} volunteers
+                </span>
+              </div>
+
+              {filteredVolunteers.length === 0 ? (
+                <div className="cs-empty">
+                  <div className="cs-empty__icon">🤝</div>
+                  <div className="cs-empty__title">No volunteers found</div>
+                  <div className="cs-empty__desc">Promote citizens to volunteer from the User Management tab.</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+                  {filteredVolunteers.map(v => {
+                    const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
+                    return (
+                      <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
+                        <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{v.name}</div>
+                        <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 4 }}>{v.email}</div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>{v.location || "Location not set"}</div>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 24, paddingTop: 12, borderTop: "1px solid #f3f4f6" }}>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#2563eb" }}>{assigned}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Assigned</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontWeight: 700, fontSize: 20, color: "#22c55e" }}>{volResolved}</div>
+                            <div style={{ fontSize: 11, color: "#9ca3af" }}>Resolved</div>
+                          </div>
+                        </div>
+                        <button className="cs-btn cs-btn--outline cs-btn--sm" style={{ marginTop: 12, width: "100%", fontSize: 12 }}
+                          onClick={() => changeUserRole(v._id, "user")}>Remove Volunteer</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ ZONES ══ */}
+          {activeTab === "zones" && (
+            <ZonesTab zones={zones} setZones={setZones} volunteers={volunteers} complaints={complaints} />
+          )}
+
+          {/* ══ REPORTS ══ */}
+          {activeTab === "reports" && (
+            <ReportsTab complaints={complaints} users={users} volunteers={volunteers} />
+          )}
+
+        </div>
+      </div>
+
+      {/* ══ DELETE USER CONFIRM MODAL ══ */}
+      {deleteConfirmModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99999,
+          background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }}
+          onClick={e => { if (e.target === e.currentTarget) setDeleteConfirmModal(null); }}
+        >
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.18)", overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg,#7f1d1d,#dc2626)", padding: "20px 24px", position: "relative" }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>🗑️ Remove User</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 3 }}>This action cannot be undone</div>
+              <button onClick={() => setDeleteConfirmModal(null)} style={{
+                position: "absolute", top: 14, right: 16, background: "rgba(255,255,255,0.15)",
+                border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer",
+                color: "#fff", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>✕</button>
+            </div>
+            <div style={{ padding: "24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, color: "#dc2626", flexShrink: 0 }}>
+                  {(deleteConfirmModal.userName || "?").substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>{deleteConfirmModal.userName}</div>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 9999,
+                    background: deleteConfirmModal.userRole === "volunteer" ? "#eff6ff" : "#f0fdf4",
+                    color: deleteConfirmModal.userRole === "volunteer" ? "#2563eb" : "#16a34a",
+                  }}>{deleteConfirmModal.userRole || "user"}</span>
+                </div>
+              </div>
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "14px 16px", marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#991b1b", marginBottom: 6 }}>⚠️ This will permanently:</div>
+                <div style={{ fontSize: 12, color: "#dc2626", lineHeight: 1.8 }}>
+                  • Delete this user's account<br />
+                  {deleteConfirmModal.userRole === "volunteer" && "• All their assigned complaints will need reassignment\n"}
+                  • Remove all associated data
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setDeleteConfirmModal(null)}
+                  style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  Cancel
+                </button>
+                <button onClick={deleteUser}
+                  style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#dc2626", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  🗑️ Yes, Remove User
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ MANUAL ASSIGN MODAL ══ */}
+      {manualAssignModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 99999,
+          background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }}
+          onClick={e => { if (e.target === e.currentTarget) setManualAssignModal(null); }}
+        >
+          <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.18)", overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg,#1e3a8a,#2563eb)", padding: "20px 24px", position: "relative" }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
+                {manualAssignModal.isOrphaned ? "🔄 Reassign Complaint" : "👤 Manual Assignment"}
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 3 }}>
+                {manualAssignModal.isOrphaned
+                  ? "Previous volunteer was removed — select a replacement"
+                  : "No location match found — select a volunteer manually"}
+              </div>
+              <button onClick={() => setManualAssignModal(null)} style={{
+                position: "absolute", top: 14, right: 16, background: "rgba(255,255,255,0.15)",
+                border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer",
+                color: "#fff", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+              }}>✕</button>
+            </div>
+            {/* Complaint info */}
+            <div style={{ padding: "16px 24px", background: "#f8fafc", borderBottom: "1px solid #e5e7eb" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", marginBottom: 4 }}>Complaint</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{manualAssignModal.complaintTitle}</div>
+              {manualAssignModal.complaintAddress && (
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>📍 {manualAssignModal.complaintAddress}</div>
+              )}
+              <div style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, borderRadius: 6, padding: "4px 10px",
+                background: manualAssignModal.isOrphaned ? "#fee2e2" : "#fef3c7",
+                border: `1px solid ${manualAssignModal.isOrphaned ? "#fca5a5" : "#fde68a"}` }}>
+                <span style={{ fontSize: 13 }}>{manualAssignModal.isOrphaned ? "🚫" : "⚠️"}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: manualAssignModal.isOrphaned ? "#991b1b" : "#92400e" }}>
+                  {manualAssignModal.isOrphaned
+                    ? `${manualAssignModal.staleName ? `"${manualAssignModal.staleName}" is` : "Previously assigned volunteer is"} no longer an active volunteer`
+                    : "No volunteer's location matches this complaint"}
+                </span>
+              </div>
+            </div>
+            {/* Volunteer list */}
+            <div style={{ padding: "16px 24px" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 12 }}>
+                Select a volunteer ({manualAssignModal.volunteers.length} available):
+              </div>
+              {manualAssignModal.volunteers.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "24px 0", color: "#9ca3af", fontSize: 13 }}>
+                  😔 No volunteers available at the moment.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto" }}>
+                  {manualAssignModal.volunteers.map(v => {
+                    const isSelected = manualSelection === String(v._id);
+                    const vAssigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
+                    const vResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && (c.status === "resolved" || c.status === "completed")).length;
+                    return (
+                      <div key={v._id} onClick={() => setManualSelection(String(v._id))}
+                        style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                          borderRadius: 10, border: `2px solid ${isSelected ? "#2563eb" : "#e5e7eb"}`,
+                          background: isSelected ? "#eff6ff" : "#fff", cursor: "pointer", transition: "all 0.15s" }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+                          background: isSelected ? "#2563eb" : "#e5e7eb",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 13, fontWeight: 700, color: isSelected ? "#fff" : "#6b7280" }}>
+                          {(v.name || "?").substring(0, 2).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: isSelected ? "#1d4ed8" : "#111827" }}>{v.name}</div>
+                          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 1 }}>{v.email}</div>
+                          {v.location && <div style={{ fontSize: 11, color: "#6b7280" }}>📍 {v.location}</div>}
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 11, color: "#6b7280" }}>{vAssigned} assigned</div>
+                          <div style={{ fontSize: 11, color: "#22c55e", fontWeight: 600 }}>{vResolved} resolved</div>
+                        </div>
+                        {isSelected && (
+                          <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#2563eb",
+                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* Footer */}
+            <div style={{ padding: "16px 24px", borderTop: "1px solid #e5e7eb", display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setManualAssignModal(null)}
+                style={{ padding: "9px 20px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={confirmManualAssign}
+                disabled={!manualSelection || assigning[manualAssignModal.complaintId]}
+                style={{ padding: "9px 24px", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 700,
+                  cursor: manualSelection ? "pointer" : "not-allowed",
+                  background: manualSelection ? "#2563eb" : "#e5e7eb",
+                  color: manualSelection ? "#fff" : "#9ca3af", transition: "all 0.15s" }}>
+                {assigning[manualAssignModal.complaintId] ? "Assigning…" : "✓ Confirm Assignment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Zones Tab ────────────────────────────────────────────────────────────────
+function ZonesTab({ zones, setZones, volunteers, complaints }) {
+  const [zoneName, setZoneName] = useState("");
+  const [zoneArea, setZoneArea] = useState("");
+  const [zoneVolunteer, setZoneVolunteer] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editArea, setEditArea] = useState("");
+  const [editVolunteer, setEditVolunteer] = useState("");
+
+  const saveZones = (updated) => {
+    setZones(updated);
+    localStorage.setItem("cs_zones", JSON.stringify(updated));
+  };
+
+  const addZone = () => {
+    if (!zoneName.trim() || !zoneArea.trim()) return;
+    const newZone = {
+      id: Date.now().toString(),
+      name: zoneName.trim(),
+      area: zoneArea.trim(),
+      volunteerId: zoneVolunteer || null,
+      createdAt: new Date().toISOString(),
+    };
+    saveZones([...zones, newZone]);
+    setZoneName(""); setZoneArea(""); setZoneVolunteer("");
+  };
+
+  const deleteZone = (id) => saveZones(zones.filter(z => z.id !== id));
+
+  const startEdit = (z) => {
+    setEditingId(z.id); setEditName(z.name);
+    setEditArea(z.area); setEditVolunteer(z.volunteerId || "");
+  };
+
+  const saveEdit = (id) => {
+    saveZones(zones.map(z => z.id === id
+      ? { ...z, name: editName, area: editArea, volunteerId: editVolunteer || null }
+      : z
+    ));
+    setEditingId(null);
+  };
+
+  const getVolunteerName = (id) => volunteers.find(v => String(v._id) === String(id))?.name || "Unassigned";
+  const getZoneComplaintCount = (area) =>
+    complaints.filter(c => (c.address || c.location || "").toLowerCase().includes(area.toLowerCase())).length;
+
+  const downloadZoneReport = (z) => {
+    const zoneComplaints = complaints.filter(c =>
+      (c.address || c.location || "").toLowerCase().includes(z.area.toLowerCase()));
+    const resolvedCount = zoneComplaints.filter(c => c.status === "resolved" || c.status === "completed").length;
+    const pendingCount = zoneComplaints.filter(c => ["pending", "received"].includes(c.status)).length;
+    const inProgressCount = zoneComplaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
+    const volunteerName = volunteers.find(v => String(v._id) === String(z.volunteerId))?.name || "Not assigned";
+    const rate = zoneComplaints.length > 0 ? Math.round((resolvedCount / zoneComplaints.length) * 100) : 0;
+
+    const html = `
+      <html><head><title>Zone Report — ${z.name}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 32px; color: #111827; max-width: 700px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg,#1e3a8a,#2563eb); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; }
+        .header h1 { margin: 0 0 4px; font-size: 22px; }
+        .header .meta { font-size: 12px; opacity: 0.7; }
+        .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+        .stat { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; text-align: center; }
+        .stat-num { font-size: 24px; font-weight: 800; }
+        .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .section { background: #f8fafc; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; }
+        .section-title { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f3f4f6; padding: 7px 10px; text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+        .badge { display:inline-block; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600; }
+        .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 28px; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <div class="header">
+        <div class="meta">CleanStreet Zone Report · Generated ${new Date().toLocaleString()}</div>
+        <h1>🗺️ ${z.name}</h1>
+        <div class="meta">Area: ${z.area} · Created ${new Date(z.createdAt).toLocaleDateString()}</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-num" style="color:#3b82f6">${zoneComplaints.length}</div><div class="stat-label">Total</div></div>
+        <div class="stat"><div class="stat-num" style="color:#f59e0b">${pendingCount}</div><div class="stat-label">Pending</div></div>
+        <div class="stat"><div class="stat-num" style="color:#8b5cf6">${inProgressCount}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat"><div class="stat-num" style="color:#22c55e">${resolvedCount}</div><div class="stat-label">Resolved</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Zone Details</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px">Assigned Volunteer</div>
+          <div style="font-size:14px;font-weight:600;color:${z.volunteerId ? "#166534" : "#9ca3af"}">${volunteerName}</div></div>
+          <div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px">Resolution Rate</div>
+          <div style="font-size:14px;font-weight:800;color:${rate >= 80 ? "#166534" : rate >= 50 ? "#92400e" : "#991b1b"}">${rate}%</div></div>
+        </div>
+      </div>
+      ${zoneComplaints.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Complaints in this Zone</div>
+        <table>
+          <tr><th>ID</th><th>Title</th><th>Priority</th><th>Status</th><th>Date</th></tr>
+          ${zoneComplaints.map(c => `<tr>
+            <td style="font-family:monospace;color:#9ca3af">#${String(c._id).slice(-6).toUpperCase()}</td>
+            <td style="font-weight:500">${c.title || "—"}</td>
+            <td style="text-transform:capitalize">${c.priority || "medium"}</td>
+            <td><span class="badge" style="background:${c.status === "resolved" ? "#dcfce7" : c.status === "in_review" || c.status === "assigned" ? "#ede9fe" : "#dbeafe"};color:${c.status === "resolved" ? "#166534" : c.status === "in_review" || c.status === "assigned" ? "#5b21b6" : "#1d4ed8"}">${c.status?.replace("_", " ")}</span></td>
+            <td style="color:#9ca3af">${new Date(c.created_at || c.createdAt).toLocaleDateString()}</td>
+          </tr>`).join("")}
+        </table>
+      </div>` : `<div class="section"><div style="color:#9ca3af;font-size:13px;text-align:center">No complaints recorded in this zone yet.</div></div>`}
+      <div class="footer">CleanStreet · Zone Report · ${z.name}</div>
+      </body></html>`;
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => document.body.removeChild(iframe), 1000); }, 500);
+  };
+
+  const filteredZoneVolunteers = zoneArea.trim()
+    ? volunteers.filter(v =>
+      (v.location || "").toLowerCase().includes(zoneArea.trim().toLowerCase()) ||
+      zoneArea.trim().toLowerCase().includes((v.location || "").toLowerCase())
+    )
+    : volunteers;
+
+  const filteredEditVolunteers = editArea.trim()
+    ? volunteers.filter(v =>
+      (v.location || "").toLowerCase().includes(editArea.trim().toLowerCase()) ||
+      editArea.trim().toLowerCase().includes((v.location || "").toLowerCase())
+    )
+    : volunteers;
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Zone Management</h1>
+        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
+          Create and manage geographic zones. Assign volunteers to handle complaints in each zone.
+        </p>
+      </div>
+
+      {/* Add Zone Form */}
+      <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: 20, marginBottom: 24 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: "#111827", marginBottom: 16 }}>➕ Create New Zone</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "end" }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Zone Name *</div>
+            <input value={zoneName} onChange={e => setZoneName(e.target.value)} placeholder="e.g. North District"
+              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              onFocus={e => e.target.style.borderColor = "#2563eb"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Area / Keyword *</div>
+            <input value={zoneArea} onChange={e => { setZoneArea(e.target.value); setZoneVolunteer(""); }} placeholder="e.g. Downtown, Elm Street"
+              style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              onFocus={e => e.target.style.borderColor = "#2563eb"} onBlur={e => e.target.style.borderColor = "#e5e7eb"} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Assign Volunteer</div>
+            <VolunteerDropdown
+              value={zoneVolunteer}
+              onChange={setZoneVolunteer}
+              volunteers={volunteers}
+              volunteers={filteredZoneVolunteers}
+              placeholder={zoneArea.trim() && filteredZoneVolunteers.length === 0
+                ? "— No volunteers in this area —"
+                : "— None —"}
+            />
+          </div>
+          <button onClick={addZone} disabled={!zoneName.trim() || !zoneArea.trim()}
+            style={{ background: zoneName.trim() && zoneArea.trim() ? "#2563eb" : "#e5e7eb", color: zoneName.trim() && zoneArea.trim() ? "#fff" : "#9ca3af", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: zoneName.trim() && zoneArea.trim() ? "pointer" : "not-allowed", whiteSpace: "nowrap" }}>
+            Add Zone
+          </button>
+        </div>
+      </div>
+
+      {/* Zones List */}
+      {zones.length === 0 ? (
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "48px 20px", textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>No zones created yet</div>
+          <div style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>Create your first zone above to start managing areas.</div>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+          {zones.map(z => {
+            const complaintCount = getZoneComplaintCount(z.area);
+            const isEditing = editingId === z.id;
+            return (
+              <div key={z.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+                <div style={{ background: "linear-gradient(135deg,#1e3a8a,#2563eb)", padding: "16px 20px" }}>
+                  {isEditing ? (
+                    <input value={editName} onChange={e => setEditName(e.target.value)}
+                      style={{ width: "100%", background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 6, padding: "6px 10px", fontSize: 15, fontWeight: 700, color: "#fff", outline: "none", boxSizing: "border-box" }} />
+                  ) : (
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>🗺️ {z.name}</div>
+                  )}
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>
+                    Created {new Date(z.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div style={{ padding: "16px 20px" }}>
+                  {isEditing ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>AREA KEYWORD</div>
+                        <input value={editArea} onChange={e => { setEditArea(e.target.value); setEditVolunteer(""); }}
+                          style={{ width: "100%", border: "1px solid #e5e7eb", borderRadius: 6, padding: "7px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: "#9ca3af", fontWeight: 600, marginBottom: 4 }}>VOLUNTEER</div>
+                        <VolunteerDropdown
+                          value={editVolunteer}
+                          onChange={setEditVolunteer}
+                          volunteers={volunteers}
+                          volunteers={filteredEditVolunteers}
+                          placeholder={editArea.trim() && filteredEditVolunteers.length === 0
+                            ? "— No volunteers in this area —"
+                            : "— None —"}
+                        />
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => saveEdit(z.id)} style={{ flex: 1, background: "#22c55e", color: "#fff", border: "none", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✓ Save</button>
+                        <button onClick={() => setEditingId(null)} style={{ flex: 1, background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 7, padding: "7px", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                        <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>Area</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{z.area}</div>
+                        </div>
+                        <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px" }}>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>Complaints</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: "#2563eb" }}>{complaintCount}</div>
+                        </div>
+                      </div>
+                      <div style={{ background: "#f0fdf4", borderRadius: 8, padding: "10px 12px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 16 }}>🤝</span>
+                        <div>
+                          <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase" }}>Assigned Volunteer</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: z.volunteerId ? "#166534" : "#9ca3af" }}>
+                            {z.volunteerId ? getVolunteerName(z.volunteerId) : "Not assigned"}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => startEdit(z)} style={{ flex: 1, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✏️ Edit</button>
+                        <button onClick={() => deleteZone(z.id)} style={{ flex: 1, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🗑️ Delete</button>
+                        <button onClick={() => downloadZoneReport(z)}
+                          style={{ flex: 1, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 7, padding: "7px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                          📄 Report
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AdminDashboard;
