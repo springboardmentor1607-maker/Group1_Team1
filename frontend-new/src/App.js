@@ -32,7 +32,7 @@ function PrivateRoute({ children, roles }) {
 function PublicRoute({ children }) {
   const { user } = useAuth();
   if (user) {
-    if (user.role === "admin") return <Navigate to="/admin" replace />;
+    if (user.role === "admin")     return <Navigate to="/admin"     replace />;
     if (user.role === "volunteer") return <Navigate to="/volunteer" replace />;
     return <Navigate to="/dashboard" replace />;
   }
@@ -56,7 +56,7 @@ function AppRoutes() {
       {/* Citizen */}
       <Route path="/dashboard" element={<PrivateRoute roles={["user"]}><Dashboard /></PrivateRoute>} />
       <Route path="/submit-complaint" element={<PrivateRoute roles={["user"]}><SubmitComplaint /></PrivateRoute>} />
-      <Route path="/complaints" element={<PrivateRoute roles={["user"]}><ViewComplaints /></PrivateRoute>} />
+      <Route path="/complaints"       element={<PrivateRoute roles={["user"]}><ViewComplaints /></PrivateRoute>} />
 
       {/* Volunteer */}
       <Route path="/volunteer" element={<PrivateRoute roles={["volunteer"]}><VolunteerDashboard /></PrivateRoute>} />
@@ -86,3 +86,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+

@@ -1,1 +1,14 @@
-Heyy I am here working on infosys project
+Clean Street is a full-stack civic engagement platform that enables citizens to report, track, and manage local public issues such as garbage dumps, potholes, water leakage, and broken streetlights.
+The system improves transparency and efficiency by allowing users, authorities, and communities to interact through real-time updates, voting, and feedback.
+
+✨ Features:
+Report issues with location, image, and description.
+Track complaint status (Received, In Review, Resolved).
+Voting & 💬 commenting system for community engagement.
+Admin dashboard to manage complaints and users.
+Authentication (OTP/Login).
+
+🏗️ Tech Stack
+Frontend: React.js
+Backend: Node.js, Express.js
+Database: MongoDB
