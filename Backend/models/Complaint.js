@@ -26,7 +26,7 @@ const complaintSchema = new mongoose.Schema(
 
     priority: {
       type: String,
-      enum: ["low", "medium", "high", "urgent", "critical"],
+      enum: ["low", "medium", "high", "urgent"],
       default: "medium",
     },
 
@@ -52,6 +52,11 @@ const complaintSchema = new mongoose.Schema(
       required: true,
     },
 
+    zone: {
+      type: String,
+      default: "",
+    },
+    
     landmark: {
       type: String,
       default: "",
@@ -67,14 +72,11 @@ const complaintSchema = new mongoose.Schema(
       type: String,
       enum: [
         "received",
-        "pending",
-        "assigned",
-        "accepted",
         "in_review",
-        "in_progress",
-        "denied",
         "resolved",
+        "assigned",
         "completed",
+        "pending",
       ],
       default: "received",
     },
@@ -116,7 +118,7 @@ const complaintSchema = new mongoose.Schema(
       createdAt: "created_at",
       updatedAt: "updated_at",
     },
-  }
+  },
 );
 
 // ✅ Required for geo queries
