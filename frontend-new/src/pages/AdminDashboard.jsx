@@ -656,7 +656,7 @@ function ReportsTab({ complaints, users, volunteers }) {
   const total = complaints.length;
   const pending = complaints.filter(c => c.status === "received" || c.status === "pending").length;
   const inProgress = complaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length;
-  const resolved = complaints.filter(c => c.status === "resolved").length;
+  const resolved = complaints.filter(c => c.status === "resolved" || c.status === "completed").length;
   const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
   const byType = complaints.reduce((acc, c) => {
@@ -673,7 +673,7 @@ function ReportsTab({ complaints, users, volunteers }) {
 
   const volStats = volunteers.map(v => ({
     name: v.name,
-    resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length,
+    resolved: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && (c.status === "resolved" || c.status === "completed")).length,
     assigned: complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length,
   })).sort((a, b) => b.resolved - a.resolved);
 
@@ -1071,7 +1071,7 @@ function ReportsTab({ complaints, users, volunteers }) {
                     }}>
                       {c.status === "received" || c.status === "pending" ? "Pending"
                         : c.status === "in_review" || c.status === "assigned" ? "In Progress"
-                          : c.status === "resolved" ? "Resolved"
+                          : (c.status === "resolved" || c.status === "completed") ? "Resolved"
                             : c.status?.replace("_", " ")}
                     </span>
                   </td>
@@ -1390,7 +1390,7 @@ function AdminDashboard() {
       </div>
       <div class="summary">
         <div class="stat"><div class="stat-num">${filteredComplaints.length}</div><div class="stat-label">Showing</div></div>
-        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => c.status === "resolved").length}</div><div class="stat-label">Resolved</div></div>
+        <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => c.status === "resolved" || c.status === "completed").length}</div><div class="stat-label">Resolved</div></div>
         <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => ["pending", "received"].includes(c.status)).length}</div><div class="stat-label">Pending</div></div>
         <div class="stat"><div class="stat-num">${filteredComplaints.filter(c => ["in_review", "in_progress", "assigned", "accepted"].includes(c.status)).length}</div><div class="stat-label">In Progress</div></div>
       </div>
@@ -1706,6 +1706,7 @@ function AdminDashboard() {
         statusFilter === "received" ? ["received", "pending"].includes(c.status) :
           statusFilter === "in_review" ? ["assigned", "accepted", "in_review", "in_progress"].includes(c.status) :
             statusFilter === "denied" ? c.status === "denied" :
+            statusFilter === "resolved" ? (c.status === "resolved" || c.status === "completed") :
               c.status === statusFilter;
     const matchSearch =
       c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2283,7 +2284,7 @@ function AdminDashboard() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
                   {filteredVolunteers.map(v => {
                     const assigned = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id)).length;
-                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && c.status === "resolved").length;
+                    const volResolved = complaints.filter(c => String(c.assigned_to?._id || c.assigned_to) === String(v._id) && (c.status === "resolved" || c.status === "completed")).length;
                     return (
                       <div key={v._id} className="cs-card" style={{ padding: "20px", textAlign: "center" }}>
                         <div className="cs-avatar cs-avatar--lg" style={{ margin: "0 auto 12px" }}>{v.name?.substring(0, 2).toUpperCase() || "V"}</div>
